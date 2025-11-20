@@ -112,6 +112,62 @@ func (db *DB) Init() error {
 			_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('deepl_api_key', '')`)
 			_, _ = db.Exec("INSERT OR IGNORE INTO schema_version (version) VALUES (5)")
 		}
+
+		// Migration v6: Drop content and summary columns to reduce database size
+		if version < 6 {
+			// Check if columns exist before attempting to drop them
+			var contentCount, summaryCount int
+			_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('articles') WHERE name='content'").Scan(&contentCount)
+			_ = db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('articles') WHERE name='summary'").Scan(&summaryCount)
+			
+			if contentCount > 0 || summaryCount > 0 {
+				// SQLite doesn't support DROP COLUMN directly in older versions
+				// We need to recreate the table
+				log.Println("Migrating database schema: removing content and summary columns...")
+				
+				// Create new table without content and summary
+				_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS articles_new (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					feed_id INTEGER,
+					title TEXT,
+					url TEXT UNIQUE,
+					image_url TEXT,
+					translated_title TEXT,
+					published_at DATETIME,
+					is_read BOOLEAN DEFAULT 0,
+					is_favorite BOOLEAN DEFAULT 0,
+					FOREIGN KEY(feed_id) REFERENCES feeds(id)
+				)`)
+				
+				// Copy data from old table to new table
+				_, _ = db.Exec(`INSERT OR IGNORE INTO articles_new (id, feed_id, title, url, image_url, translated_title, published_at, is_read, is_favorite)
+					SELECT id, feed_id, title, url, image_url, translated_title, published_at, is_read, is_favorite FROM articles`)
+				
+				// Drop old table
+				_, _ = db.Exec(`DROP TABLE articles`)
+				
+				// Rename new table
+				_, _ = db.Exec(`ALTER TABLE articles_new RENAME TO articles`)
+				
+				// Recreate indexes
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_feed_id ON articles(feed_id)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at DESC)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_is_read ON articles(is_read)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_is_favorite ON articles(is_favorite)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_feed_published ON articles(feed_id, published_at DESC)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_read_published ON articles(is_read, published_at DESC)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_fav_published ON articles(is_favorite, published_at DESC)`)
+				
+				log.Println("Migration complete: content and summary columns removed")
+				
+				// Run VACUUM to reclaim space
+				log.Println("Running VACUUM to reclaim database space...")
+				_, _ = db.Exec(`VACUUM`)
+				log.Println("VACUUM complete")
+			}
+			
+			_, _ = db.Exec("INSERT OR IGNORE INTO schema_version (version) VALUES (6)")
+		}
 	})
 	return err
 }
@@ -137,8 +193,6 @@ func initSchema(db *sql.DB) error {
 		feed_id INTEGER,
 		title TEXT,
 		url TEXT UNIQUE,
-		content TEXT,
-		summary TEXT,
 		image_url TEXT,
 		translated_title TEXT,
 		published_at DATETIME,
@@ -205,8 +259,8 @@ func (db *DB) GetFeeds() ([]models.Feed, error) {
 
 func (db *DB) SaveArticle(article *models.Article) error {
 	db.WaitForReady()
-	query := `INSERT OR IGNORE INTO articles (feed_id, title, url, content, summary, image_url, published_at, translated_title) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := db.Exec(query, article.FeedID, article.Title, article.URL, article.Content, article.Summary, article.ImageURL, article.PublishedAt, article.TranslatedTitle)
+	query := `INSERT OR IGNORE INTO articles (feed_id, title, url, image_url, published_at, translated_title) VALUES (?, ?, ?, ?, ?, ?)`
+	_, err := db.Exec(query, article.FeedID, article.Title, article.URL, article.ImageURL, article.PublishedAt, article.TranslatedTitle)
 	return err
 }
 
@@ -218,7 +272,7 @@ func (db *DB) SaveArticles(ctx context.Context, articles []*models.Article) erro
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO articles (feed_id, title, url, content, summary, image_url, published_at, translated_title) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO articles (feed_id, title, url, image_url, published_at, translated_title) VALUES (?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -232,7 +286,7 @@ func (db *DB) SaveArticles(ctx context.Context, articles []*models.Article) erro
 		default:
 		}
 
-		_, err := stmt.ExecContext(ctx, article.FeedID, article.Title, article.URL, article.Content, article.Summary, article.ImageURL, article.PublishedAt, article.TranslatedTitle)
+		_, err := stmt.ExecContext(ctx, article.FeedID, article.Title, article.URL, article.ImageURL, article.PublishedAt, article.TranslatedTitle)
 		if err != nil {
 			log.Println("Error saving article in batch:", err)
 			// Continue even if one fails
@@ -245,7 +299,7 @@ func (db *DB) SaveArticles(ctx context.Context, articles []*models.Article) erro
 func (db *DB) GetArticles(filter string, feedID int64, category string, limit, offset int) ([]models.Article, error) {
 	db.WaitForReady()
 	baseQuery := `
-		SELECT a.id, a.feed_id, a.title, a.url, a.content, a.summary, a.image_url, a.published_at, a.is_read, a.is_favorite, a.translated_title, f.title 
+		SELECT a.id, a.feed_id, a.title, a.url, a.image_url, a.published_at, a.is_read, a.is_favorite, a.translated_title, f.title 
 		FROM articles a 
 		JOIN feeds f ON a.feed_id = f.id 
 	`
@@ -288,12 +342,11 @@ func (db *DB) GetArticles(filter string, feedID int64, category string, limit, o
 	var articles []models.Article
 	for rows.Next() {
 		var a models.Article
-		var summary, imageURL, translatedTitle sql.NullString
-		if err := rows.Scan(&a.ID, &a.FeedID, &a.Title, &a.URL, &a.Content, &summary, &imageURL, &a.PublishedAt, &a.IsRead, &a.IsFavorite, &translatedTitle, &a.FeedTitle); err != nil {
+		var imageURL, translatedTitle sql.NullString
+		if err := rows.Scan(&a.ID, &a.FeedID, &a.Title, &a.URL, &imageURL, &a.PublishedAt, &a.IsRead, &a.IsFavorite, &translatedTitle, &a.FeedTitle); err != nil {
 			log.Println("Error scanning article:", err)
 			continue
 		}
-		a.Summary = summary.String
 		a.ImageURL = imageURL.String
 		a.TranslatedTitle = translatedTitle.String
 		articles = append(articles, a)

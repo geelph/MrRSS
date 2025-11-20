@@ -103,7 +103,6 @@ func TestDatabasePerformanceWithIndexes(t *testing.T) {
 			FeedID:      feedID,
 			Title:       fmt.Sprintf("Article %d", i),
 			URL:         fmt.Sprintf("https://example.com/article-%d", i),
-			Content:     fmt.Sprintf("Content for article %d", i),
 			PublishedAt: time.Now().Add(-time.Duration(i) * time.Minute),
 			IsRead:      i%2 == 0,
 			IsFavorite:  i%10 == 0,
@@ -230,7 +229,6 @@ func BenchmarkGetArticles(b *testing.B) {
 			FeedID:      feedID,
 			Title:       fmt.Sprintf("Bench Article %d", i),
 			URL:         fmt.Sprintf("https://example.com/bench-%d", i),
-			Content:     "Benchmark content",
 			PublishedAt: time.Now().Add(-time.Duration(i) * time.Minute),
 			IsRead:      i%3 == 0,
 		}

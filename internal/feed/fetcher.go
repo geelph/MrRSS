@@ -147,16 +147,6 @@ func (f *Fetcher) FetchFeed(ctx context.Context, feed models.Feed) {
 			published = *item.PublishedParsed
 		}
 
-		content := item.Content
-		if content == "" {
-			content = item.Description
-		}
-
-		summary := item.Description
-		if summary == "" && len(content) > 200 {
-			summary = content[:200] + "..."
-		}
-
 		imageURL := ""
 		if item.Image != nil {
 			imageURL = item.Image.URL
@@ -164,8 +154,12 @@ func (f *Fetcher) FetchFeed(ctx context.Context, feed models.Feed) {
 			imageURL = item.Enclosures[0].URL
 		}
 
-		// Fallback: Try to find image in content
+		// Fallback: Try to find image in description/content
 		if imageURL == "" {
+			content := item.Content
+			if content == "" {
+				content = item.Description
+			}
 			re := regexp.MustCompile(`<img[^>]+src="([^">]+)"`)
 			matches := re.FindStringSubmatch(content)
 			if len(matches) > 1 {
@@ -185,8 +179,6 @@ func (f *Fetcher) FetchFeed(ctx context.Context, feed models.Feed) {
 			FeedID:          feed.ID,
 			Title:           item.Title,
 			URL:             item.Link,
-			Content:         content,
-			Summary:         summary,
 			ImageURL:        imageURL,
 			PublishedAt:     published,
 			TranslatedTitle: translatedTitle,

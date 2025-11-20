@@ -17,12 +17,10 @@ type Article struct {
 	FeedID          int64     `json:"feed_id"`
 	Title           string    `json:"title"`
 	URL             string    `json:"url"`
-	Content         string    `json:"content"`
-	Summary         string    `json:"summary"`   // New field
-	ImageURL        string    `json:"image_url"` // New field
+	ImageURL        string    `json:"image_url"`
 	PublishedAt     time.Time `json:"published_at"`
 	IsRead          bool      `json:"is_read"`
 	IsFavorite      bool      `json:"is_favorite"`
 	FeedTitle       string    `json:"feed_title,omitempty"` // Joined field
-	TranslatedTitle string    `json:"translated_title"`     // New field
+	TranslatedTitle string    `json:"translated_title"`
 }

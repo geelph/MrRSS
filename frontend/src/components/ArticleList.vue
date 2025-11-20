@@ -120,10 +120,6 @@ async function refreshArticles() {
                         <div class="text-xs text-text-secondary italic mb-1">{{ article.title }}</div>
                     </div>
 
-                    <div v-if="store.showSummaries && article.summary" class="text-sm text-text-secondary mb-2 line-clamp-2 leading-relaxed">
-                        {{ article.summary }}
-                    </div>
-
                     <div class="flex justify-between items-center text-xs text-text-secondary mt-2">
                         <span class="font-medium text-accent">{{ article.feed_title }}</span>
                         <span>{{ formatDate(article.published_at) }}</span>
