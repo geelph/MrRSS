@@ -4,6 +4,7 @@ import (
 	"MrRSS/internal/database"
 	"MrRSS/internal/models"
 	"MrRSS/internal/translation"
+	"context"
 	"log"
 	"regexp"
 	"sync"
@@ -15,6 +16,7 @@ import (
 // FeedParser interface to allow mocking
 type FeedParser interface {
 	ParseURL(url string) (*gofeed.Feed, error)
+	ParseURLWithContext(url string, ctx context.Context) (*gofeed.Feed, error)
 }
 
 type Fetcher struct {
@@ -45,7 +47,7 @@ func (f *Fetcher) GetProgress() Progress {
 	return f.progress
 }
 
-func (f *Fetcher) FetchAll() {
+func (f *Fetcher) FetchAll(ctx context.Context) {
 	f.mu.Lock()
 	if f.progress.IsRunning {
 		f.mu.Unlock()
@@ -84,17 +86,35 @@ func (f *Fetcher) FetchAll() {
 	sem := make(chan struct{}, 5) // Limit concurrency
 
 	for _, feed := range feeds {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			log.Println("FetchAll cancelled (loop)")
+			goto Finish
+		default:
+		}
+
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(fd models.Feed) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			f.FetchFeed(fd)
+
+			// Check for cancellation inside goroutine before starting
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			f.FetchFeed(ctx, fd)
 			f.mu.Lock()
 			f.progress.Current++
 			f.mu.Unlock()
 		}(feed)
 	}
+
+Finish:
 	wg.Wait()
 
 	f.mu.Lock()
@@ -102,8 +122,8 @@ func (f *Fetcher) FetchAll() {
 	f.mu.Unlock()
 }
 
-func (f *Fetcher) FetchFeed(feed models.Feed) {
-	parsedFeed, err := f.fp.ParseURL(feed.URL)
+func (f *Fetcher) FetchFeed(ctx context.Context, feed models.Feed) {
+	parsedFeed, err := f.fp.ParseURLWithContext(feed.URL, ctx)
 	if err != nil {
 		log.Printf("Error parsing feed %s: %v", feed.URL, err)
 		return
@@ -174,8 +194,15 @@ func (f *Fetcher) FetchFeed(feed models.Feed) {
 		articlesToSave = append(articlesToSave, article)
 	}
 
+	// Check context before heavy DB operation
+	select {
+	case <-ctx.Done():
+		return
+	default:
+	}
+
 	if len(articlesToSave) > 0 {
-		if err := f.db.SaveArticles(articlesToSave); err != nil {
+		if err := f.db.SaveArticles(ctx, articlesToSave); err != nil {
 			log.Printf("Error saving articles for feed %s: %v", feed.Title, err)
 		}
 	}

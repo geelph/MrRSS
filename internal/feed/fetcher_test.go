@@ -3,6 +3,7 @@ package feed
 import (
 	"MrRSS/internal/database"
 	"MrRSS/internal/translation"
+	"context"
 	"testing"
 
 	"github.com/mmcdole/gofeed"
@@ -14,6 +15,10 @@ type MockParser struct {
 }
 
 func (m *MockParser) ParseURL(url string) (*gofeed.Feed, error) {
+	return m.Feed, m.Err
+}
+
+func (m *MockParser) ParseURLWithContext(url string, ctx context.Context) (*gofeed.Feed, error) {
 	return m.Feed, m.Err
 }
 
@@ -82,7 +87,7 @@ func TestFetchFeed(t *testing.T) {
 	feeds, _ := db.GetFeeds()
 
 	// Fetch the feed
-	fetcher.FetchFeed(feeds[0])
+	fetcher.FetchFeed(context.Background(), feeds[0])
 
 	articles, err := db.GetArticles("", 0, "", 10, 0)
 	if err != nil {

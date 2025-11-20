@@ -3,10 +3,13 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"MrRSS/internal/database"
@@ -26,7 +29,7 @@ func NewHandler(db *database.DB, fetcher *feed.Fetcher) *Handler {
 	}
 }
 
-func (h *Handler) StartBackgroundScheduler() {
+func (h *Handler) StartBackgroundScheduler(ctx context.Context) {
 	for {
 		intervalStr, err := h.DB.GetSetting("update_interval")
 		interval := 10
@@ -37,8 +40,14 @@ func (h *Handler) StartBackgroundScheduler() {
 		}
 
 		log.Printf("Next auto-update in %d minutes", interval)
-		time.Sleep(time.Duration(interval) * time.Minute)
-		h.Fetcher.FetchAll()
+
+		select {
+		case <-ctx.Done():
+			log.Println("Stopping background scheduler")
+			return
+		case <-time.After(time.Duration(interval) * time.Minute):
+			h.Fetcher.FetchAll(ctx)
+		}
 	}
 }
 
@@ -162,20 +171,41 @@ func (h *Handler) HandleToggleFavorite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleRefresh(w http.ResponseWriter, r *http.Request) {
-	go h.Fetcher.FetchAll()
+	go h.Fetcher.FetchAll(context.Background())
 	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) HandleOPMLImport(w http.ResponseWriter, r *http.Request) {
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	log.Printf("HandleOPMLImport: ContentLength: %d", r.ContentLength)
+	contentType := r.Header.Get("Content-Type")
+	log.Printf("HandleOPMLImport: Content-Type: %s", contentType)
+
+	var file io.Reader
+
+	if strings.Contains(contentType, "multipart/form-data") {
+		f, header, err := r.FormFile("file")
+		if err != nil {
+			log.Printf("Error getting form file: %v", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		defer f.Close()
+		log.Printf("HandleOPMLImport: Received file %s, size: %d", header.Filename, header.Size)
+
+		if header.Size == 0 {
+			http.Error(w, "Uploaded file is empty", http.StatusBadRequest)
+			return
+		}
+		file = f
+	} else {
+		// Handle raw body upload
+		file = r.Body
+		defer r.Body.Close()
 	}
-	defer file.Close()
 
 	feeds, err := opml.Parse(file)
 	if err != nil {
+		log.Printf("Error parsing OPML: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -184,7 +214,7 @@ func (h *Handler) HandleOPMLImport(w http.ResponseWriter, r *http.Request) {
 		for _, f := range feeds {
 			h.Fetcher.ImportSubscription(f.Title, f.URL, f.Category)
 		}
-		h.Fetcher.FetchAll()
+		h.Fetcher.FetchAll(context.Background())
 	}()
 
 	w.WriteHeader(http.StatusOK)

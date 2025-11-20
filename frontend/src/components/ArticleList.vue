@@ -1,6 +1,7 @@
 <script setup>
 import { store } from '../store.js';
 import { ref, computed } from 'vue';
+import { BrowserOpenURL } from '../wailsjs/wailsjs/runtime/runtime.js';
 
 const listRef = ref(null);
 
@@ -66,7 +67,7 @@ function handleArticleAction(action, article) {
         article.is_favorite = newState;
         fetch(`/api/articles/favorite?id=${article.id}`, { method: 'POST' });
     } else if (action === 'openBrowser') {
-        window.open(article.url, '_blank');
+        BrowserOpenURL(article.url);
     }
 }
 
@@ -80,7 +81,7 @@ async function refreshArticles() {
 </script>
 
 <template>
-    <section class="flex flex-col w-full md:w-[400px] border-r border-border bg-bg-primary shrink-0 h-full">
+    <section class="article-list flex flex-col w-full border-r border-border bg-bg-primary shrink-0 h-full">
         <div class="p-4 border-b border-border bg-bg-primary">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="m-0 text-lg font-semibold">Articles</h3>
@@ -139,6 +140,11 @@ async function refreshArticles() {
 </template>
 
 <style scoped>
+@media (min-width: 768px) {
+    .article-list {
+        width: var(--article-list-width, 400px);
+    }
+}
 .article-card {
     @apply p-3 border-b border-border cursor-pointer transition-colors flex gap-3 relative hover:bg-bg-tertiary;
 }

@@ -54,20 +54,26 @@ function importOPML(event) {
     const file = event.target.files[0];
     if (!file) return;
     
-    const formData = new FormData();
-    formData.append('file', file);
-
-    fetch('/api/opml/import', {
-        method: 'POST',
-        body: formData
-    }).then(res => {
-        if (res.ok) {
-            alert('OPML Imported. Feeds will appear shortly.');
-            store.fetchFeeds();
-        } else {
-            alert('Import failed');
-        }
-    });
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const content = e.target.result;
+        fetch('/api/opml/import', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'text/xml'
+            },
+            body: content
+        }).then(async res => {
+            if (res.ok) {
+                alert('OPML Imported. Feeds will appear shortly.');
+                store.fetchFeeds();
+            } else {
+                const text = await res.text();
+                alert('Import failed: ' + text);
+            }
+        });
+    };
+    reader.readAsText(file);
 }
 
 function exportOPML() {
@@ -81,10 +87,11 @@ async function deleteFeed(id) {
 }
 
 const isAllSelected = computed(() => {
-    return store.feeds.length > 0 && selectedFeeds.value.length === store.feeds.length;
+    return store.feeds && store.feeds.length > 0 && selectedFeeds.value.length === store.feeds.length;
 });
 
 function toggleSelectAll(e) {
+    if (!store.feeds) return;
     if (e.target.checked) {
         selectedFeeds.value = store.feeds.map(f => f.id);
     } else {
@@ -104,6 +111,7 @@ async function batchDelete() {
 
 async function batchMove() {
     if (selectedFeeds.value.length === 0) return;
+    if (!store.feeds) return;
     const newCategory = prompt('Enter new category name:');
     if (newCategory === null) return;
 

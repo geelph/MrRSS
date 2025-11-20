@@ -1,8 +1,11 @@
 package database
 
 import (
+	"context"
 	"database/sql"
 	"log"
+	"strings"
+	"sync"
 	"time"
 
 	"MrRSS/internal/models"
@@ -12,46 +15,82 @@ import (
 
 type DB struct {
 	*sql.DB
+	ready chan struct{}
+	once  sync.Once
 }
 
 func NewDB(dataSourceName string) (*DB, error) {
+	// Add busy_timeout to prevent "database is locked" errors
+	// Also enable WAL mode for better concurrency
+	if !strings.Contains(dataSourceName, "?") {
+		dataSourceName += "?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"
+	} else {
+		dataSourceName += "&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"
+	}
+
 	db, err := sql.Open("sqlite", dataSourceName)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
+	return &DB{
+		DB:    db,
+		ready: make(chan struct{}),
+	}, nil
+}
 
-	if err := initSchema(db); err != nil {
-		return nil, err
-	}
+func (db *DB) Init() error {
+	var err error
+	db.once.Do(func() {
+		defer close(db.ready)
 
-	// Migration: Add category column if not exists
-	_, _ = db.Exec("ALTER TABLE feeds ADD COLUMN category TEXT DEFAULT ''")
-	// Migration: Add image_url to feeds
-	_, _ = db.Exec("ALTER TABLE feeds ADD COLUMN image_url TEXT DEFAULT ''")
-	// Migration: Add summary and image_url to articles
-	_, _ = db.Exec("ALTER TABLE articles ADD COLUMN summary TEXT DEFAULT ''")
-	_, _ = db.Exec("ALTER TABLE articles ADD COLUMN image_url TEXT DEFAULT ''")
-	// Migration: Add translated_title to articles
-	_, _ = db.Exec("ALTER TABLE articles ADD COLUMN translated_title TEXT DEFAULT ''")
+		if err = db.Ping(); err != nil {
+			return
+		}
 
-	// Migration: Create settings table
-	_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS settings (
-		key TEXT PRIMARY KEY,
-		value TEXT
-	)`)
-	// Default settings
-	_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('update_interval', '10')`)
-	// Default settings for translation
-	_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('translation_enabled', 'false')`)
-	_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('target_language', 'es')`)
-	_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('translation_provider', 'google')`)
-	_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('deepl_api_key', '')`)
+		if err = initSchema(db.DB); err != nil {
+			return
+		}
 
-	return &DB{db}, nil
+		// Helper function to add column safely
+		addColumn := func(table, column, definition string) {
+			// Check if column exists
+			query := "SELECT COUNT(*) FROM pragma_table_info(?) WHERE name=?"
+			var count int
+			_ = db.QueryRow(query, table, column).Scan(&count)
+			if count == 0 {
+				_, _ = db.Exec("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition)
+			}
+		}
+
+		// Migration: Add category column if not exists
+		addColumn("feeds", "category", "TEXT DEFAULT ''")
+		// Migration: Add image_url to feeds
+		addColumn("feeds", "image_url", "TEXT DEFAULT ''")
+		// Migration: Add summary and image_url to articles
+		addColumn("articles", "summary", "TEXT DEFAULT ''")
+		addColumn("articles", "image_url", "TEXT DEFAULT ''")
+		// Migration: Add translated_title to articles
+		addColumn("articles", "translated_title", "TEXT DEFAULT ''")
+
+		// Migration: Create settings table
+		_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS settings (
+			key TEXT PRIMARY KEY,
+			value TEXT
+		)`)
+		// Default settings
+		_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('update_interval', '10')`)
+		// Default settings for translation
+		_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('translation_enabled', 'false')`)
+		_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('target_language', 'es')`)
+		_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('translation_provider', 'google')`)
+		_, _ = db.Exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('deepl_api_key', '')`)
+	})
+	return err
+}
+
+func (db *DB) WaitForReady() {
+	<-db.ready
 }
 
 func initSchema(db *sql.DB) error {
@@ -86,12 +125,14 @@ func initSchema(db *sql.DB) error {
 }
 
 func (db *DB) AddFeed(feed *models.Feed) error {
+	db.WaitForReady()
 	query := `INSERT OR IGNORE INTO feeds (title, url, description, category, image_url, last_updated) VALUES (?, ?, ?, ?, ?, ?)`
 	_, err := db.Exec(query, feed.Title, feed.URL, feed.Description, feed.Category, feed.ImageURL, time.Now())
 	return err
 }
 
 func (db *DB) DeleteFeed(id int64) error {
+	db.WaitForReady()
 	// First delete associated articles
 	_, err := db.Exec("DELETE FROM articles WHERE feed_id = ?", id)
 	if err != nil {
@@ -102,6 +143,7 @@ func (db *DB) DeleteFeed(id int64) error {
 }
 
 func (db *DB) GetFeeds() ([]models.Feed, error) {
+	db.WaitForReady()
 	rows, err := db.Query("SELECT id, title, url, description, category, image_url, last_updated FROM feeds")
 	if err != nil {
 		return nil, err
@@ -123,26 +165,35 @@ func (db *DB) GetFeeds() ([]models.Feed, error) {
 }
 
 func (db *DB) SaveArticle(article *models.Article) error {
+	db.WaitForReady()
 	query := `INSERT OR IGNORE INTO articles (feed_id, title, url, content, summary, image_url, published_at, translated_title) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 	_, err := db.Exec(query, article.FeedID, article.Title, article.URL, article.Content, article.Summary, article.ImageURL, article.PublishedAt, article.TranslatedTitle)
 	return err
 }
 
-func (db *DB) SaveArticles(articles []*models.Article) error {
-	tx, err := db.Begin()
+func (db *DB) SaveArticles(ctx context.Context, articles []*models.Article) error {
+	db.WaitForReady()
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.Prepare(`INSERT OR IGNORE INTO articles (feed_id, title, url, content, summary, image_url, published_at, translated_title) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO articles (feed_id, title, url, content, summary, image_url, published_at, translated_title) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
 	for _, article := range articles {
-		_, err := stmt.Exec(article.FeedID, article.Title, article.URL, article.Content, article.Summary, article.ImageURL, article.PublishedAt, article.TranslatedTitle)
+		// Check context before each insert
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		_, err := stmt.ExecContext(ctx, article.FeedID, article.Title, article.URL, article.Content, article.Summary, article.ImageURL, article.PublishedAt, article.TranslatedTitle)
 		if err != nil {
 			log.Println("Error saving article in batch:", err)
 			// Continue even if one fails
@@ -153,6 +204,7 @@ func (db *DB) SaveArticles(articles []*models.Article) error {
 }
 
 func (db *DB) GetArticles(filter string, feedID int64, category string, limit, offset int) ([]models.Article, error) {
+	db.WaitForReady()
 	baseQuery := `
 		SELECT a.id, a.feed_id, a.title, a.url, a.content, a.summary, a.image_url, a.published_at, a.is_read, a.is_favorite, a.translated_title, f.title 
 		FROM articles a 
@@ -211,21 +263,25 @@ func (db *DB) GetArticles(filter string, feedID int64, category string, limit, o
 }
 
 func (db *DB) UpdateFeed(id int64, title, url, category string) error {
+	db.WaitForReady()
 	_, err := db.Exec("UPDATE feeds SET title = ?, url = ?, category = ? WHERE id = ?", title, url, category, id)
 	return err
 }
 
 func (db *DB) UpdateFeedCategory(id int64, category string) error {
+	db.WaitForReady()
 	_, err := db.Exec("UPDATE feeds SET category = ? WHERE id = ?", category, id)
 	return err
 }
 
 func (db *DB) UpdateFeedImage(id int64, imageURL string) error {
+	db.WaitForReady()
 	_, err := db.Exec("UPDATE feeds SET image_url = ? WHERE id = ?", imageURL, id)
 	return err
 }
 
 func (db *DB) MarkArticleRead(id int64, read bool) error {
+	db.WaitForReady()
 	isRead := 0
 	if read {
 		isRead = 1
@@ -235,6 +291,7 @@ func (db *DB) MarkArticleRead(id int64, read bool) error {
 }
 
 func (db *DB) ToggleFavorite(id int64) error {
+	db.WaitForReady()
 	// First get current state
 	var isFav bool
 	err := db.QueryRow("SELECT is_favorite FROM articles WHERE id = ?", id).Scan(&isFav)
@@ -246,6 +303,7 @@ func (db *DB) ToggleFavorite(id int64) error {
 }
 
 func (db *DB) GetSetting(key string) (string, error) {
+	db.WaitForReady()
 	var value string
 	err := db.QueryRow("SELECT value FROM settings WHERE key = ?", key).Scan(&value)
 	if err != nil {
@@ -255,6 +313,7 @@ func (db *DB) GetSetting(key string) (string, error) {
 }
 
 func (db *DB) SetSetting(key, value string) error {
+	db.WaitForReady()
 	_, err := db.Exec("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", key, value)
 	return err
 }

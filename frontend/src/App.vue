@@ -15,6 +15,61 @@ const feedToEdit = ref(null);
 const showSettings = ref(false);
 const isSidebarOpen = ref(false);
 
+// Resizable columns state
+const sidebarWidth = ref(256);
+const articleListWidth = ref(400);
+const isResizingSidebar = ref(false);
+const isResizingArticleList = ref(false);
+
+function startResizeSidebar(e) {
+    isResizingSidebar.value = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', handleResizeSidebar);
+    window.addEventListener('mouseup', stopResizeSidebar);
+}
+
+function handleResizeSidebar(e) {
+    if (!isResizingSidebar.value) return;
+    const newWidth = e.clientX;
+    if (newWidth >= 180 && newWidth <= 450) {
+        sidebarWidth.value = newWidth;
+    }
+}
+
+function stopResizeSidebar() {
+    isResizingSidebar.value = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('mousemove', handleResizeSidebar);
+    window.removeEventListener('mouseup', stopResizeSidebar);
+}
+
+function startResizeArticleList(e) {
+    isResizingArticleList.value = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', handleResizeArticleList);
+    window.addEventListener('mouseup', stopResizeArticleList);
+}
+
+function handleResizeArticleList(e) {
+    if (!isResizingArticleList.value) return;
+    // Assuming sidebar is visible and at the left
+    const newWidth = e.clientX - sidebarWidth.value;
+    if (newWidth >= 250 && newWidth <= 600) {
+        articleListWidth.value = newWidth;
+    }
+}
+
+function stopResizeArticleList() {
+    isResizingArticleList.value = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('mousemove', handleResizeArticleList);
+    window.removeEventListener('mouseup', stopResizeArticleList);
+}
+
 // Context Menu State
 const contextMenu = ref({
     show: false,
@@ -86,9 +141,16 @@ function handleContextMenuAction(action) {
 </script>
 
 <template>
-    <div class="app-container flex h-screen w-full bg-bg-primary text-text-primary overflow-hidden">
+    <div class="app-container flex h-screen w-full bg-bg-primary text-text-primary overflow-hidden"
+         :style="{ '--sidebar-width': sidebarWidth + 'px', '--article-list-width': articleListWidth + 'px' }">
         <Sidebar :isOpen="isSidebarOpen" @toggle="toggleSidebar" />
+        
+        <div class="resizer hidden md:block" @mousedown="startResizeSidebar"></div>
+        
         <ArticleList :isSidebarOpen="isSidebarOpen" @toggleSidebar="toggleSidebar" />
+        
+        <div class="resizer hidden md:block" @mousedown="startResizeArticleList"></div>
+        
         <ArticleDetail />
         
         <AddFeedModal v-if="showAddFeed" @close="showAddFeed = false" @added="onFeedAdded" />
@@ -107,5 +169,18 @@ function handleContextMenuAction(action) {
 </template>
 
 <style>
+.resizer {
+    width: 4px;
+    cursor: col-resize;
+    background-color: transparent;
+    flex-shrink: 0;
+    transition: background-color 0.2s;
+    z-index: 10;
+    margin-left: -2px;
+    margin-right: -2px;
+}
+.resizer:hover, .resizer:active {
+    background-color: var(--color-accent, #3b82f6);
+}
 /* Global styles if needed */
 </style>

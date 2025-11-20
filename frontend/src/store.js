@@ -88,9 +88,11 @@ export const store = reactive({
     async fetchFeeds() {
         try {
             const res = await fetch('/api/feeds');
-            this.feeds = await res.json();
+            const data = await res.json();
+            this.feeds = data || [];
         } catch (e) {
             console.error(e);
+            this.feeds = [];
         }
     },
 

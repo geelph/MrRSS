@@ -1,6 +1,7 @@
 <script setup>
 import { store } from '../store.js';
 import { computed } from 'vue';
+import { BrowserOpenURL } from '../wailsjs/wailsjs/runtime/runtime.js';
 
 const article = computed(() => store.articles.find(a => a.id === store.currentArticleId));
 
@@ -23,7 +24,7 @@ function toggleFavorite() {
 }
 
 function openOriginal() {
-    if (article.value) window.open(article.value.url, '_blank');
+    if (article.value) BrowserOpenURL(article.value.url);
 }
 </script>
 

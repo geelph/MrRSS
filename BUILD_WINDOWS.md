@@ -29,7 +29,7 @@ This will create the executable in `build/bin/MrRSS.exe`.
 If you prefer to run the command manually:
 
 ```powershell
-wails build
+wails build -clean -tags native_webview2loader
 ```
 
 ## Architecture

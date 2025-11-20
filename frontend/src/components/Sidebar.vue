@@ -141,7 +141,7 @@ async function handleCategoryAction(action, categoryName) {
 </script>
 
 <template>
-    <aside :class="['sidebar flex flex-col bg-bg-secondary border-r border-border w-64 h-full transition-transform duration-300 absolute z-20 md:relative md:translate-x-0', isOpen ? 'translate-x-0' : '-translate-x-full']">
+    <aside :class="['sidebar flex flex-col bg-bg-secondary border-r border-border h-full transition-transform duration-300 absolute z-20 md:relative md:translate-x-0', isOpen ? 'translate-x-0' : '-translate-x-full']">
         <div class="p-5 border-b border-border flex justify-between items-center">
             <h2 class="m-0 text-lg font-bold flex items-center gap-2 text-accent">
                 <img src="/assets/logo.svg" alt="Logo" class="h-7 w-auto" /> MrRSS
@@ -220,6 +220,14 @@ async function handleCategoryAction(action, categoryName) {
 </template>
 
 <style scoped>
+.sidebar {
+    width: 16rem;
+}
+@media (min-width: 768px) {
+    .sidebar {
+        width: var(--sidebar-width, 16rem);
+    }
+}
 .nav-item {
     @apply flex items-center gap-3 w-full px-3 py-2.5 text-text-secondary rounded-lg font-medium transition-colors hover:bg-bg-tertiary hover:text-text-primary text-left;
 }
