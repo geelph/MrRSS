@@ -173,7 +173,12 @@ jobs:
         working-directory: ./frontend
         run: npm run build
       
-      - name: Build application
+      - name: Build application (Linux)
+        if: matrix.platform == 'linux'
+        run: wails build -clean -ldflags "-s -w" -platform ${{ matrix.platform }}/${{ matrix.arch }} -tags webkit2_41
+      
+      - name: Build application (Non-Linux)
+        if: matrix.platform != 'linux'
         run: wails build -clean -ldflags "-s -w" -platform ${{ matrix.platform }}/${{ matrix.arch }}
       
       - name: Create installer (Windows)

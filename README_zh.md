@@ -67,6 +67,16 @@
 - [Node.js](https://nodejs.org/) (LTS 版本，带 npm)
 - [Wails](https://wails.io/docs/gettingstarted/installation) CLI
 
+**仅限 Linux:** 还需要安装系统依赖：
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install libgtk-3-dev libwebkit2gtk-4.1-dev gcc pkg-config
+
+# 对于旧版 Ubuntu（24.04 之前），请使用：
+# sudo apt-get install libgtk-3-dev libwebkit2gtk-4.0-dev gcc pkg-config
+```
+
 ### 安装步骤
 
 1. **克隆仓库**
@@ -132,6 +142,9 @@ wails build
 
 # 使用特定标志构建
 wails build -clean -ldflags "-s -w"
+
+# 对于 Ubuntu 24.04 或更新版本的 Linux，使用 webkit2_41 标签：
+wails build -clean -ldflags "-s -w" -tags webkit2_41
 ```
 
 #### 创建安装包

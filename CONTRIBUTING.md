@@ -33,6 +33,16 @@ This project and everyone participating in it is governed by our [Code of Conduc
 - Node.js (LTS version)
 - Wails CLI: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 
+**Linux only:** Install system dependencies:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install libgtk-3-dev libwebkit2gtk-4.1-dev gcc pkg-config
+
+# For older Ubuntu versions (before 24.04), use:
+# sudo apt-get install libgtk-3-dev libwebkit2gtk-4.0-dev gcc pkg-config
+```
+
 ### Setup Steps
 
 1. Install frontend dependencies:

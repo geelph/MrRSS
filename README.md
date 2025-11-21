@@ -67,6 +67,16 @@ Before you begin, ensure you have the following installed:
 - [Node.js](https://nodejs.org/) (LTS version with npm)
 - [Wails](https://wails.io/docs/gettingstarted/installation) CLI
 
+**Linux only:** You also need to install system dependencies:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install libgtk-3-dev libwebkit2gtk-4.1-dev gcc pkg-config
+
+# For older Ubuntu versions (before 24.04), use:
+# sudo apt-get install libgtk-3-dev libwebkit2gtk-4.0-dev gcc pkg-config
+```
+
 ### Installation
 
 1. **Clone the repository**
@@ -132,6 +142,9 @@ wails build
 
 # Build with specific flags
 wails build -clean -ldflags "-s -w"
+
+# For Linux on Ubuntu 24.04 or newer, use webkit2_41 tag:
+wails build -clean -ldflags "-s -w" -tags webkit2_41
 ```
 
 #### Creating Installation Packages
