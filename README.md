@@ -41,14 +41,12 @@ Download the latest installer for your platform from the [Releases](https://gith
 
 - **x64 (64-bit)**: Download `MrRSS-{version}-windows-amd64-installer.exe`
 - **ARM64**: Download `MrRSS-{version}-windows-arm64-installer.exe`
-- **x86 (32-bit)**: Download `MrRSS-{version}-windows-386-installer.exe`
 - Run the installer and follow the installation wizard
 - Launch MrRSS from Start Menu or Desktop shortcut
 
 **macOS:**
 
-- **Apple Silicon (M1/M2/M3)**: Download `MrRSS-{version}-darwin-arm64.dmg`
-- **Intel**: Download `MrRSS-{version}-darwin-amd64.dmg`
+- **Universal (Intel & Apple Silicon)**: Download `MrRSS-{version}-darwin-universal.dmg`
 - Open the DMG file
 - Drag MrRSS.app to your Applications folder
 - Launch MrRSS from Applications
@@ -57,7 +55,6 @@ Download the latest installer for your platform from the [Releases](https://gith
 
 - **x64 (64-bit)**: Download `MrRSS-{version}-linux-amd64.AppImage`
 - **ARM64 (aarch64)**: Download `MrRSS-{version}-linux-arm64.AppImage`
-- **x86 (32-bit)**: Download `MrRSS-{version}-linux-386.AppImage`
 - Make it executable: `chmod +x MrRSS-*.AppImage`
 - Run: `./MrRSS-*.AppImage`
 - Or download the `.tar.gz` file for a portable version

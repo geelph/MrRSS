@@ -15,11 +15,12 @@ jobs:
     permissions:
       contents: write
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url || steps.get_existing_release.outputs.upload_url }}
       version: ${{ steps.get_version.outputs.version }}
       tag: ${{ steps.get_version.outputs.tag }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       
       - name: Get version from input
         id: get_version
@@ -57,27 +58,10 @@ jobs:
           git commit -m "Release ${{ steps.get_version.outputs.tag }}" || echo "No changes to commit"
           git tag ${{ steps.get_version.outputs.tag }}
           git push origin ${{ steps.get_version.outputs.tag }}
-      
-      - name: Check if release exists
-        id: check_release
-        run: |
-          set +e
-          RELEASE_ID=$(curl -s -H "Authorization: token ${{ secrets.AUTH_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.get_version.outputs.tag }}" \
-            | jq -r '.id // empty')
-          set -e
-          
-          if [ -n "$RELEASE_ID" ] && [ "$RELEASE_ID" != "null" ]; then
-            echo "release_exists=true" >> $GITHUB_OUTPUT
-            echo "Release for tag ${{ steps.get_version.outputs.tag }} already exists (ID: $RELEASE_ID)"
-          else
-            echo "release_exists=false" >> $GITHUB_OUTPUT
-            echo "Release for tag ${{ steps.get_version.outputs.tag }} does not exist"
-          fi
+          git push origin HEAD:${{ github.ref_name }}
       
       - name: Generate changelog
         id: changelog
-        if: steps.check_release.outputs.release_exists == 'false'
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
           
@@ -117,35 +101,14 @@ jobs:
           echo "==============================="
       
       - name: Create Release
-        id: create_release
-        if: steps.check_release.outputs.release_exists == 'false'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.AUTH_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_version.outputs.tag }}
-          release_name: MrRSS ${{ steps.get_version.outputs.tag }}
+          name: MrRSS ${{ steps.get_version.outputs.tag }}
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: false
-      
-      - name: Get existing release upload URL
-        id: get_existing_release
-        if: steps.check_release.outputs.release_exists == 'true'
-        run: |
-          set +e
-          UPLOAD_URL=$(curl -s -H "Authorization: token ${{ secrets.AUTH_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.get_version.outputs.tag }}" \
-            | jq -r '.upload_url')
-          set -e
-          
-          if [ -n "$UPLOAD_URL" ] && [ "$UPLOAD_URL" != "null" ]; then
-            echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
-            echo "Found upload URL: $UPLOAD_URL"
-          else
-            echo "Error: Could not get upload URL for existing release"
-            exit 1
-          fi
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-release:
     name: Build ${{ matrix.platform }}-${{ matrix.arch }}
@@ -165,10 +128,6 @@ jobs:
             platform: linux
             arch: arm64
             ext: ''
-          - os: ubuntu-latest
-            platform: linux
-            arch: '386'
-            ext: ''
           # Windows builds
           - os: windows-latest
             platform: windows
@@ -178,18 +137,10 @@ jobs:
             platform: windows
             arch: arm64
             ext: '.exe'
-          - os: windows-latest
-            platform: windows
-            arch: '386'
-            ext: '.exe'
-          # macOS builds
+          # macOS builds (universal only)
           - os: macos-latest
             platform: darwin
-            arch: amd64
-            ext: '.app'
-          - os: macos-latest
-            platform: darwin
-            arch: arm64
+            arch: universal
             ext: '.app'
     
     steps:
@@ -212,6 +163,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev gcc pkg-config wget file libfuse2 imagemagick
+          # Install ARM64 cross-compilation tools if needed
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          fi
           # Verify webkit2gtk-4.1 is installed
           pkg-config --modversion webkit2gtk-4.1 || (echo "webkit2gtk-4.1 not found" && exit 1)
       
@@ -234,7 +189,12 @@ jobs:
       
       - name: Build application (Linux)
         if: matrix.platform == 'linux'
-        run: wails build -clean -ldflags "-s -w" -platform ${{ matrix.platform }}/${{ matrix.arch }} -tags webkit2_41
+        run: |
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            export CC=aarch64-linux-gnu-gcc
+            export CXX=aarch64-linux-gnu-g++
+          fi
+          wails build -clean -ldflags "-s -w" -platform ${{ matrix.platform }}/${{ matrix.arch }} -tags webkit2_41
       
       - name: Build application (Non-Linux)
         if: matrix.platform != 'linux'
@@ -243,14 +203,53 @@ jobs:
       - name: Create installer (Windows)
         if: matrix.platform == 'windows'
         run: |
-          # Ensure build/windows directory exists
-          New-Item -ItemType Directory -Force -Path build/windows
-          # Update version in installer script
+          # Find NSIS installation
+          $nsisPath = Get-Command makensis -ErrorAction SilentlyContinue
+          if (-not $nsisPath) {
+            # Try common installation paths
+            $possiblePaths = @(
+              "C:\Program Files (x86)\NSIS\makensis.exe",
+              "C:\Program Files\NSIS\makensis.exe"
+            )
+            foreach ($path in $possiblePaths) {
+              if (Test-Path $path) {
+                $nsisPath = $path
+                break
+              }
+            }
+          } else {
+            $nsisPath = $nsisPath.Source
+          }
+          
+          if (-not $nsisPath) {
+            Write-Error "NSIS not found"
+            exit 1
+          }
+          
+          Write-Host "Using NSIS at: $nsisPath"
+          
+          # Update version and architecture in installer script
           $version = "${{ needs.create-release.outputs.version }}"
-          (Get-Content build/windows/installer.nsi) -replace '!define APP_VERSION ".*"', "!define APP_VERSION `"$version`"" | Set-Content build/windows/installer.nsi
-          # Build NSIS installer
-          # Use full path since chocolatey doesn't refresh PATH in current session
-          & "C:\Program Files (x86)\NSIS\makensis.exe" build/windows/installer.nsi
+          $arch = "${{ matrix.arch }}"
+          $installerPath = "build/windows/installer.nsi"
+          
+          if (Test-Path $installerPath) {
+            $content = Get-Content $installerPath -Raw
+            $content = $content -replace '!define APP_VERSION ".*"', "!define APP_VERSION `"$version`""
+            $content = $content -replace 'OutFile ".*"', "OutFile `"..\bin\MrRSS-$version-windows-$arch-installer.exe`""
+            Set-Content $installerPath $content
+            
+            # Build NSIS installer
+            & $nsisPath $installerPath
+            
+            if ($LASTEXITCODE -ne 0) {
+              Write-Error "NSIS build failed with exit code $LASTEXITCODE"
+              exit 1
+            }
+          } else {
+            Write-Warning "Installer script not found at $installerPath"
+            exit 1
+          }
         shell: pwsh
         continue-on-error: true
       
@@ -258,7 +257,7 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           chmod +x build/linux/create-appimage.sh
-          ./build/linux/create-appimage.sh
+          ARCH=${{ matrix.arch }} ./build/linux/create-appimage.sh
         continue-on-error: true
       
       - name: Create installer (macOS)
@@ -272,65 +271,83 @@ jobs:
         if: matrix.platform == 'linux'
         run: |
           cd build/bin
-          tar -czf MrRSS-${{ needs.create-release.outputs.version }}-linux-amd64.tar.gz MrRSS
+          if [ -f "MrRSS" ]; then
+            tar -czf MrRSS-${{ needs.create-release.outputs.version }}-linux-${{ matrix.arch }}.tar.gz MrRSS
+          else
+            echo "Error: MrRSS binary not found"
+            exit 1
+          fi
       
       - name: Package application (Windows - zip fallback)
         if: matrix.platform == 'windows'
         run: |
           cd build/bin
-          Compress-Archive -Path MrRSS.exe -DestinationPath MrRSS-${{ needs.create-release.outputs.version }}-windows-amd64.zip
+          if (Test-Path "MrRSS.exe") {
+            Compress-Archive -Path MrRSS.exe -DestinationPath MrRSS-${{ needs.create-release.outputs.version }}-windows-${{ matrix.arch }}.zip
+          } else {
+            Write-Error "MrRSS.exe not found"
+            exit 1
+          }
         shell: pwsh
       
       - name: Package application (macOS - zip fallback)
         if: matrix.platform == 'darwin'
         run: |
           cd build/bin
-          # Create a zip of the .app bundle
-          zip -r MrRSS-${{ needs.create-release.outputs.version }}-darwin-universal.zip MrRSS.app
+          if [ -d "MrRSS.app" ]; then
+            # Create a zip of the .app bundle
+            zip -r MrRSS-${{ needs.create-release.outputs.version }}-darwin-${{ matrix.arch }}.zip MrRSS.app
+          else
+            echo "Error: MrRSS.app not found"
+            exit 1
+          fi
       
-      - name: Upload Windows Installer
-        if: matrix.platform == 'windows'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.AUTH_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./build/bin/MrRSS-${{ needs.create-release.outputs.version }}-windows-amd64-installer.exe
-          asset_name: MrRSS-${{ needs.create-release.outputs.version }}-windows-amd64-installer.exe
-          asset_content_type: application/octet-stream
-        continue-on-error: true
+      - name: Collect artifacts
+        id: collect_artifacts
+        shell: bash
+        run: |
+          cd build/bin
+          artifacts=""
+          
+          # Check for installer
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            installer="MrRSS-${{ needs.create-release.outputs.version }}-windows-${{ matrix.arch }}-installer.exe"
+            if [ -f "$installer" ]; then
+              artifacts="$artifacts$installer,"
+            fi
+          elif [ "${{ matrix.platform }}" = "linux" ]; then
+            installer="MrRSS-${{ needs.create-release.outputs.version }}-linux-${{ matrix.arch }}.AppImage"
+            if [ -f "$installer" ]; then
+              artifacts="$artifacts$installer,"
+            fi
+          elif [ "${{ matrix.platform }}" = "darwin" ]; then
+            installer="MrRSS-${{ needs.create-release.outputs.version }}-darwin-${{ matrix.arch }}.dmg"
+            if [ -f "$installer" ]; then
+              artifacts="$artifacts$installer,"
+            fi
+          fi
+          
+          # Check for package
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            package="MrRSS-${{ needs.create-release.outputs.version }}-windows-${{ matrix.arch }}.zip"
+          elif [ "${{ matrix.platform }}" = "darwin" ]; then
+            package="MrRSS-${{ needs.create-release.outputs.version }}-darwin-${{ matrix.arch }}.zip"
+          else
+            package="MrRSS-${{ needs.create-release.outputs.version }}-linux-${{ matrix.arch }}.tar.gz"
+          fi
+          
+          if [ -f "$package" ]; then
+            artifacts="$artifacts$package,"
+          fi
+          
+          echo "artifacts=$artifacts" >> $GITHUB_OUTPUT
+          echo "Found artifacts: $artifacts"
       
-      - name: Upload Linux AppImage
-        if: matrix.platform == 'linux'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.AUTH_TOKEN }}
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./build/bin/MrRSS-${{ needs.create-release.outputs.version }}-linux-amd64.AppImage
-          asset_name: MrRSS-${{ needs.create-release.outputs.version }}-linux-amd64.AppImage
-          asset_content_type: application/octet-stream
-        continue-on-error: true
-      
-      - name: Upload macOS DMG
-        if: matrix.platform == 'darwin'
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.AUTH_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./build/bin/MrRSS-${{ needs.create-release.outputs.version }}-darwin-universal.dmg
-          asset_name: MrRSS-${{ needs.create-release.outputs.version }}-darwin-universal.dmg
-          asset_content_type: application/octet-stream
-        continue-on-error: true
-      
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.AUTH_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./build/bin/MrRSS-${{ needs.create-release.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.platform == 'windows' && '.zip' || matrix.platform == 'darwin' && '.zip' || '.tar.gz' }}
-          asset_name: MrRSS-${{ needs.create-release.outputs.version }}-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.platform == 'windows' && '.zip' || matrix.platform == 'darwin' && '.zip' || '.tar.gz' }}
-          asset_content_type: application/octet-stream
-        continue-on-error: true
+          tag_name: ${{ needs.create-release.outputs.tag }}
+          files: |
+            build/bin/MrRSS-${{ needs.create-release.outputs.version }}-*
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: false

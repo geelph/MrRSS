@@ -41,14 +41,12 @@
 
 - **x64 (64位)**: 下载 `MrRSS-{version}-windows-amd64-installer.exe`
 - **ARM64**: 下载 `MrRSS-{version}-windows-arm64-installer.exe`
-- **x86 (32位)**: 下载 `MrRSS-{version}-windows-386-installer.exe`
 - 运行安装程序并按照向导操作
 - 从开始菜单或桌面快捷方式启动 MrRSS
 
 **macOS:**
 
-- **Apple Silicon (M1/M2/M3)**: 下载 `MrRSS-{version}-darwin-arm64.dmg`
-- **Intel**: 下载 `MrRSS-{version}-darwin-amd64.dmg`
+- **通用版 (Intel 和 Apple Silicon)**: 下载 `MrRSS-{version}-darwin-universal.dmg`
 - 打开 DMG 文件
 - 将 MrRSS.app 拖入应用程序文件夹
 - 从应用程序中启动 MrRSS
@@ -57,7 +55,6 @@
 
 - **x64 (64位)**: 下载 `MrRSS-{version}-linux-amd64.AppImage`
 - **ARM64 (aarch64)**: 下载 `MrRSS-{version}-linux-arm64.AppImage`
-- **x86 (32位)**: 下载 `MrRSS-{version}-linux-386.AppImage`
 - 添加执行权限: `chmod +x MrRSS-*.AppImage`
 - 运行: `./MrRSS-*.AppImage`
 - 或者下载 `.tar.gz` 文件使用便携版

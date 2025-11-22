@@ -487,8 +487,8 @@ func (h *Handler) HandleCheckUpdates(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		} else if platform == "darwin" {
-			// For macOS, match exact arch (amd64/arm64)
-			if strings.Contains(name, platformArch) && strings.HasSuffix(name, ".dmg") {
+			// For macOS, use universal build (supports both arm64 and amd64)
+			if strings.Contains(name, "darwin-universal") && strings.HasSuffix(name, ".dmg") {
 				downloadURL = asset.BrowserDownloadURL
 				assetName = asset.Name
 				assetSize = asset.Size
