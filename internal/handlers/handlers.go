@@ -8,6 +8,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -427,11 +431,16 @@ func (h *Handler) HandleCheckUpdates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var release struct {
-		TagName    string `json:"tag_name"`
-		Name       string `json:"name"`
-		HTMLURL    string `json:"html_url"`
-		Body       string `json:"body"`
+		TagName     string `json:"tag_name"`
+		Name        string `json:"name"`
+		HTMLURL     string `json:"html_url"`
+		Body        string `json:"body"`
 		PublishedAt string `json:"published_at"`
+		Assets      []struct {
+			Name               string `json:"name"`
+			BrowserDownloadURL string `json:"browser_download_url"`
+			Size               int64  `json:"size"`
+		} `json:"assets"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
@@ -447,11 +456,62 @@ func (h *Handler) HandleCheckUpdates(w http.ResponseWriter, r *http.Request) {
 	latestVersion := strings.TrimPrefix(release.TagName, "v")
 	hasUpdate := compareVersions(latestVersion, currentVersion) > 0
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	// Find the appropriate download URL based on platform
+	var downloadURL string
+	var assetName string
+	var assetSize int64
+	platform := runtime.GOOS
+	arch := runtime.GOARCH
+
+	for _, asset := range release.Assets {
+		name := strings.ToLower(asset.Name)
+		
+		// Match platform-specific installer/package with architecture
+		// Asset naming convention: MrRSS-{version}-{platform}-{arch}-installer.{ext}
+		platformArch := platform + "-" + arch
+		
+		if platform == "windows" {
+			// For Windows, prefer installer.exe, fallback to .zip
+			if strings.Contains(name, platformArch) && strings.HasSuffix(name, "-installer.exe") {
+				downloadURL = asset.BrowserDownloadURL
+				assetName = asset.Name
+				assetSize = asset.Size
+				break
+			}
+		} else if platform == "linux" {
+			// For Linux, prefer .AppImage, fallback to .tar.gz
+			if strings.Contains(name, platformArch) && strings.HasSuffix(name, ".appimage") {
+				downloadURL = asset.BrowserDownloadURL
+				assetName = asset.Name
+				assetSize = asset.Size
+				break
+			}
+		} else if platform == "darwin" {
+			// For macOS, match exact arch (amd64/arm64)
+			if strings.Contains(name, platformArch) && strings.HasSuffix(name, ".dmg") {
+				downloadURL = asset.BrowserDownloadURL
+				assetName = asset.Name
+				assetSize = asset.Size
+				break
+			}
+		}
+	}
+
+	response := map[string]interface{}{
 		"current_version": currentVersion,
 		"latest_version":  latestVersion,
 		"has_update":      hasUpdate,
-	})
+		"platform":        platform,
+		"arch":            arch,
+	}
+
+	if downloadURL != "" {
+		response["download_url"] = downloadURL
+		response["asset_name"] = assetName
+		response["asset_size"] = assetSize
+	}
+
+	json.NewEncoder(w).Encode(response)
 }
 
 // compareVersions compares two semantic versions (e.g., "1.1.0" vs "1.0.0")
@@ -494,4 +554,185 @@ func (h *Handler) HandleVersion(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"version": version.Version,
 	})
+}
+
+// HandleDownloadUpdate downloads the update file
+func (h *Handler) HandleDownloadUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		DownloadURL string `json:"download_url"`
+		AssetName   string `json:"asset_name"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate download URL is from the official GitHub repository releases
+	const allowedURLPrefix = "https://github.com/WCY-dt/MrRSS/releases/download/"
+	if !strings.HasPrefix(req.DownloadURL, allowedURLPrefix) {
+		log.Printf("Invalid download URL attempted: %s", req.DownloadURL)
+		http.Error(w, "Invalid download URL", http.StatusBadRequest)
+		return
+	}
+
+	// Validate asset name to prevent path traversal
+	if strings.Contains(req.AssetName, "..") || strings.Contains(req.AssetName, "/") || strings.Contains(req.AssetName, "\\") {
+		log.Printf("Invalid asset name attempted: %s", req.AssetName)
+		http.Error(w, "Invalid asset name", http.StatusBadRequest)
+		return
+	}
+
+	// Create temp directory for download
+	tempDir := os.TempDir()
+	filePath := filepath.Join(tempDir, req.AssetName)
+
+	// Download the file
+	log.Printf("Downloading update from: %s", req.DownloadURL)
+	resp, err := http.Get(req.DownloadURL)
+	if err != nil {
+		log.Printf("Error downloading update: %v", err)
+		http.Error(w, "Failed to download update", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Download failed with status: %d", resp.StatusCode)
+		http.Error(w, "Failed to download update", http.StatusInternalServerError)
+		return
+	}
+
+	// Create the file
+	out, err := os.Create(filePath)
+	if err != nil {
+		log.Printf("Error creating file: %v", err)
+		http.Error(w, "Failed to create download file", http.StatusInternalServerError)
+		return
+	}
+	defer out.Close()
+
+	// Write the body to file
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		log.Printf("Error writing file: %v", err)
+		http.Error(w, "Failed to write download file", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Update downloaded successfully to: %s", filePath)
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":   true,
+		"file_path": filePath,
+	})
+}
+
+// HandleInstallUpdate triggers the installation of the downloaded update
+func (h *Handler) HandleInstallUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		FilePath string `json:"file_path"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Validate file path is within temp directory to prevent path traversal
+	tempDir := os.TempDir()
+	cleanPath := filepath.Clean(req.FilePath)
+	if !strings.HasPrefix(cleanPath, filepath.Clean(tempDir)) {
+		log.Printf("Invalid file path attempted: %s", req.FilePath)
+		http.Error(w, "Invalid file path", http.StatusBadRequest)
+		return
+	}
+
+	// Validate file exists and is a regular file
+	fileInfo, err := os.Stat(cleanPath)
+	if os.IsNotExist(err) {
+		http.Error(w, "Update file not found", http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		log.Printf("Error stating file: %v", err)
+		http.Error(w, "Error accessing update file", http.StatusInternalServerError)
+		return
+	}
+	if !fileInfo.Mode().IsRegular() {
+		log.Printf("File is not a regular file: %s", cleanPath)
+		http.Error(w, "Invalid file type", http.StatusBadRequest)
+		return
+	}
+
+	platform := runtime.GOOS
+	log.Printf("Installing update from: %s on platform: %s", cleanPath, platform)
+
+	// Launch installer based on platform
+	var cmd *exec.Cmd
+	switch platform {
+	case "windows":
+		// Launch the installer - validate file extension
+		if !strings.HasSuffix(strings.ToLower(cleanPath), ".exe") {
+			http.Error(w, "Invalid file type for Windows", http.StatusBadRequest)
+			return
+		}
+		cmd = exec.Command(cleanPath, "/S") // Silent install for NSIS
+	case "linux":
+		// Make AppImage executable and run it - validate file extension
+		if !strings.HasSuffix(strings.ToLower(cleanPath), ".appimage") {
+			http.Error(w, "Invalid file type for Linux", http.StatusBadRequest)
+			return
+		}
+		if err := os.Chmod(cleanPath, 0755); err != nil {
+			log.Printf("Error making file executable: %v", err)
+			http.Error(w, "Failed to prepare installer", http.StatusInternalServerError)
+			return
+		}
+		cmd = exec.Command(cleanPath)
+	case "darwin":
+		// Open the DMG file - validate file extension
+		if !strings.HasSuffix(strings.ToLower(cleanPath), ".dmg") {
+			http.Error(w, "Invalid file type for macOS", http.StatusBadRequest)
+			return
+		}
+		cmd = exec.Command("open", cleanPath)
+	default:
+		http.Error(w, "Unsupported platform", http.StatusBadRequest)
+		return
+	}
+
+	// Start the installer in the background
+	if err := cmd.Start(); err != nil {
+		log.Printf("Error starting installer: %v", err)
+		http.Error(w, "Failed to start installer", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("Installer started successfully")
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Installation started. Application will exit shortly.",
+	})
+
+	// Schedule graceful shutdown to allow the response to be sent
+	// and give time for proper cleanup
+	go func() {
+		time.Sleep(2 * time.Second)
+		log.Println("Initiating graceful shutdown for update installation...")
+		// Note: In a production app, this should trigger the Wails shutdown handler
+		// which will properly clean up resources. For now, we use os.Exit.
+		os.Exit(0)
+	}()
 }

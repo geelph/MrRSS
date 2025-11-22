@@ -184,12 +184,42 @@ export const store = reactive({
                     clearInterval(interval);
                     this.fetchFeeds();
                     this.fetchArticles();
+                    
+                    // Check for app updates after initial refresh completes
+                    this.checkForAppUpdates();
                 }
             } catch (e) {
                 clearInterval(interval);
                 this.refreshProgress.isRunning = false;
             }
         }, 500);
+    },
+
+    async checkForAppUpdates() {
+        try {
+            const res = await fetch('/api/check-updates');
+            if (res.ok) {
+                const data = await res.json();
+                
+                // Only proceed if there's an update available and a download URL
+                if (data.has_update && data.download_url) {
+                    console.log(`Update available: ${data.latest_version}`);
+                    
+                    // Show notification to user
+                    window.showToast(
+                        `${this.i18n.t('updateAvailable')}: v${data.latest_version}`,
+                        'info',
+                        5000
+                    );
+                    
+                    // Optionally: Auto-download and install
+                    // For now, just notify - user can manually update from Settings
+                }
+            }
+        } catch (e) {
+            console.error('Auto-update check failed:', e);
+            // Silently fail - don't disrupt user experience
+        }
     },
 
     startAutoRefresh(minutes) {

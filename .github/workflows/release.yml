@@ -79,8 +79,42 @@ jobs:
         id: changelog
         if: steps.check_release.outputs.release_exists == 'false'
         run: |
-          echo "## What's Changed" > CHANGELOG.md
-          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s (%h)" >> CHANGELOG.md || echo "* Initial release" >> CHANGELOG.md
+          VERSION="${{ steps.get_version.outputs.version }}"
+          
+          # Extract changelog for this version from CHANGELOG.md
+          if [ -f "CHANGELOG.md" ]; then
+            # Find the section for this version
+            # Match pattern like "## [1.1.3] - 2025-11-22"
+            awk -v ver="$VERSION" '
+              BEGIN { found=0; print_section=0 }
+              /^## \[/ {
+                if (print_section) exit
+                if ($0 ~ "\\[" ver "\\]") {
+                  found=1
+                  print_section=1
+                  next
+                }
+              }
+              print_section && /^## \[/ { exit }
+              print_section { print }
+              END {
+                if (!found) {
+                  print "## What'\''s Changed"
+                  print ""
+                  print "* Release version " ver
+                }
+              }
+            ' CHANGELOG.md > RELEASE_NOTES.md
+          else
+            # Fallback to git log if CHANGELOG.md doesn't exist
+            echo "## What's Changed" > RELEASE_NOTES.md
+            git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s (%h)" >> RELEASE_NOTES.md || echo "* Initial release" >> RELEASE_NOTES.md
+          fi
+          
+          # Show what we extracted for debugging
+          echo "=== Generated Release Notes ==="
+          cat RELEASE_NOTES.md
+          echo "==============================="
       
       - name: Create Release
         id: create_release
@@ -91,7 +125,7 @@ jobs:
         with:
           tag_name: ${{ steps.get_version.outputs.tag }}
           release_name: MrRSS ${{ steps.get_version.outputs.tag }}
-          body_path: CHANGELOG.md
+          body_path: RELEASE_NOTES.md
           draft: false
           prerelease: false
       
@@ -114,7 +148,7 @@ jobs:
           fi
 
   build-release:
-    name: Build ${{ matrix.platform }}
+    name: Build ${{ matrix.platform }}-${{ matrix.arch }}
     needs: create-release
     runs-on: ${{ matrix.os }}
     permissions:
@@ -122,17 +156,40 @@ jobs:
     strategy:
       matrix:
         include:
+          # Linux builds
           - os: ubuntu-latest
             platform: linux
             arch: amd64
             ext: ''
+          - os: ubuntu-latest
+            platform: linux
+            arch: arm64
+            ext: ''
+          - os: ubuntu-latest
+            platform: linux
+            arch: '386'
+            ext: ''
+          # Windows builds
           - os: windows-latest
             platform: windows
             arch: amd64
             ext: '.exe'
+          - os: windows-latest
+            platform: windows
+            arch: arm64
+            ext: '.exe'
+          - os: windows-latest
+            platform: windows
+            arch: '386'
+            ext: '.exe'
+          # macOS builds
           - os: macos-latest
             platform: darwin
-            arch: universal
+            arch: amd64
+            ext: '.app'
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
             ext: '.app'
     
     steps:

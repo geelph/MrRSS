@@ -111,29 +111,37 @@ const contextMenu = ref({
 });
 
 onMounted(async () => {
-    // Initialize theme system
+    // Initialize theme system immediately (lightweight)
     store.initTheme();
     
-    // Trigger immediate article refresh on app launch
-    store.refreshFeeds();
+    // Defer heavy operations to allow UI to render first
+    setTimeout(() => {
+        // Load feeds and articles in background
+        store.fetchFeeds();
+        store.fetchArticles();
+        
+        // Trigger feed refresh after initial load
+        setTimeout(() => {
+            store.refreshFeeds();
+        }, 1000);
+    }, 100);
     
-    store.fetchFeeds();
-    store.fetchArticles();
-    
-    // Initialize settings for auto-refresh
-    try {
-        const res = await fetch('/api/settings');
-        const data = await res.json();
-        if (data.update_interval) {
-            store.startAutoRefresh(parseInt(data.update_interval));
+    // Initialize settings asynchronously
+    setTimeout(async () => {
+        try {
+            const res = await fetch('/api/settings');
+            const data = await res.json();
+            if (data.update_interval) {
+                store.startAutoRefresh(parseInt(data.update_interval));
+            }
+            // Apply saved theme preference
+            if (data.theme) {
+                store.setTheme(data.theme);
+            }
+        } catch (e) {
+            console.error(e);
         }
-        // Apply saved theme preference
-        if (data.theme) {
-            store.setTheme(data.theme);
-        }
-    } catch (e) {
-        console.error(e);
-    }
+    }, 200);
     
     // Listen for events from Sidebar
     window.addEventListener('show-add-feed', () => showAddFeed.value = true);
