@@ -16,11 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - macOS: Universal (Intel & Apple Silicon)
 - Visual feedback during update download and installation
 
-### Changed
-
-- Removed 32-bit (386) architecture support for Windows and Linux
-- Consolidated macOS builds into a single universal binary supporting both Intel and Apple Silicon
-
 ## [1.1.2] - 2025-11-22
 
 ### Added
