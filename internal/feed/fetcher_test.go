@@ -95,7 +95,7 @@ func TestFetchFeed(t *testing.T) {
 	// Fetch the feed
 	fetcher.FetchFeed(context.Background(), feeds[0])
 
-	articles, err := db.GetArticles("", 0, "", 10, 0)
+	articles, err := db.GetArticles("", 0, "", false, 10, 0)
 	if err != nil {
 		t.Fatalf("GetArticles failed: %v", err)
 	}

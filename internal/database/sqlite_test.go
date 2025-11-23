@@ -112,7 +112,7 @@ func TestDatabasePerformanceWithIndexes(t *testing.T) {
 
 	// Measure query time with filter
 	startQuery := time.Now()
-	results, err := db.GetArticles("unread", feedID, "", 50, 0)
+	results, err := db.GetArticles("unread", feedID, "", false, 50, 0)
 	if err != nil {
 		t.Fatalf("Failed to get articles: %v", err)
 	}
@@ -126,7 +126,7 @@ func TestDatabasePerformanceWithIndexes(t *testing.T) {
 
 	// Test category query
 	startCategoryQuery := time.Now()
-	results, err = db.GetArticles("", 0, "test", 50, 0)
+	results, err = db.GetArticles("", 0, "test", false, 50, 0)
 	if err != nil {
 		t.Fatalf("Failed to get articles by category: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestDatabasePerformanceWithIndexes(t *testing.T) {
 
 	// Test favorites query
 	startFavQuery := time.Now()
-	results, err = db.GetArticles("favorites", 0, "", 50, 0)
+	results, err = db.GetArticles("favorites", 0, "", false, 50, 0)
 	if err != nil {
 		t.Fatalf("Failed to get favorite articles: %v", err)
 	}
@@ -220,7 +220,7 @@ func BenchmarkGetArticles(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := db.GetArticles("", feedID, "", 50, 0)
+		_, err := db.GetArticles("", feedID, "", false, 50, 0)
 		if err != nil {
 			b.Fatalf("Failed to get articles: %v", err)
 		}
@@ -279,7 +279,7 @@ func TestCleanupOldArticles(t *testing.T) {
 	}
 
 	// Verify initial count
-	allArticles, _ := db.GetArticles("", feedID, "", 100, 0)
+	allArticles, _ := db.GetArticles("", feedID, "", false, 100, 0)
 	if len(allArticles) != 6 {
 		t.Errorf("Expected 6 articles initially, got %d", len(allArticles))
 	}
@@ -296,7 +296,7 @@ func TestCleanupOldArticles(t *testing.T) {
 	t.Logf("Cleaned up %d articles", count)
 
 	// Verify cleanup results
-	remainingArticles, _ := db.GetArticles("", feedID, "", 100, 0)
+	remainingArticles, _ := db.GetArticles("", feedID, "", false, 100, 0)
 	t.Logf("Remaining articles: %d", len(remainingArticles))
 
 	// Should have: Old Fav (1) + Week Old Unread (1) + Week Old Read (1) + Recent (1) = 4
@@ -379,7 +379,7 @@ func TestCleanupUnimportantArticles(t *testing.T) {
 	}
 
 	// Verify remaining articles
-	remainingArticles, _ := db.GetArticles("", feedID, "", 100, 0)
+	remainingArticles, _ := db.GetArticles("", feedID, "", false, 100, 0)
 	if len(remainingArticles) != 3 {
 		t.Errorf("Expected 3 articles after cleanup, got %d", len(remainingArticles))
 	}
