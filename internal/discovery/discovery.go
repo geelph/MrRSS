@@ -121,7 +121,7 @@ func (s *Service) findFriendLinkPage(ctx context.Context, homepage string) (stri
 
 	// Common patterns for friend link pages (multiple languages)
 	patterns := []string{
-		"友链", "友情链接", "blogroll", "friends", "links", 
+		"友链", "友情链接", "blogroll", "friends", "links",
 		"link", "buddy", "partner", "about/links", "friends.html",
 	}
 
@@ -417,21 +417,21 @@ func (s *Service) isValidFeed(ctx context.Context, feedURL string) bool {
 		buf := make([]byte, 512)
 		n, _ := io.ReadAtLeast(resp.Body, buf, 1)
 		content := string(buf[:n])
-		
+
 		// Check for XML declaration and RSS/Atom tags
-		if strings.Contains(content, "<?xml") || 
-		   strings.Contains(content, "<rss") || 
-		   strings.Contains(content, "<feed") ||
-		   strings.Contains(content, "<atom") {
+		if strings.Contains(content, "<?xml") ||
+			strings.Contains(content, "<rss") ||
+			strings.Contains(content, "<feed") ||
+			strings.Contains(content, "<atom") {
 			return true
 		}
 		return false
 	}
 
 	contentType := resp.Header.Get("Content-Type")
-	return strings.Contains(contentType, "xml") || 
-	       strings.Contains(contentType, "rss") || 
-	       strings.Contains(contentType, "atom")
+	return strings.Contains(contentType, "xml") ||
+		strings.Contains(contentType, "rss") ||
+		strings.Contains(contentType, "atom")
 }
 
 // getFavicon gets the favicon URL for a blog

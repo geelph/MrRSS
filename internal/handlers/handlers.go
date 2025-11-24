@@ -28,9 +28,9 @@ import (
 )
 
 type Handler struct {
-	DB            *database.DB
-	Fetcher       *feed.Fetcher
-	Translator    translation.Translator
+	DB               *database.DB
+	Fetcher          *feed.Fetcher
+	Translator       translation.Translator
 	DiscoveryService *discovery.Service
 }
 
@@ -239,7 +239,7 @@ func (h *Handler) HandleGetUnreadCounts(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) HandleMarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 	feedIDStr := r.URL.Query().Get("feed_id")
-	
+
 	var err error
 	if feedIDStr != "" {
 		// Mark all as read for a specific feed
@@ -253,7 +253,7 @@ func (h *Handler) HandleMarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 		// Mark all as read globally
 		err = h.DB.MarkAllAsRead()
 	}
-	
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -345,19 +345,19 @@ func (h *Handler) HandleSettings(w http.ResponseWriter, r *http.Request) {
 		showHidden, _ := h.DB.GetSetting("show_hidden_articles")
 		startupOnBoot, _ := h.DB.GetSetting("startup_on_boot")
 		json.NewEncoder(w).Encode(map[string]string{
-			"update_interval":       interval,
-			"translation_enabled":   translationEnabled,
-			"target_language":       targetLang,
-			"translation_provider":  provider,
-			"deepl_api_key":         apiKey,
-			"auto_cleanup_enabled":  autoCleanup,
-			"max_cache_size_mb":     maxCacheSize,
-			"max_article_age_days":  maxArticleAge,
-			"language":              language,
-			"theme":                 theme,
-			"last_article_update":   lastUpdate,
-			"show_hidden_articles":  showHidden,
-			"startup_on_boot":       startupOnBoot,
+			"update_interval":      interval,
+			"translation_enabled":  translationEnabled,
+			"target_language":      targetLang,
+			"translation_provider": provider,
+			"deepl_api_key":        apiKey,
+			"auto_cleanup_enabled": autoCleanup,
+			"max_cache_size_mb":    maxCacheSize,
+			"max_article_age_days": maxArticleAge,
+			"language":             language,
+			"theme":                theme,
+			"last_article_update":  lastUpdate,
+			"show_hidden_articles": showHidden,
+			"startup_on_boot":      startupOnBoot,
 		})
 	} else if r.Method == http.MethodPost {
 		var req struct {
@@ -427,7 +427,7 @@ func (h *Handler) HandleSettings(w http.ResponseWriter, r *http.Request) {
 			} else if currentValue != req.StartupOnBoot {
 				// Only apply if the value changed
 				h.DB.SetSetting("startup_on_boot", req.StartupOnBoot)
-				
+
 				// Apply the startup setting
 				if req.StartupOnBoot == "true" {
 					if err := utils.EnableStartup(); err != nil {
