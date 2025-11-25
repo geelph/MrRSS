@@ -20,7 +20,7 @@
 
 - 🖥️ **Cross-Platform**: Native desktop app for Windows, macOS, and Linux
 - 🌐 **Auto-Translation**: Translate article titles using Google Translate or DeepL API
-- 📁 **Smart Organization**: Organize feeds into categories that expand by default
+- 🔍 **Smart Feed Discovery**: Automatically discover new feeds from friend links and related sources
 - ⭐ **Favorites & Reading Tracking**: Save articles and track read/unread status
 - 🎨 **Modern UI**: Clean, responsive interface with dark mode support
 - 📦 **OPML Import/Export**: Easy migration from other RSS readers
@@ -122,45 +122,6 @@ go test ./...
 cd frontend
 npm test
 ```
-
-## 🎯 Usage
-
-### Adding Feeds
-
-1. Click the **+** button in the sidebar
-2. Enter the feed URL
-3. Optionally set a custom title and category
-4. Click **Add Feed**
-
-### Managing Feeds
-
-- **Right-click** on a feed to edit or unsubscribe
-- **Right-click** on a category to rename it
-- Use the **Settings → Feeds** tab to bulk manage subscriptions
-
-## ⚙️ Configuration
-
-Access settings via the gear icon in the sidebar:
-
-### General Settings
-
-- **Dark Mode**: Toggle between light and dark themes
-- **Language**: Choose between English and Chinese
-- **Auto-update Interval**: Set how often feeds refresh (in minutes)
-- **Auto Cleanup**: Automatically remove old articles
-
-### Translation Settings
-
-- **Enable Translation**: Toggle automatic translation
-- **Provider**: Choose between Google Translate (free) or DeepL API
-- **Target Language**: Select translation target language
-- **DeepL API Key**: Required if using DeepL
-
-### Data Management
-
-- **Import OPML**: Import subscriptions from other RSS readers
-- **Export OPML**: Export your subscriptions
-- **Clean Database**: Remove all articles except read and favorited ones
 
 ## 🤝 Contributing
 

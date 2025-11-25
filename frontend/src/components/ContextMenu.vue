@@ -23,7 +23,8 @@ const iconMap = {
     'ph-article': 'PhArticle',
     'ph-eye': 'PhEye',
     'ph-eye-slash': 'PhEyeSlash',
-    'ph-arrow-square-out': 'PhArrowSquareOut'
+    'ph-arrow-square-out': 'PhArrowSquareOut',
+    'PhMagnifyingGlass': 'PhMagnifyingGlass'
 };
 
 // Get icon component from icon string

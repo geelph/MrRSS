@@ -4,7 +4,9 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -17,6 +19,7 @@ import (
 	"time"
 
 	"MrRSS/internal/database"
+	"MrRSS/internal/discovery"
 	"MrRSS/internal/feed"
 	"MrRSS/internal/models"
 	"MrRSS/internal/opml"
@@ -26,16 +29,18 @@ import (
 )
 
 type Handler struct {
-	DB         *database.DB
-	Fetcher    *feed.Fetcher
-	Translator translation.Translator
+	DB               *database.DB
+	Fetcher          *feed.Fetcher
+	Translator       translation.Translator
+	DiscoveryService *discovery.Service
 }
 
 func NewHandler(db *database.DB, fetcher *feed.Fetcher, translator translation.Translator) *Handler {
 	return &Handler{
-		DB:         db,
-		Fetcher:    fetcher,
-		Translator: translator,
+		DB:               db,
+		Fetcher:          fetcher,
+		Translator:       translator,
+		DiscoveryService: discovery.NewService(),
 	}
 }
 
@@ -235,7 +240,7 @@ func (h *Handler) HandleGetUnreadCounts(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) HandleMarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 	feedIDStr := r.URL.Query().Get("feed_id")
-	
+
 	var err error
 	if feedIDStr != "" {
 		// Mark all as read for a specific feed
@@ -249,7 +254,7 @@ func (h *Handler) HandleMarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 		// Mark all as read globally
 		err = h.DB.MarkAllAsRead()
 	}
-	
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -341,19 +346,19 @@ func (h *Handler) HandleSettings(w http.ResponseWriter, r *http.Request) {
 		showHidden, _ := h.DB.GetSetting("show_hidden_articles")
 		startupOnBoot, _ := h.DB.GetSetting("startup_on_boot")
 		json.NewEncoder(w).Encode(map[string]string{
-			"update_interval":       interval,
-			"translation_enabled":   translationEnabled,
-			"target_language":       targetLang,
-			"translation_provider":  provider,
-			"deepl_api_key":         apiKey,
-			"auto_cleanup_enabled":  autoCleanup,
-			"max_cache_size_mb":     maxCacheSize,
-			"max_article_age_days":  maxArticleAge,
-			"language":              language,
-			"theme":                 theme,
-			"last_article_update":   lastUpdate,
-			"show_hidden_articles":  showHidden,
-			"startup_on_boot":       startupOnBoot,
+			"update_interval":      interval,
+			"translation_enabled":  translationEnabled,
+			"target_language":      targetLang,
+			"translation_provider": provider,
+			"deepl_api_key":        apiKey,
+			"auto_cleanup_enabled": autoCleanup,
+			"max_cache_size_mb":    maxCacheSize,
+			"max_article_age_days": maxArticleAge,
+			"language":             language,
+			"theme":                theme,
+			"last_article_update":  lastUpdate,
+			"show_hidden_articles": showHidden,
+			"startup_on_boot":      startupOnBoot,
 		})
 	} else if r.Method == http.MethodPost {
 		var req struct {
@@ -423,7 +428,7 @@ func (h *Handler) HandleSettings(w http.ResponseWriter, r *http.Request) {
 			} else if currentValue != req.StartupOnBoot {
 				// Only apply if the value changed
 				h.DB.SetSetting("startup_on_boot", req.StartupOnBoot)
-				
+
 				// Apply the startup setting
 				if req.StartupOnBoot == "true" {
 					if err := utils.EnableStartup(); err != nil {
@@ -1026,4 +1031,160 @@ func (h *Handler) HandleInstallUpdate(w http.ResponseWriter, r *http.Request) {
 		// which will properly clean up resources. For now, we use os.Exit.
 		os.Exit(0)
 	}()
+}
+
+// HandleDiscoverBlogs discovers blogs from a feed's friend links
+func (h *Handler) HandleDiscoverBlogs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		FeedID int64 `json:"feed_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Get the specific feed by ID
+	targetFeed, err := h.DB.GetFeedByID(req.FeedID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Feed not found", http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Get all existing feed URLs for deduplication
+	subscribedURLs, err := h.DB.GetAllFeedURLs()
+	if err != nil {
+		log.Printf("Error getting subscribed URLs: %v", err)
+		subscribedURLs = make(map[string]bool) // Continue with empty set
+	}
+
+	// Discover blogs with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	log.Printf("Starting blog discovery for feed: %s (%s)", targetFeed.Title, targetFeed.URL)
+	discovered, err := h.DiscoveryService.DiscoverFromFeed(ctx, targetFeed.URL)
+	if err != nil {
+		log.Printf("Error discovering blogs: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to discover blogs: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Filter out already-subscribed feeds
+	filtered := make([]discovery.DiscoveredBlog, 0)
+	for _, blog := range discovered {
+		if !subscribedURLs[blog.RSSFeed] {
+			filtered = append(filtered, blog)
+		} else {
+			log.Printf("Filtering out already-subscribed feed: %s (%s)", blog.Name, blog.RSSFeed)
+		}
+	}
+
+	// Mark the feed as discovered
+	if err := h.DB.MarkFeedDiscovered(req.FeedID); err != nil {
+		log.Printf("Error marking feed as discovered: %v", err)
+	}
+
+	log.Printf("Discovered %d blogs, %d after filtering", len(discovered), len(filtered))
+	json.NewEncoder(w).Encode(filtered)
+}
+
+// HandleDiscoverAllFeeds discovers feeds from all subscriptions that haven't been discovered yet
+func (h *Handler) HandleDiscoverAllFeeds(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get all feeds
+	feeds, err := h.DB.GetFeeds()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get all existing feed URLs for deduplication
+	subscribedURLs, err := h.DB.GetAllFeedURLs()
+	if err != nil {
+		log.Printf("Error getting subscribed URLs: %v", err)
+		subscribedURLs = make(map[string]bool) // Continue with empty set
+	}
+
+	// Filter feeds that haven't been discovered yet
+	var feedsToDiscover []models.Feed
+	for _, feed := range feeds {
+		if !feed.DiscoveryCompleted {
+			feedsToDiscover = append(feedsToDiscover, feed)
+		}
+	}
+
+	if len(feedsToDiscover) == 0 {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message":         "All feeds have already been discovered",
+			"discovered_from": 0,
+			"feeds_found":     0,
+		})
+		return
+	}
+
+	// Discover feeds with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	allDiscovered := make(map[string][]discovery.DiscoveredBlog)
+	discoveredCount := 0
+
+	log.Printf("Starting batch discovery for %d feeds", len(feedsToDiscover))
+
+discoveryLoop:
+	for _, feed := range feedsToDiscover {
+		select {
+		case <-ctx.Done():
+			log.Println("Batch discovery cancelled: timeout")
+			break discoveryLoop
+		default:
+		}
+
+		log.Printf("Discovering from feed: %s (%s)", feed.Title, feed.URL)
+		discovered, err := h.DiscoveryService.DiscoverFromFeed(ctx, feed.URL)
+		if err != nil {
+			log.Printf("Error discovering from feed %s: %v", feed.Title, err)
+			continue
+		}
+
+		// Filter out already-subscribed feeds
+		filtered := make([]discovery.DiscoveredBlog, 0)
+		for _, blog := range discovered {
+			if !subscribedURLs[blog.RSSFeed] {
+				filtered = append(filtered, blog)
+			}
+		}
+
+		if len(filtered) > 0 {
+			allDiscovered[feed.Title] = filtered
+			discoveredCount += len(filtered)
+		}
+
+		// Mark the feed as discovered
+		if err := h.DB.MarkFeedDiscovered(feed.ID); err != nil {
+			log.Printf("Error marking feed as discovered: %v", err)
+		}
+	}
+
+	log.Printf("Batch discovery complete: discovered %d feeds from %d sources", discoveredCount, len(feedsToDiscover))
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"discovered_from": len(feedsToDiscover),
+		"feeds_found":     discoveredCount,
+		"feeds":           allDiscovered,
+	})
 }

@@ -113,6 +113,7 @@ function onFeedContextMenu(e, feed) {
                 { label: store.i18n.t('markAllAsReadFeed'), action: 'markAllRead', icon: 'ph-check-circle' },
                 { separator: true },
                 { label: store.i18n.t('openWebsite'), action: 'openWebsite', icon: 'ph-globe' },
+                { label: store.i18n.t('discoverFeeds'), action: 'discover', icon: 'PhMagnifyingGlass' },
                 { separator: true },
                 { label: store.i18n.t('editSubscription'), action: 'edit', icon: 'ph-pencil' },
                 { label: store.i18n.t('unsubscribe'), action: 'delete', icon: 'ph-trash', danger: true }
@@ -147,6 +148,8 @@ async function handleFeedAction(action, feed) {
         // Use feed.link if available (website homepage), otherwise fall back to feed.url (RSS feed)
         const urlToOpen = feed.link || feed.url;
         BrowserOpenURL(urlToOpen);
+    } else if (action === 'discover') {
+        window.dispatchEvent(new CustomEvent('show-discover-blogs', { detail: feed }));
     }
 }
 

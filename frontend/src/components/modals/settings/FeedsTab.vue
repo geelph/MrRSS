@@ -3,12 +3,14 @@ import { store } from '../../../store.js';
 import { ref, computed } from 'vue';
 import { 
     PhHardDrives, PhUpload, PhDownload, PhBroom, PhRss, PhPlus, 
-    PhTrash, PhFolder, PhPencil 
+    PhTrash, PhFolder, PhPencil, PhMagnifyingGlass, PhCircleNotch
 } from "@phosphor-icons/vue";
 
 const emit = defineEmits(['import-opml', 'export-opml', 'cleanup-database', 'add-feed', 'edit-feed', 'delete-feed', 'batch-delete', 'batch-move']);
 
 const selectedFeeds = ref([]);
+const isDiscoveringAll = ref(false);
+const discoveryProgress = ref({ message: '', detail: '' });
 
 const isAllSelected = computed(() => {
     return store.feeds && store.feeds.length > 0 && selectedFeeds.value.length === store.feeds.length;
@@ -33,6 +35,61 @@ function handleExportOPML() {
 
 function handleCleanupDatabase() {
     emit('cleanup-database');
+}
+
+async function handleDiscoverAll() {
+    isDiscoveringAll.value = true;
+    discoveryProgress.value = { message: store.i18n.t('preparingDiscovery'), detail: '' };
+    
+    try {
+        // Simulate progress updates
+        const progressSteps = [
+            { delay: 500, message: store.i18n.t('loadingFeeds'), detail: '' },
+            { delay: 2000, message: store.i18n.t('analyzingFeeds'), detail: store.i18n.t('scanningFriendLinks') },
+            { delay: 4000, message: store.i18n.t('checkingFeeds'), detail: store.i18n.t('validatingRSS') },
+        ];
+        
+        let currentStep = 0;
+        const progressInterval = setInterval(() => {
+            if (currentStep < progressSteps.length) {
+                discoveryProgress.value = progressSteps[currentStep];
+                currentStep++;
+            }
+        }, 2000);
+        
+        const response = await fetch('/api/feeds/discover-all', {
+            method: 'POST'
+        });
+
+        clearInterval(progressInterval);
+        
+        if (!response.ok) {
+            throw new Error('Failed to discover feeds');
+        }
+
+        const result = await response.json();
+        
+        // Refresh feeds to show updated discovery status
+        await store.fetchFeeds();
+        
+        if (result.feeds_found > 0) {
+            window.showToast(
+                store.i18n.t('discoveryComplete') + ': ' + 
+                store.i18n.t('foundFeeds', { count: result.feeds_found }) +
+                ' ' + store.i18n.t('fromFeed') + ' ' + result.discovered_from + ' ' +
+                store.i18n.t('feeds'),
+                'success'
+            );
+        } else {
+            window.showToast(store.i18n.t('noFriendLinksFound'), 'info');
+        }
+    } catch (error) {
+        console.error('Discovery error:', error);
+        window.showToast(store.i18n.t('discoveryFailed'), 'error');
+    } finally {
+        isDiscoveringAll.value = false;
+        discoveryProgress.value = { message: '', detail: '' };
+    }
 }
 
 function handleAddFeed() {
@@ -83,6 +140,34 @@ function getFavicon(url) {
                 <button @click="handleExportOPML" class="btn-secondary flex-1 justify-center text-sm sm:text-base">
                     <PhDownload :size="18" class="sm:w-5 sm:h-5" /> {{ store.i18n.t('exportOPML') }}
                 </button>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <button @click="handleDiscoverAll" :disabled="isDiscoveringAll" 
+                        :class="['btn-primary flex-1 justify-center text-sm sm:text-base', isDiscoveringAll && 'opacity-50 cursor-not-allowed']">
+                    <PhCircleNotch v-if="isDiscoveringAll" :size="18" class="sm:w-5 sm:h-5 animate-spin" />
+                    <PhMagnifyingGlass v-else :size="18" class="sm:w-5 sm:h-5" />
+                    {{ isDiscoveringAll ? store.i18n.t('discoveringAllFeeds') : store.i18n.t('discoverAllFeeds') }}
+                </button>
+            </div>
+            <p v-if="!isDiscoveringAll" class="text-xs text-text-secondary mb-2">
+                {{ store.i18n.t('discoverAllFeedsDesc') }}
+            </p>
+            <div v-if="isDiscoveringAll" class="bg-gradient-to-r from-accent/10 to-accent/5 border-l-4 border-accent rounded-lg p-4 mb-2 space-y-2">
+                <div class="flex items-center gap-2">
+                    <PhCircleNotch :size="20" class="animate-spin text-accent shrink-0" />
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-accent">
+                            {{ discoveryProgress.message }}
+                        </p>
+                        <p v-if="discoveryProgress.detail" class="text-xs text-text-secondary mt-1">
+                            {{ discoveryProgress.detail }}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-text-tertiary pt-2 border-t border-accent/20">
+                    <PhRss :size="12" />
+                    <span>{{ store.i18n.t('pleaseWait') }}</span>
+                </div>
             </div>
             <div class="flex">
                 <button @click="handleCleanupDatabase" class="btn-danger flex-1 justify-center text-sm sm:text-base">
@@ -145,6 +230,12 @@ function getFavicon(url) {
 </template>
 
 <style scoped>
+.btn-primary {
+    @apply bg-accent text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-semibold hover:bg-accent-hover transition-colors shadow-sm;
+}
+.btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+}
 .btn-secondary {
     @apply bg-transparent border border-border text-text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-medium hover:bg-bg-tertiary transition-colors;
 }
