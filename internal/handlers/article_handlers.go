@@ -477,6 +477,24 @@ func evaluateSingleCondition(article models.Article, condition FilterCondition, 
 			}
 		}
 
+	case "is_read":
+		// Filter by read/unread status
+		if condition.Value == "" {
+			result = true
+		} else {
+			wantRead := condition.Value == "true"
+			result = article.IsRead == wantRead
+		}
+
+	case "is_favorite":
+		// Filter by favorite/unfavorite status
+		if condition.Value == "" {
+			result = true
+		} else {
+			wantFavorite := condition.Value == "true"
+			result = article.IsFavorite == wantFavorite
+		}
+
 	default:
 		result = true
 	}

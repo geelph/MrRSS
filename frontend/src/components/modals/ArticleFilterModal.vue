@@ -19,13 +19,21 @@ const fieldOptions = [
     { value: 'feed_category', labelKey: 'feedCategory', multiSelect: true },
     { value: 'article_title', labelKey: 'articleTitle', multiSelect: false },
     { value: 'published_after', labelKey: 'publishedAfter', multiSelect: false },
-    { value: 'published_before', labelKey: 'publishedBefore', multiSelect: false }
+    { value: 'published_before', labelKey: 'publishedBefore', multiSelect: false },
+    { value: 'is_read', labelKey: 'readStatus', multiSelect: false, booleanField: true },
+    { value: 'is_favorite', labelKey: 'favoriteStatus', multiSelect: false, booleanField: true }
 ];
 
 // Operator options for article title only
 const textOperatorOptions = [
     { value: 'contains', labelKey: 'contains' },
     { value: 'exact', labelKey: 'exactMatch' }
+];
+
+// Boolean value options for read/favorite status
+const booleanOptions = [
+    { value: 'true', labelKey: 'yes' },
+    { value: 'false', labelKey: 'no' }
 ];
 
 // Logic options (only AND/OR for connectors)
@@ -92,6 +100,10 @@ function isMultiSelectField(field) {
     return field === 'feed_name' || field === 'feed_category';
 }
 
+function isBooleanField(field) {
+    return field === 'is_read' || field === 'is_favorite';
+}
+
 function needsOperator(field) {
     // Only article_title needs the contains/exact operator
     return field === 'article_title';
@@ -106,6 +118,10 @@ function onFieldChange(index) {
     } else if (isMultiSelectField(condition.field)) {
         condition.operator = 'contains';  // Always contains for multi-select
         condition.value = '';
+        condition.values = [];
+    } else if (isBooleanField(condition.field)) {
+        condition.operator = null;
+        condition.value = 'true';  // Default to true (read/favorited)
         condition.values = [];
     } else {
         condition.operator = 'contains';
@@ -272,6 +288,15 @@ function close() {
                                            type="date" 
                                            v-model="condition.value" 
                                            class="date-field w-full">
+                                    
+                                    <!-- Boolean select for read/favorite status -->
+                                    <select v-else-if="isBooleanField(condition.field)"
+                                            v-model="condition.value"
+                                            class="select-field w-full">
+                                        <option v-for="opt in booleanOptions" :key="opt.value" :value="opt.value">
+                                            {{ store.i18n.t(opt.labelKey) }}
+                                        </option>
+                                    </select>
                                     
                                     <!-- Multi-select dropdown for feed name -->
                                     <div v-else-if="condition.field === 'feed_name'" class="dropdown-container">
