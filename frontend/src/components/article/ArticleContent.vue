@@ -496,4 +496,101 @@ onMounted(async () => {
   color: var(--text-secondary);
   opacity: 0.75;
 }
+
+/* Audio player styling - podcast support */
+.prose :deep(audio) {
+  width: 100%;
+  max-width: 100%;
+  margin: 1em 0;
+  border-radius: 0.5rem;
+  background-color: var(--bg-secondary);
+}
+
+/* Video player styling */
+.prose :deep(video) {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 1.5em 0;
+  border-radius: 0.5rem;
+  background-color: var(--bg-secondary);
+}
+
+/* Iframe for embedded videos (YouTube, Vimeo, etc.) */
+.prose :deep(iframe) {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 1.5em 0;
+  border-radius: 0.5rem;
+  border: none;
+  background-color: var(--bg-secondary);
+}
+
+/* Figure and figcaption styling for media */
+.prose :deep(figure) {
+  margin: 1.5em 0;
+}
+
+.prose :deep(figcaption) {
+  font-size: 0.875em;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 0.5em;
+}
+
+/* Enclosure media container styling (RSS media enclosures) */
+.prose :deep(.media-enclosure) {
+  margin: 1.5em 0;
+  padding: 1em;
+  background-color: var(--bg-secondary);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+}
+
+/* Table styling for better rich text */
+.prose :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.9em;
+}
+
+.prose :deep(th),
+.prose :deep(td) {
+  padding: 0.75em;
+  border: 1px solid var(--border-color);
+  text-align: left;
+}
+
+.prose :deep(th) {
+  background-color: var(--bg-secondary);
+  font-weight: 600;
+}
+
+.prose :deep(tr:nth-child(even)) {
+  background-color: var(--bg-secondary);
+}
+
+/* Horizontal rule styling */
+.prose :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 2em 0;
+}
+
+/* Definition list styling */
+.prose :deep(dl) {
+  margin: 1em 0;
+}
+
+.prose :deep(dt) {
+  font-weight: 600;
+  margin-top: 0.5em;
+}
+
+.prose :deep(dd) {
+  margin-left: 1.5em;
+  color: var(--text-secondary);
+}
 </style>

@@ -35,6 +35,9 @@ const en: TranslationMessages = {
   zoomIn: 'Zoom In',
   zoomOut: 'Zoom Out',
   imageViewerHelp: 'Use mouse wheel or +/- keys to zoom • Drag to move • ESC to close',
+  imageViewerHelpExtended:
+    'Use mouse wheel or +/- keys to zoom • Drag to move • Ctrl+S to save • ESC to close',
+  downloadImage: 'Download Image',
 
   // Context Menu
   unsubscribe: 'Unsubscribe',

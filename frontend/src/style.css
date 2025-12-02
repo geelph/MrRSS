@@ -55,6 +55,21 @@ textarea,
   user-select: text;
 }
 
+/* Allow text selection in article content area */
+.prose-content,
+.prose-content * {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Allow image interactions (click, right-click context menu) in article content */
+.prose-content img {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

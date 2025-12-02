@@ -35,6 +35,8 @@ const zh: TranslationMessages = {
   zoomIn: '放大',
   zoomOut: '缩小',
   imageViewerHelp: '使用鼠标滚轮或 +/- 键缩放 • 拖动移动 • ESC 关闭',
+  imageViewerHelpExtended: '使用鼠标滚轮或 +/- 键缩放 • 拖动移动 • Ctrl+S 保存 • ESC 关闭',
+  downloadImage: '下载图片',
 
   // Context Menu
   unsubscribe: '取消订阅',

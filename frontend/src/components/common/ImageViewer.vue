@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, type Ref, type CSSProperties } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhX, PhMagnifyingGlassMinus, PhMagnifyingGlassPlus } from '@phosphor-icons/vue';
+import {
+  PhX,
+  PhMagnifyingGlassMinus,
+  PhMagnifyingGlassPlus,
+  PhDownloadSimple,
+} from '@phosphor-icons/vue';
 
 const { t } = useI18n();
 
@@ -10,7 +15,7 @@ interface Props {
   alt?: string;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
   close: [];
@@ -90,6 +95,42 @@ function handleKeyDown(e: KeyboardEvent) {
     zoomIn();
   } else if (e.key === '-' || e.key === '_') {
     zoomOut();
+  } else if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    downloadImage();
+  }
+}
+
+// Download image to local storage
+async function downloadImage() {
+  try {
+    const response = await fetch(props.src);
+    const blob = await response.blob();
+
+    // Extract filename from URL or generate one
+    const urlParts = props.src.split('/');
+    let filename = urlParts[urlParts.length - 1].split('?')[0] || 'image';
+
+    // Ensure it has an extension
+    if (!filename.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i)) {
+      const mimeType = blob.type;
+      const ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
+      filename = `${filename}.${ext}`;
+    }
+
+    // Create download link
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Failed to download image:', error);
+    // Fallback: open image in new tab
+    window.open(props.src, '_blank');
   }
 }
 
@@ -135,6 +176,9 @@ onUnmounted(() => {
       >
         <PhMagnifyingGlassPlus :size="20" />
       </button>
+      <button @click="downloadImage" class="control-btn" :title="t('downloadImage')">
+        <PhDownloadSimple :size="20" />
+      </button>
       <button @click="close" class="control-btn" :title="t('close')">
         <PhX :size="20" />
       </button>
@@ -160,7 +204,7 @@ onUnmounted(() => {
 
     <!-- Help text -->
     <div class="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/70 text-sm text-center px-4">
-      <p class="hidden sm:block">{{ t('imageViewerHelp') }}</p>
+      <p class="hidden sm:block">{{ t('imageViewerHelpExtended') }}</p>
     </div>
   </div>
 </template>
