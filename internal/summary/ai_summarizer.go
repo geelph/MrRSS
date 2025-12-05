@@ -71,11 +71,10 @@ func (s *AISummarizer) Summarize(text string, length SummaryLength) (SummaryResu
 		}, nil
 	}
 
-	// Truncate text if too long to save tokens (keep first ~4000 characters)
-	// This should be enough context for a good summary
-	maxInputChars := 4000
-	if len(cleanedText) > maxInputChars {
-		cleanedText = cleanedText[:maxInputChars]
+	// Truncate text if too long to save tokens
+	// This limits API usage while providing enough context for a good summary
+	if len(cleanedText) > MaxInputCharsForAI {
+		cleanedText = cleanedText[:MaxInputCharsForAI]
 	}
 
 	targetWords := getTargetWordCountForAI(length)
@@ -120,8 +119,8 @@ func (s *AISummarizer) Summarize(text string, length SummaryLength) (SummaryResu
 				Message string `json:"message"`
 			} `json:"error"`
 		}
-		json.NewDecoder(resp.Body).Decode(&errorResp)
-		if errorResp.Error.Message != "" {
+		// Try to decode error response; if it fails, return generic error with status code
+		if err := json.NewDecoder(resp.Body).Decode(&errorResp); err == nil && errorResp.Error.Message != "" {
 			return SummaryResult{}, fmt.Errorf("ai api error: %s", errorResp.Error.Message)
 		}
 		return SummaryResult{}, fmt.Errorf("ai api returned status: %d", resp.StatusCode)

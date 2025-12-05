@@ -20,6 +20,10 @@ const MinContentLength = 200
 // MinSentenceCount is the minimum number of sentences required for summarization
 const MinSentenceCount = 3
 
+// MaxInputCharsForAI is the maximum number of characters to send to AI for summarization.
+// This limits token usage while providing enough context for a good summary.
+const MaxInputCharsForAI = 4000
+
 // Target word counts for different summary lengths
 // For Chinese text, each Chinese character is roughly equivalent to one English word
 const (
