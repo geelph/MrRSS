@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { Article } from '@/types/models';
 
 interface TranslationSettings {
@@ -7,6 +8,7 @@ interface TranslationSettings {
 }
 
 export function useArticleTranslation() {
+  const { t } = useI18n();
   const translationSettings = ref<TranslationSettings>({
     enabled: false,
     targetLang: 'en',
@@ -77,9 +79,13 @@ export function useArticleTranslation() {
         const data = await res.json();
         // Update the article in the store
         article.translated_title = data.translated_title;
+      } else {
+        console.error('Error translating article:', res.status);
+        window.showToast(t('errorTranslatingTitle'), 'error');
       }
     } catch (e) {
       console.error('Error translating article:', e);
+      window.showToast(t('errorTranslating'), 'error');
     } finally {
       translatingArticles.value.delete(article.id);
     }

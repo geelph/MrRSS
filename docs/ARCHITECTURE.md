@@ -90,7 +90,7 @@ handlers/
 #### Translation (`internal/translation/`)
 
 - `translator.go` - Translation interface and factory
-- `google_free.go` - Google Translate (free, no API key)
+- `google.go` - Google Translate (free, no API key)
 - `deepl.go` - DeepL API integration
 - `baidu.go` - Baidu Translation API integration
 - `ai.go` - AI-based translation integration

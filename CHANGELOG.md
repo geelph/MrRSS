@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported Baidu Translation and AI-based translation.
 
+### Changed
+
+- Errors from translation services are now logged and displayed to users for better troubleshooting.
+
+### Fixed
+
+- Fixed the issue where the default settings were not applied correctly on first launch.
+
 ## [1.2.8] - 2025-12-04
 
 ### Added

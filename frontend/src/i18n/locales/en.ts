@@ -278,6 +278,10 @@ const en: TranslationMessages = {
   errorUpdatingFeed: 'Error updating feed',
   errorCleaningDatabase: 'Error cleaning up database',
   importFailed: 'Import failed: {error}',
+  errorTranslating:
+    'Translation failed. Please check your network connection and translation settings.',
+  errorTranslatingTitle: 'Failed to translate article title',
+  errorTranslatingContent: 'Failed to translate content',
 
   // Loading Messages
   loadingContent: 'Loading content',

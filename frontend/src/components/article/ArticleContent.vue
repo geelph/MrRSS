@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { Article } from '@/types/models';
 import ArticleTitle from './parts/ArticleTitle.vue';
 import ArticleSummary from './parts/ArticleSummary.vue';
@@ -23,6 +24,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const { t } = useI18n();
 
 // Use composables for summary and translation
 const {
@@ -78,9 +81,13 @@ async function translateText(text: string): Promise<string> {
     if (res.ok) {
       const data = await res.json();
       return data.translated_text || '';
+    } else {
+      console.error('Error translating text:', res.status);
+      window.showToast(t('errorTranslatingContent'), 'error');
     }
   } catch (e) {
     console.error('Error translating text:', e);
+    window.showToast(t('errorTranslating'), 'error');
   }
   return '';
 }

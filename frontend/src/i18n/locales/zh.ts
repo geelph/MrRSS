@@ -276,6 +276,9 @@ const zh: TranslationMessages = {
   errorUpdatingFeed: '更新订阅时出错',
   errorCleaningDatabase: '清理数据库时出错',
   importFailed: '导入失败：{error}',
+  errorTranslating: '翻译失败。请检查网络连接和翻译设置。',
+  errorTranslatingTitle: '翻译文章标题失败',
+  errorTranslatingContent: '翻译内容失败',
 
   // Loading Messages
   loadingContent: '加载内容中',
