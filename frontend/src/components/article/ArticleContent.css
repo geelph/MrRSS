@@ -490,3 +490,110 @@
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
+
+/* Responsive adjustments for mobile devices */
+@media (max-width: 640px) {
+  .prose {
+    font-size: 0.9375rem; /* Slightly smaller base font on mobile */
+  }
+
+  .prose :deep(h1) {
+    font-size: 1.875em; /* Reduce h1 size on mobile */
+    line-height: 1.2;
+    margin-bottom: 0.75em;
+  }
+
+  .prose :deep(h2) {
+    font-size: 1.5em;
+    margin-top: 1.5em;
+  }
+
+  .prose :deep(h3) {
+    font-size: 1.25em;
+  }
+
+  .prose :deep(table) {
+    font-size: 0.8125em; /* Smaller table text on mobile */
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .prose :deep(th),
+  .prose :deep(td) {
+    padding: 0.625em 0.75em; /* Reduce padding on mobile */
+  }
+
+  .prose :deep(blockquote) {
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    margin: 1.25em 0;
+  }
+
+  .prose :deep(pre) {
+    padding: 1em;
+    font-size: 0.8125em;
+    margin: 1.25em 0;
+  }
+
+  .prose :deep(img) {
+    margin: 1.5em 0;
+  }
+}
+
+/* Dark mode adjustments for mark element */
+@media (prefers-color-scheme: dark) {
+  .prose :deep(mark) {
+    background-color: rgba(255, 220, 100, 0.25);
+  }
+
+  .prose :deep(tbody tr:nth-child(odd)) {
+    background-color: rgba(255, 255, 255, 0.02);
+  }
+}
+
+/* Smooth scrolling for anchor links */
+.prose :deep(a[href^="#"]) {
+  scroll-behavior: smooth;
+}
+
+/* Print styles for better article printing */
+@media print {
+  .prose {
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  .prose :deep(a) {
+    text-decoration: underline;
+  }
+
+  .prose :deep(a[href]::after) {
+    content: " (" attr(href) ")";
+    font-size: 0.875em;
+    color: var(--text-secondary);
+  }
+
+  .prose :deep(img) {
+    max-width: 100%;
+    page-break-inside: avoid;
+  }
+
+  .prose :deep(h1),
+  .prose :deep(h2),
+  .prose :deep(h3),
+  .prose :deep(h4),
+  .prose :deep(h5),
+  .prose :deep(h6) {
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+
+  .prose :deep(table),
+  .prose :deep(pre),
+  .prose :deep(blockquote) {
+    page-break-inside: avoid;
+  }
+}
