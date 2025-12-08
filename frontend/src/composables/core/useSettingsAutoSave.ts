@@ -105,7 +105,8 @@ export function useSettingsAutoSave(settings: Ref<SettingsData>) {
           summary_ai_endpoint:
             settings.value.summary_ai_endpoint ?? settingsDefaults.summary_ai_endpoint,
           summary_ai_model: settings.value.summary_ai_model ?? settingsDefaults.summary_ai_model,
-          summary_ai_system_prompt: settings.value.summary_ai_system_prompt ?? settingsDefaults.summary_ai_system_prompt,
+          summary_ai_system_prompt:
+            settings.value.summary_ai_system_prompt ?? settingsDefaults.summary_ai_system_prompt,
         }),
       });
 

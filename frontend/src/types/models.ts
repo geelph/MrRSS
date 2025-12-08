@@ -12,7 +12,6 @@ export interface Article {
   image_url?: string; // Article thumbnail image
   audio_url?: string; // Podcast audio file URL
   video_url?: string; // YouTube video embed URL
-  content: string;
   published_at: string;
   is_read: boolean;
   is_favorite: boolean;

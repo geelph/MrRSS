@@ -74,7 +74,8 @@ export function useSettings() {
         summary_ai_api_key: data.summary_ai_api_key || settingsDefaults.summary_ai_api_key,
         summary_ai_endpoint: data.summary_ai_endpoint || settingsDefaults.summary_ai_endpoint,
         summary_ai_model: data.summary_ai_model || settingsDefaults.summary_ai_model,
-        summary_ai_system_prompt: data.summary_ai_system_prompt || settingsDefaults.summary_ai_system_prompt,
+        summary_ai_system_prompt:
+          data.summary_ai_system_prompt || settingsDefaults.summary_ai_system_prompt,
         baidu_app_id: data.baidu_app_id || settingsDefaults.baidu_app_id,
         baidu_secret_key: data.baidu_secret_key || settingsDefaults.baidu_secret_key,
         ai_api_key: data.ai_api_key || settingsDefaults.ai_api_key,

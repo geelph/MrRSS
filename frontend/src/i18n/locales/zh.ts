@@ -174,8 +174,9 @@ const zh: TranslationMessages = {
   aiModelDesc: '用于翻译的 AI 模型',
   aiModelPlaceholder: 'gpt-4o-mini',
   aiSystemPrompt: '自定义系统提示词',
-  aiSystemPromptDesc: 'AI 翻译的自定义系统提示词（留空使用默认值）',
-  aiSystemPromptPlaceholder: '默认：你是一个翻译器。准确翻译给定的文本。只输出翻译的文本，不要输出其他内容。',
+  aiSystemPromptDesc: 'AI 翻译的自定义系统提示词',
+  aiSystemPromptPlaceholder:
+    '默认：你是一个翻译器。准确翻译给定的文本。只输出翻译的文本，不要输出其他内容。',
   targetLanguage: '目标语言',
   targetLanguageDesc: '将文章标题翻译为此语言',
   language: '语言',
@@ -199,8 +200,9 @@ const zh: TranslationMessages = {
   summaryAiModelDesc: '用于摘要的 AI 模型',
   summaryAiModelPlaceholder: 'gpt-4o-mini',
   summaryAiSystemPrompt: '自定义系统提示词',
-  summaryAiSystemPromptDesc: 'AI 摘要的自定义系统提示词（留空使用默认值）',
-  summaryAiSystemPromptPlaceholder: '默认：你是一个摘要生成器。生成给定文本的简洁摘要。只输出摘要，不要输出其他内容。',
+  summaryAiSystemPromptDesc: 'AI 摘要的自定义系统提示词',
+  summaryAiSystemPromptPlaceholder:
+    '默认：你是一个摘要生成器。生成给定文本的简洁摘要。只输出摘要，不要输出其他内容。',
   summaryLength: '摘要长度',
   summaryLengthDesc: '控制生成摘要的长度',
   summaryLengthShort: '短',

@@ -404,12 +404,6 @@ func TestProcessArticlesWithYouTubeFeed(t *testing.T) {
 		t.Errorf("Expected title '%s', got '%s'", expectedTitle, article.Title)
 	}
 
-	// Should use media:description
-	expectedContent := "I'm joining bush pilot Matt Dearden as we fly into some of the world's most extreme and unforgiving airstrips."
-	if article.Content != expectedContent {
-		t.Errorf("Expected content '%s', got '%s'", expectedContent, article.Content)
-	}
-
 	// Should extract media:thumbnail
 	expectedImageURL := "https://i4.ytimg.com/vi/KZcE7HgtFsA/hqdefault.jpg"
 	if article.ImageURL != expectedImageURL {

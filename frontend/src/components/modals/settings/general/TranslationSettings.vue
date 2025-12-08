@@ -182,8 +182,7 @@ defineProps<Props>();
           </div>
           <textarea
             v-model="settings.ai_system_prompt"
-            :placeholder="t('aiSystemPromptPlaceholder')"
-            class="input-field text-xs sm:text-sm resize-y"
+            class="input-field w-full text-xs sm:text-sm resize-none"
             rows="3"
           />
         </div>

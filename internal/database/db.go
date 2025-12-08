@@ -134,7 +134,6 @@ func initSchema(db *sql.DB) error {
 		audio_url TEXT DEFAULT '',
 		video_url TEXT DEFAULT '',
 		translated_title TEXT,
-		content TEXT DEFAULT '',
 		published_at DATETIME,
 		is_read BOOLEAN DEFAULT 0,
 		is_favorite BOOLEAN DEFAULT 0,

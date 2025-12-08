@@ -264,7 +264,10 @@ async function openScriptsFolder() {
             />
             <button
               type="button"
-              @click="showCustomCategory = false; categorySelection = ''"
+              @click="
+                showCustomCategory = false;
+                categorySelection = '';
+              "
               class="px-3 py-2 text-xs sm:text-sm text-text-secondary hover:text-text-primary border border-border rounded-md hover:bg-bg-tertiary transition-colors"
             >
               {{ t('cancel') }}

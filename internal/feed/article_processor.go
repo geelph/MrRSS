@@ -70,7 +70,6 @@ func (f *Fetcher) processArticles(feed models.Feed, items []*gofeed.Item) []*mod
 			ImageURL:        imageURL,
 			AudioURL:        audioURL,
 			VideoURL:        videoURL,
-			Content:         content,
 			PublishedAt:     published,
 			TranslatedTitle: translatedTitle,
 		}

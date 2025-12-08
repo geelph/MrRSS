@@ -11,8 +11,8 @@ import (
 // SaveArticle saves a single article to the database.
 func (db *DB) SaveArticle(article *models.Article) error {
 	db.WaitForReady()
-	query := `INSERT OR IGNORE INTO articles (feed_id, title, url, image_url, audio_url, video_url, published_at, translated_title, content, is_read, is_favorite, is_hidden, is_read_later) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := db.Exec(query, article.FeedID, article.Title, article.URL, article.ImageURL, article.AudioURL, article.VideoURL, article.PublishedAt, article.TranslatedTitle, article.Content, article.IsRead, article.IsFavorite, article.IsHidden, article.IsReadLater)
+	query := `INSERT OR IGNORE INTO articles (feed_id, title, url, image_url, audio_url, video_url, published_at, translated_title, is_read, is_favorite, is_hidden, is_read_later) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err := db.Exec(query, article.FeedID, article.Title, article.URL, article.ImageURL, article.AudioURL, article.VideoURL, article.PublishedAt, article.TranslatedTitle, article.IsRead, article.IsFavorite, article.IsHidden, article.IsReadLater)
 	return err
 }
 
@@ -25,7 +25,7 @@ func (db *DB) SaveArticles(ctx context.Context, articles []*models.Article) erro
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO articles (feed_id, title, url, image_url, audio_url, video_url, published_at, translated_title, content, is_read, is_favorite, is_hidden, is_read_later) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO articles (feed_id, title, url, image_url, audio_url, video_url, published_at, translated_title, is_read, is_favorite, is_hidden, is_read_later) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func (db *DB) SaveArticles(ctx context.Context, articles []*models.Article) erro
 		default:
 		}
 
-		_, err := stmt.ExecContext(ctx, article.FeedID, article.Title, article.URL, article.ImageURL, article.AudioURL, article.VideoURL, article.PublishedAt, article.TranslatedTitle, article.Content, article.IsRead, article.IsFavorite, article.IsHidden, article.IsReadLater)
+		_, err := stmt.ExecContext(ctx, article.FeedID, article.Title, article.URL, article.ImageURL, article.AudioURL, article.VideoURL, article.PublishedAt, article.TranslatedTitle, article.IsRead, article.IsFavorite, article.IsHidden, article.IsReadLater)
 		if err != nil {
 			log.Println("Error saving article in batch:", err)
 			// Continue even if one fails
@@ -53,7 +53,7 @@ func (db *DB) SaveArticles(ctx context.Context, articles []*models.Article) erro
 func (db *DB) GetArticles(filter string, feedID int64, category string, showHidden bool, limit, offset int) ([]models.Article, error) {
 	db.WaitForReady()
 	baseQuery := `
-		SELECT a.id, a.feed_id, a.title, a.url, a.image_url, a.audio_url, a.video_url, a.content, a.published_at, a.is_read, a.is_favorite, a.is_hidden, a.is_read_later, a.translated_title, f.title
+		SELECT a.id, a.feed_id, a.title, a.url, a.image_url, a.audio_url, a.video_url, a.published_at, a.is_read, a.is_favorite, a.is_hidden, a.is_read_later, a.translated_title, f.title
 		FROM articles a
 		JOIN feeds f ON a.feed_id = f.id
 	`
@@ -113,15 +113,14 @@ func (db *DB) GetArticles(filter string, feedID int64, category string, showHidd
 	var articles []models.Article
 	for rows.Next() {
 		var a models.Article
-		var imageURL, audioURL, videoURL, content, translatedTitle sql.NullString
-		if err := rows.Scan(&a.ID, &a.FeedID, &a.Title, &a.URL, &imageURL, &audioURL, &videoURL, &content, &a.PublishedAt, &a.IsRead, &a.IsFavorite, &a.IsHidden, &a.IsReadLater, &translatedTitle, &a.FeedTitle); err != nil {
+		var imageURL, audioURL, videoURL, translatedTitle sql.NullString
+		if err := rows.Scan(&a.ID, &a.FeedID, &a.Title, &a.URL, &imageURL, &audioURL, &videoURL, &a.PublishedAt, &a.IsRead, &a.IsFavorite, &a.IsHidden, &a.IsReadLater, &translatedTitle, &a.FeedTitle); err != nil {
 			log.Println("Error scanning article:", err)
 			continue
 		}
 		a.ImageURL = imageURL.String
 		a.AudioURL = audioURL.String
 		a.VideoURL = videoURL.String
-		a.Content = content.String
 		a.TranslatedTitle = translatedTitle.String
 		articles = append(articles, a)
 	}
