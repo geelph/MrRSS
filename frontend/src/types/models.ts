@@ -17,6 +17,7 @@ export interface Article {
   is_favorite: boolean;
   is_hidden: boolean;
   is_read_later: boolean;
+  labels?: string; // JSON string of label array
 }
 
 export interface Feed {

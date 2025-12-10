@@ -7,6 +7,7 @@ import UpdateSettings from './UpdateSettings.vue';
 import DatabaseSettings from './DatabaseSettings.vue';
 import TranslationSettings from './TranslationSettings.vue';
 import SummarySettings from './SummarySettings.vue';
+import LabelSettings from './LabelSettings.vue';
 
 interface Props {
   settings: SettingsData;
@@ -30,6 +31,8 @@ useSettingsAutoSave(settingsRef);
     <TranslationSettings :settings="settings" />
 
     <SummarySettings :settings="settings" />
+
+    <LabelSettings :settings="settings" />
   </div>
 </template>
 

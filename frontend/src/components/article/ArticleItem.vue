@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhEyeSlash, PhStar, PhClockCountdown } from '@phosphor-icons/vue';
 import type { Article } from '@/types/models';
 import { formatDate as formatDateUtil } from '@/utils/date';
+import ArticleLabels from './parts/ArticleLabels.vue';
 
 interface Props {
   article: Article;
@@ -18,6 +20,17 @@ const emit = defineEmits<{
 }>();
 
 const { t, locale } = useI18n();
+const showLabels = ref(true);
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/settings');
+    const settings = await res.json();
+    showLabels.value = settings.label_show_in_list === 'true';
+  } catch (e) {
+    console.error('Failed to load label settings:', e);
+  }
+});
 
 function formatDate(dateStr: string): string {
   return formatDateUtil(dateStr, locale.value === 'zh-CN' ? 'zh-CN' : 'en-US');
@@ -99,6 +112,14 @@ function handleImageError(event: Event) {
           <span class="whitespace-nowrap">{{ formatDate(article.published_at) }}</span>
         </div>
       </div>
+
+      <ArticleLabels
+        v-if="showLabels && article.labels"
+        :labelsJson="article.labels"
+        :maxDisplay="3"
+        size="sm"
+        class="mt-1"
+      />
     </div>
   </div>
 </template>

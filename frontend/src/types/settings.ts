@@ -32,6 +32,14 @@ export interface SettingsData {
   summary_ai_endpoint: string;
   summary_ai_model: string;
   summary_ai_system_prompt: string;
+  label_enabled: boolean;
+  label_provider: string;
+  label_ai_api_key: string;
+  label_ai_endpoint: string;
+  label_ai_model: string;
+  label_ai_system_prompt: string;
+  label_show_in_list: boolean;
+  label_max_count: string;
   [key: string]: unknown; // Allow additional properties
 }
 
