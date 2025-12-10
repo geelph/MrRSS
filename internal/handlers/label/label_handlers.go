@@ -3,6 +3,7 @@ package label
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -171,7 +172,7 @@ func getArticleContent(h *core.Handler, articleID int64) (string, error) {
 	// Get the article directly by ID
 	article, err := h.DB.GetArticleByID(articleID)
 	if err != nil {
-		return "", nil
+		return "", fmt.Errorf("failed to get article by ID: %w", err)
 	}
 
 	// Get the feed

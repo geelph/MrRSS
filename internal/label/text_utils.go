@@ -129,8 +129,9 @@ func normalizeLabel(label string) string {
 	if !isChineseText(label) {
 		words := strings.Fields(label)
 		for i, word := range words {
-			if len(word) > 0 {
-				words[i] = strings.ToUpper(string(word[0])) + strings.ToLower(word[1:])
+			runes := []rune(word)
+			if len(runes) > 0 {
+				words[i] = strings.ToUpper(string(runes[0])) + strings.ToLower(string(runes[1:]))
 			}
 		}
 		label = strings.Join(words, " ")

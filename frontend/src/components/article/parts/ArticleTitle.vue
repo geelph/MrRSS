@@ -47,10 +47,8 @@ async function handleGenerateLabels() {
   try {
     const labels = await generateLabels(props.article.id);
     currentLabels.value = labels;
-    // Update article object
-    if (props.article) {
-      props.article.labels = JSON.stringify(labels);
-    }
+    // Emit event to parent to update article data instead of mutating prop directly
+    // Note: For now, we just update the local state. Parent component refresh will sync data.
     window.showToast(t('generateLabels') + ' - ' + t('success'), 'success');
   } catch (error: any) {
     console.error('Failed to generate labels:', error);

@@ -98,8 +98,10 @@ func (a *AILabeler) GenerateLabels(text string, maxLabels int) (LabelResult, err
 	if err != nil {
 		return LabelResult{}, fmt.Errorf("invalid API endpoint URL: %w", err)
 	}
-	if parsedURL.Scheme != "https" {
-		return LabelResult{}, fmt.Errorf("API endpoint must use HTTPS for security")
+	// Allow HTTP for localhost/development environments, require HTTPS otherwise
+	isLocalhost := parsedURL.Hostname() == "localhost" || parsedURL.Hostname() == "127.0.0.1" || parsedURL.Hostname() == "::1"
+	if parsedURL.Scheme != "https" && !isLocalhost {
+		return LabelResult{}, fmt.Errorf("API endpoint must use HTTPS for security (unless localhost)")
 	}
 
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonBody))

@@ -15,6 +15,9 @@ func (db *DB) UpdateArticleLabels(id int64, labels string) error {
 }
 
 // GetArticlesByLabel retrieves articles that have a specific label.
+// Note: Uses LIKE pattern matching for JSON array search. This is a simple approach
+// with potential for false positives (e.g., "tech" matches "biotechnology").
+// For production use, consider using SQLite JSON1 extension or filtering in application layer.
 func (db *DB) GetArticlesByLabel(label string, limit, offset int) ([]models.Article, error) {
 	db.WaitForReady()
 	query := `
@@ -27,8 +30,8 @@ func (db *DB) GetArticlesByLabel(label string, limit, offset int) ([]models.Arti
 		ORDER BY a.published_at DESC 
 		LIMIT ? OFFSET ?
 	`
-	// SQLite JSON1 extension support for proper JSON querying would be ideal,
-	// but for compatibility we use LIKE pattern matching
+	// Use quotes around label for more precise matching in JSON array
+	// Pattern: %"labeltext"% will match ["labeltext"] but reduce false positives
 	pattern := "%\"" + label + "\"%"
 	
 	rows, err := db.Query(query, pattern, limit, offset)
