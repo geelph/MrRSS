@@ -186,7 +186,7 @@ async function openScriptsFolder() {
             v-model="url"
             type="text"
             :placeholder="t('rssUrlPlaceholder')"
-            :class="['input-field', feedType === 'url' && !url.trim() ? 'border-red-500' : '']"
+            :class="['input-field', isUrlInvalid ? 'border-red-500' : '']"
           />
           <div class="mt-2">
             <button
@@ -207,10 +207,7 @@ async function openScriptsFolder() {
           <div v-if="availableScripts.length > 0" class="mb-2">
             <select
               v-model="scriptPath"
-              :class="[
-                'input-field',
-                feedType === 'script' && !scriptPath.trim() ? 'border-red-500' : '',
-              ]"
+              :class="['input-field', isScriptInvalid ? 'border-red-500' : '']"
             >
               <option value="">{{ t('selectScriptPlaceholder') }}</option>
               <option v-for="script in availableScripts" :key="script.path" :value="script.path">
