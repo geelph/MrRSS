@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n';
 import { PhWarning } from '@phosphor-icons/vue';
 import AppearanceSettings from './AppearanceSettings.vue';
 import UpdateSettings from './UpdateSettings.vue';
+import ProxySettings from './ProxySettings.vue';
 import DatabaseSettings from './DatabaseSettings.vue';
 import TranslationSettings from './TranslationSettings.vue';
 import SummarySettings from './SummarySettings.vue';
@@ -53,6 +54,8 @@ const { isValid, isTranslationValid, isSummaryValid } = useSettingsValidation(se
     <AppearanceSettings :settings="settings" />
 
     <UpdateSettings :settings="settings" />
+
+    <ProxySettings :settings="settings" />
 
     <DatabaseSettings :settings="settings" />
 

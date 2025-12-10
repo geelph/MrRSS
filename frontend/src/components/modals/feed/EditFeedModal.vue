@@ -30,6 +30,9 @@ const categorySelection = ref('');
 const showCustomCategory = ref(false);
 const scriptPath = ref('');
 const hideFromTimeline = ref(false);
+const proxyMode = ref<'global' | 'custom' | 'none'>('global');
+const proxyUrl = ref('');
+const refreshInterval = ref(0);
 const isSubmitting = ref(false);
 
 // Available scripts from the scripts directory
@@ -67,6 +70,17 @@ onMounted(async () => {
   category.value = props.feed.category;
   scriptPath.value = props.feed.script_path || '';
   hideFromTimeline.value = props.feed.hide_from_timeline || false;
+  refreshInterval.value = props.feed.refresh_interval || 0;
+
+  // Initialize proxy settings
+  if (props.feed.proxy_url) {
+    proxyMode.value = 'custom';
+    proxyUrl.value = props.feed.proxy_url;
+  } else if (props.feed.proxy_enabled) {
+    proxyMode.value = 'global';
+  } else {
+    proxyMode.value = 'none';
+  }
 
   // Initialize category selection
   if (category.value && existingCategories.value.includes(category.value)) {
@@ -119,7 +133,20 @@ async function save() {
       title: title.value,
       category: category.value,
       hide_from_timeline: hideFromTimeline.value,
+      refresh_interval: refreshInterval.value,
     };
+
+    // Handle proxy settings
+    if (proxyMode.value === 'custom') {
+      body.proxy_enabled = true;
+      body.proxy_url = proxyUrl.value;
+    } else if (proxyMode.value === 'global') {
+      body.proxy_enabled = true;
+      body.proxy_url = '';
+    } else {
+      body.proxy_enabled = false;
+      body.proxy_url = '';
+    }
 
     if (feedType.value === 'url') {
       body.url = url.value;
@@ -307,6 +334,43 @@ async function openScriptsFolder() {
               class="w-4 h-4 rounded border-border text-accent focus:ring-2 focus:ring-accent cursor-pointer"
             />
           </label>
+        </div>
+
+        <!-- Proxy Settings -->
+        <div class="mb-3 sm:mb-4">
+          <label class="block mb-1 sm:mb-1.5 font-semibold text-xs sm:text-sm text-text-secondary"
+            >{{ t('feedProxy') }}</label
+          >
+          <p class="text-[10px] sm:text-xs text-text-secondary mb-2">{{ t('feedProxyDesc') }}</p>
+          <select v-model="proxyMode" class="input-field w-full mb-2">
+            <option value="global">{{ t('useGlobalProxy') }}</option>
+            <option value="custom">{{ t('useCustomProxy') }}</option>
+            <option value="none">{{ t('noProxy') }}</option>
+          </select>
+          <input
+            v-if="proxyMode === 'custom'"
+            v-model="proxyUrl"
+            type="text"
+            :placeholder="t('customProxyUrlPlaceholder')"
+            class="input-field"
+          />
+        </div>
+
+        <!-- Refresh Interval -->
+        <div class="mb-3 sm:mb-4">
+          <label class="block mb-1 sm:mb-1.5 font-semibold text-xs sm:text-sm text-text-secondary"
+            >{{ t('feedRefreshInterval') }}</label
+          >
+          <p class="text-[10px] sm:text-xs text-text-secondary mb-2">
+            {{ t('feedRefreshIntervalDesc') }}
+          </p>
+          <input
+            v-model.number="refreshInterval"
+            type="number"
+            min="0"
+            :placeholder="t('feedRefreshIntervalPlaceholder')"
+            class="input-field"
+          />
         </div>
       </div>
       <div class="p-3 sm:p-5 border-t border-border bg-bg-secondary text-right shrink-0">

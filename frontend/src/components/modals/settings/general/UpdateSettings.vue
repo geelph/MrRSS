@@ -31,10 +31,10 @@ function formatLastUpdate(timestamp: string): string {
         <PhClock :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
         <div class="flex-1 min-w-0">
           <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
-            {{ t('autoUpdateInterval') }}
+            {{ t('refreshMode') }}
           </div>
           <div class="text-xs text-text-secondary hidden sm:block">
-            {{ t('autoUpdateIntervalDesc') }}
+            {{ t('refreshModeDesc') }}
           </div>
           <!-- Last update time - now as sub-item -->
           <div class="text-xs text-text-secondary mt-1 flex items-center gap-1">
@@ -42,6 +42,24 @@ function formatLastUpdate(timestamp: string): string {
             <span class="font-medium text-accent">{{
               formatLastUpdate(settings.last_article_update)
             }}</span>
+          </div>
+        </div>
+      </div>
+      <select v-model="settings.refresh_mode" class="input-field w-32 sm:w-40 text-xs sm:text-sm">
+        <option value="fixed">{{ t('fixedInterval') }}</option>
+        <option value="intelligent">{{ t('intelligentInterval') }}</option>
+      </select>
+    </div>
+
+    <div v-if="settings.refresh_mode === 'fixed'" class="setting-item mt-2 sm:mt-3">
+      <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
+        <PhClock :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
+        <div class="flex-1 min-w-0">
+          <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
+            {{ t('autoUpdateInterval') }}
+          </div>
+          <div class="text-xs text-text-secondary hidden sm:block">
+            {{ t('autoUpdateIntervalDesc') }}
           </div>
         </div>
       </div>
