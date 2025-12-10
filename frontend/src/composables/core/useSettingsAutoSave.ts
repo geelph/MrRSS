@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n';
 import { useAppStore } from '@/stores/app';
 import type { SettingsData } from '@/types/settings';
 import { settingsDefaults } from '@/config/defaults';
+import { useSettingsValidation } from './useSettingsValidation';
 
 export function useSettingsAutoSave(settings: Ref<SettingsData>) {
   const { locale } = useI18n();
@@ -13,6 +14,9 @@ export function useSettingsAutoSave(settings: Ref<SettingsData>) {
 
   let saveTimeout: ReturnType<typeof setTimeout> | null = null;
   let isInitialLoad = true;
+
+  // Use validation composable
+  const { isValid } = useSettingsValidation(settings);
 
   // Track previous translation settings
   const prevTranslationSettings: Ref<{
@@ -46,6 +50,12 @@ export function useSettingsAutoSave(settings: Ref<SettingsData>) {
     try {
       // Skip translation clearing on initial load
       if (isInitialLoad) {
+        return;
+      }
+
+      // Validate settings before saving
+      if (!isValid.value) {
+        // Skip save silently - validation errors are shown in UI
         return;
       }
 

@@ -5,6 +5,17 @@ All notable changes to MrRSS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.12] - 2025-12-10
+
+### Changed
+
+- Settings now support validation and show error messages for invalid inputs.
+
+### Fixed
+
+- Links in article content rendering mode can now be translated correctly.
+- Fixed the issue where some images were not displayed in article content rendering mode.
+
 ## [1.2.11] - 2025-12-08
 
 ### Added

@@ -23,11 +23,12 @@ describe('useContentTranslation', () => {
       container.innerHTML = '<p>Use the <code>console.log</code> function</p>';
       const p = container.querySelector('p') as HTMLElement;
 
-      const { text, preservedElements } = extractTextWithPlaceholders(p);
+      const { text, preservedElements, hyperlinks } = extractTextWithPlaceholders(p);
 
       expect(text).toContain('⟦0⟧');
       expect(preservedElements).toHaveLength(1);
       expect(preservedElements[0].outerHTML).toBe('<code>console.log</code>');
+      expect(hyperlinks).toHaveLength(0);
     });
 
     it('should extract text with multiple inline elements', () => {
@@ -56,10 +57,11 @@ describe('useContentTranslation', () => {
       container.innerHTML = '<p>Simple text without special elements</p>';
       const p = container.querySelector('p') as HTMLElement;
 
-      const { text, preservedElements } = extractTextWithPlaceholders(p);
+      const { text, preservedElements, hyperlinks } = extractTextWithPlaceholders(p);
 
       expect(text).toBe('Simple text without special elements');
       expect(preservedElements).toHaveLength(0);
+      expect(hyperlinks).toHaveLength(0);
     });
 
     it('should extract text with kbd elements', () => {
@@ -82,6 +84,33 @@ describe('useContentTranslation', () => {
       expect(preservedElements).toHaveLength(2);
       expect(preservedElements[0].outerHTML).toBe('<sub>2</sub>');
       expect(preservedElements[1].outerHTML).toBe('<sup>2</sup>');
+    });
+
+    it('should handle hyperlinks with markers for translation', () => {
+      container.innerHTML = '<p>Visit <a href="https://example.com">this link</a> for more</p>';
+      const p = container.querySelector('p') as HTMLElement;
+
+      const { text, preservedElements, hyperlinks } = extractTextWithPlaceholders(p);
+
+      // Hyperlinks should be marked with special markers
+      expect(text).toContain('⟪0this link0⟫');
+      expect(preservedElements).toHaveLength(0); // Links are not in preserved elements
+      expect(hyperlinks).toHaveLength(1);
+      expect(hyperlinks[0].href).toBe('https://example.com');
+    });
+
+    it('should handle multiple hyperlinks', () => {
+      container.innerHTML =
+        '<p>Visit <a href="https://example.com">link1</a> and <a href="https://test.com">link2</a></p>';
+      const p = container.querySelector('p') as HTMLElement;
+
+      const { text, hyperlinks } = extractTextWithPlaceholders(p);
+
+      expect(text).toContain('⟪0link10⟫');
+      expect(text).toContain('⟪1link21⟫');
+      expect(hyperlinks).toHaveLength(2);
+      expect(hyperlinks[0].href).toBe('https://example.com');
+      expect(hyperlinks[1].href).toBe('https://test.com');
     });
   });
 
@@ -152,6 +181,71 @@ describe('useContentTranslation', () => {
       const result = restorePreservedElements(translatedText, preservedElements);
 
       expect(result).toContain('<code>test</code>');
+    });
+
+    it('should restore hyperlinks in translated text', () => {
+      const translatedText = 'Visit ⟪0translated link0⟫ for more';
+      const hyperlinks = [
+        {
+          startMarker: '⟪0',
+          endMarker: '0⟫',
+          href: 'https://example.com',
+          attributes: { href: 'https://example.com', class: 'link' },
+        },
+      ];
+
+      const result = restorePreservedElements(translatedText, [], hyperlinks);
+
+      expect(result).toContain('<a href="https://example.com" class="link">translated link</a>');
+      expect(result).not.toContain('⟪');
+      expect(result).not.toContain('⟫');
+    });
+
+    it('should restore multiple hyperlinks in translated text', () => {
+      const translatedText = 'Visit ⟪0first link0⟫ and ⟪1second link1⟫';
+      const hyperlinks = [
+        {
+          startMarker: '⟪0',
+          endMarker: '0⟫',
+          href: 'https://example.com',
+          attributes: { href: 'https://example.com' },
+        },
+        {
+          startMarker: '⟪1',
+          endMarker: '1⟫',
+          href: 'https://test.com',
+          attributes: { href: 'https://test.com' },
+        },
+      ];
+
+      const result = restorePreservedElements(translatedText, [], hyperlinks);
+
+      expect(result).toContain('<a href="https://example.com">first link</a>');
+      expect(result).toContain('<a href="https://test.com">second link</a>');
+    });
+
+    it('should restore both preserved elements and hyperlinks', () => {
+      const translatedText = 'Use ⟦0⟧ and visit ⟪0this link0⟫';
+      const preservedElements = [
+        {
+          placeholder: '⟦0⟧',
+          outerHTML: '<code>API</code>',
+          element: document.createElement('code'),
+        },
+      ];
+      const hyperlinks = [
+        {
+          startMarker: '⟪0',
+          endMarker: '0⟫',
+          href: 'https://example.com',
+          attributes: { href: 'https://example.com' },
+        },
+      ];
+
+      const result = restorePreservedElements(translatedText, preservedElements, hyperlinks);
+
+      expect(result).toContain('<code>API</code>');
+      expect(result).toContain('<a href="https://example.com">this link</a>');
     });
   });
 

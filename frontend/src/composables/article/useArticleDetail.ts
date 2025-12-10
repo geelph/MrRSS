@@ -161,33 +161,30 @@ export function useArticleDetail() {
     }
   }
 
-  // Attach event listeners to links and images in rendered content
-  function attachContentEventListeners() {
-    // Handle all links - open in default browser
-    const links = document.querySelectorAll('.prose a');
-    links.forEach((link) => {
-      link.addEventListener('click', (e: Event) => {
-        e.preventDefault();
-        const href = link.getAttribute('href');
-        if (href) {
-          BrowserOpenURL(href);
-        }
-      });
-    });
-
-    // Handle all images - make them clickable for zoom/pan and add context menu
+  // Attach event listeners to images in rendered content
+  // Can be called multiple times (e.g., after translations modify the DOM)
+  function attachImageEventListeners() {
+    // Remove any existing listeners by cloning images (to clear all event listeners)
     const images = document.querySelectorAll<HTMLImageElement>('.prose img');
     images.forEach((img) => {
       img.style.cursor = 'pointer';
+      // Remove old listeners by replacing with clone
+      const newImg = img.cloneNode(true) as HTMLImageElement;
+      img.parentNode?.replaceChild(newImg, img);
+
+      // Attach fresh event listeners to the new image element
+      newImg.style.cursor = 'pointer';
       // Left click - open image viewer
-      img.addEventListener('click', (e: Event) => {
+      newImg.addEventListener('click', (e: Event) => {
         e.preventDefault();
-        imageViewerSrc.value = img.src;
-        imageViewerAlt.value = img.alt || '';
+        e.stopPropagation(); // Prevent event bubbling to parent link elements
+        imageViewerSrc.value = newImg.src;
+        imageViewerAlt.value = newImg.alt || '';
       });
       // Right click - show context menu for saving
-      img.addEventListener('contextmenu', (e: MouseEvent) => {
+      newImg.addEventListener('contextmenu', (e: MouseEvent) => {
         e.preventDefault();
+        e.stopPropagation(); // Prevent event bubbling to parent link elements
         // Use global context menu system
         window.dispatchEvent(
           new CustomEvent('open-context-menu', {
@@ -206,7 +203,7 @@ export function useArticleDetail() {
                   icon: 'PhDownloadSimple',
                 },
               ],
-              data: { src: img.src },
+              data: { src: newImg.src },
               callback: (action: string, data: { src: string }) => {
                 if (action === 'view') {
                   imageViewerSrc.value = data.src;
@@ -219,6 +216,39 @@ export function useArticleDetail() {
           })
         );
       });
+    });
+  }
+
+  // Attach event listeners to links and images in rendered content
+  function attachContentEventListeners() {
+    // Attach image event handlers first
+    attachImageEventListeners();
+
+    // Handle all links - open in external browser, but skip if link contains an image (let image handler take precedence)
+    const links = document.querySelectorAll('.prose a');
+    links.forEach((link) => {
+      link.addEventListener(
+        'click',
+        (e: Event) => {
+          // Check if the link contains an image
+          const hasImage = link.querySelector('img');
+          if (hasImage) {
+            // Let the image click handler take precedence - don't open the link
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+
+          // For text links, open in external browser
+          e.preventDefault();
+          e.stopPropagation();
+          const href = link.getAttribute('href');
+          if (href) {
+            BrowserOpenURL(href);
+          }
+        },
+        true
+      ); // Use capture phase to ensure our handler runs first
     });
   }
 
@@ -358,6 +388,7 @@ export function useArticleDetail() {
     toggleContentView,
     closeImageViewer,
     downloadImage,
+    attachImageEventListeners, // Expose for re-attaching after content modifications
 
     // Translations
     t,

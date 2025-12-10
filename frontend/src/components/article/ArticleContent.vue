@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { BrowserOpenURL } from '@/wailsjs/wailsjs/runtime/runtime';
 import type { Article } from '@/types/models';
 import ArticleTitle from './parts/ArticleTitle.vue';
 import ArticleSummary from './parts/ArticleSummary.vue';
@@ -29,6 +30,7 @@ interface Props {
   article: Article;
   articleContent: string;
   isLoadingContent: boolean;
+  attachImageEventListeners?: () => void;
 }
 
 const props = defineProps<Props>();
@@ -179,6 +181,9 @@ async function translateContentParagraphs(content: string) {
   ];
   const elements = proseContainer.querySelectorAll(textTags.join(','));
 
+  // Track which elements we've already translated to avoid duplicates
+  const translatedElements = new Set<HTMLElement>();
+
   for (const el of elements) {
     const htmlEl = el as HTMLElement;
 
@@ -187,6 +192,22 @@ async function translateContentParagraphs(content: string) {
 
     // Skip if already has translation inside
     if (htmlEl.querySelector('.translation-text')) continue;
+
+    // Skip if we've already translated this element
+    if (translatedElements.has(htmlEl)) continue;
+
+    // Skip if this element's parent was already translated
+    // This prevents duplicate translations of nested elements
+    let hasTranslatedAncestor = false;
+    let ancestor = htmlEl.parentElement;
+    while (ancestor && ancestor !== proseContainer) {
+      if (translatedElements.has(ancestor)) {
+        hasTranslatedAncestor = true;
+        break;
+      }
+      ancestor = ancestor.parentElement;
+    }
+    if (hasTranslatedAncestor) continue;
 
     // Skip elements that are entirely technical content (no translatable text)
     if (
@@ -205,19 +226,23 @@ async function translateContentParagraphs(content: string) {
       continue;
     }
 
-    // Extract text with placeholders for inline elements (formulas, code, images)
-    const { text: textWithPlaceholders, preservedElements } = extractTextWithPlaceholders(htmlEl);
+    // Extract text with placeholders for inline elements (formulas, code, images) and hyperlinks
+    const {
+      text: textWithPlaceholders,
+      preservedElements,
+      hyperlinks,
+    } = extractTextWithPlaceholders(htmlEl);
 
     if (!textWithPlaceholders || textWithPlaceholders.length < 2) continue;
 
-    // Translate the text (with placeholders)
+    // Translate the text (with placeholders and link markers)
     const translatedText = await translateText(textWithPlaceholders);
 
     // Skip if translation is same as original or empty
     if (!translatedText || translatedText === textWithPlaceholders) continue;
 
-    // Restore preserved elements in the translated text
-    const translatedHTML = restorePreservedElements(translatedText, preservedElements);
+    // Restore preserved elements and hyperlinks in the translated text
+    const translatedHTML = restorePreservedElements(translatedText, preservedElements, hyperlinks);
 
     // Determine how to insert translation based on element type
     const tagName = htmlEl.tagName;
@@ -247,6 +272,9 @@ async function translateContentParagraphs(content: string) {
       translationEl.innerHTML = translatedHTML;
       htmlEl.parentNode?.insertBefore(translationEl, htmlEl.nextSibling);
     }
+
+    // Mark this element as translated
+    translatedElements.add(htmlEl);
   }
 
   // Re-apply rendering enhancements to translation elements (for math formulas)
@@ -254,7 +282,39 @@ async function translateContentParagraphs(content: string) {
   proseContainer.querySelectorAll('.translation-text').forEach((el) => {
     renderMathFormulas(el as HTMLElement);
     highlightCodeBlocks(el as HTMLElement);
+
+    // Attach event listeners to links in translated text - open in external browser
+    el.querySelectorAll('a').forEach((link) => {
+      link.addEventListener(
+        'click',
+        (e: Event) => {
+          // Check if the link contains an image
+          const hasImage = link.querySelector('img');
+          if (hasImage) {
+            // Let the image click handler take precedence - don't open the link
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+
+          // For text links, open in external browser
+          e.preventDefault();
+          e.stopPropagation();
+          const href = link.getAttribute('href');
+          if (href) {
+            BrowserOpenURL(href);
+          }
+        },
+        true
+      ); // Use capture phase to ensure our handler runs first
+    });
   });
+
+  // Re-attach image event listeners after translation modifies the DOM
+  if (props.attachImageEventListeners) {
+    await nextTick();
+    props.attachImageEventListeners();
+  }
 
   isTranslatingContent.value = false;
 }

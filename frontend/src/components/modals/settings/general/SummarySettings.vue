@@ -64,7 +64,9 @@ defineProps<Props>();
           <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
             <PhKey :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
             <div class="flex-1 min-w-0">
-              <div class="font-medium mb-0 sm:mb-1 text-sm">{{ t('summaryAiApiKey') }}</div>
+              <div class="font-medium mb-0 sm:mb-1 text-sm">
+                {{ t('summaryAiApiKey') }} <span class="text-red-500">*</span>
+              </div>
               <div class="text-xs text-text-secondary hidden sm:block">
                 {{ t('summaryAiApiKeyDesc') }}
               </div>
@@ -74,7 +76,14 @@ defineProps<Props>();
             type="password"
             v-model="settings.summary_ai_api_key"
             :placeholder="t('summaryAiApiKeyPlaceholder')"
-            class="input-field w-32 sm:w-48 text-xs sm:text-sm"
+            :class="[
+              'input-field w-32 sm:w-48 text-xs sm:text-sm',
+              settings.summary_enabled &&
+              settings.summary_provider === 'ai' &&
+              !settings.summary_ai_api_key?.trim()
+                ? 'border-red-500'
+                : '',
+            ]"
           />
         </div>
         <div class="sub-setting-item">

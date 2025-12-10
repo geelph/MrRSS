@@ -2,6 +2,9 @@
 import { toRef } from 'vue';
 import type { SettingsData } from '@/types/settings';
 import { useSettingsAutoSave } from '@/composables/core/useSettingsAutoSave';
+import { useSettingsValidation } from '@/composables/core/useSettingsValidation';
+import { useI18n } from 'vue-i18n';
+import { PhWarning } from '@phosphor-icons/vue';
 import AppearanceSettings from './AppearanceSettings.vue';
 import UpdateSettings from './UpdateSettings.vue';
 import DatabaseSettings from './DatabaseSettings.vue';
@@ -13,14 +16,40 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+const { t } = useI18n();
 
 // Use composable for auto-save with reactivity
 const settingsRef = toRef(props, 'settings');
 useSettingsAutoSave(settingsRef);
+
+// Use validation composable
+const { isValid, isTranslationValid, isSummaryValid } = useSettingsValidation(settingsRef);
 </script>
 
 <template>
   <div class="space-y-4 sm:space-y-6">
+    <!-- Validation Warning -->
+    <div
+      v-if="!isValid"
+      class="p-3 sm:p-4 rounded-lg border-2 border-red-500 bg-red-500/10 flex items-start gap-3"
+    >
+      <PhWarning :size="20" class="text-red-500 shrink-0 mt-0.5" :weight="'fill'" />
+      <div class="flex-1">
+        <div class="font-semibold text-red-500 text-sm sm:text-base mb-1">
+          {{ t('requiredField') }}
+        </div>
+        <div class="text-xs sm:text-sm text-text-secondary">
+          <span v-if="!isTranslationValid">
+            {{ t('translationCredentialsRequired') }}
+          </span>
+          <span v-if="!isTranslationValid && !isSummaryValid"> • </span>
+          <span v-if="!isSummaryValid">
+            {{ t('summaryCredentialsRequired') }}
+          </span>
+        </div>
+      </div>
+    </div>
+
     <AppearanceSettings :settings="settings" />
 
     <UpdateSettings :settings="settings" />

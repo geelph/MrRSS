@@ -83,6 +83,16 @@ const isFormValid = computed(() => {
   }
 });
 
+// Validation for URL field
+const isUrlInvalid = computed(() => {
+  return feedType.value === 'url' && !url.value.trim();
+});
+
+// Validation for script field
+const isScriptInvalid = computed(() => {
+  return feedType.value === 'script' && !scriptPath.value.trim();
+});
+
 async function addFeed() {
   if (!isFormValid.value) return;
   isSubmitting.value = true;
@@ -155,8 +165,9 @@ async function openScriptsFolder() {
       </div>
       <div class="flex-1 overflow-y-auto p-4 sm:p-6">
         <div class="mb-3 sm:mb-4">
-          <label class="block mb-1 sm:mb-1.5 font-semibold text-xs sm:text-sm text-text-secondary"
-            >{{ t('title') }} ({{ t('optional') }})</label
+          <label
+            class="block mb-1 sm:mb-1.5 font-semibold text-xs sm:text-sm text-text-secondary"
+            >{{ t('title') }}</label
           >
           <input
             v-model="title"
@@ -168,15 +179,14 @@ async function openScriptsFolder() {
 
         <!-- URL Input (default mode) -->
         <div v-if="feedType === 'url'" class="mb-3 sm:mb-4">
-          <label
-            class="block mb-1 sm:mb-1.5 font-semibold text-xs sm:text-sm text-text-secondary"
-            >{{ t('rssUrl') }}</label
+          <label class="block mb-1 sm:mb-1.5 font-semibold text-xs sm:text-sm text-text-secondary"
+            >{{ t('rssUrl') }} <span class="text-red-500">*</span></label
           >
           <input
             v-model="url"
             type="text"
             :placeholder="t('rssUrlPlaceholder')"
-            class="input-field"
+            :class="['input-field', isUrlInvalid ? 'border-red-500' : '']"
           />
           <div class="mt-2">
             <button
@@ -191,12 +201,14 @@ async function openScriptsFolder() {
 
         <!-- Script Selection (advanced mode) -->
         <div v-else class="mb-3 sm:mb-4">
-          <label
-            class="block mb-1 sm:mb-1.5 font-semibold text-xs sm:text-sm text-text-secondary"
-            >{{ t('selectScript') }}</label
+          <label class="block mb-1 sm:mb-1.5 font-semibold text-xs sm:text-sm text-text-secondary"
+            >{{ t('selectScript') }} <span class="text-red-500">*</span></label
           >
           <div v-if="availableScripts.length > 0" class="mb-2">
-            <select v-model="scriptPath" class="input-field">
+            <select
+              v-model="scriptPath"
+              :class="['input-field', isScriptInvalid ? 'border-red-500' : '']"
+            >
               <option value="">{{ t('selectScriptPlaceholder') }}</option>
               <option v-for="script in availableScripts" :key="script.path" :value="script.path">
                 {{ script.name }} ({{ script.type }})
@@ -242,7 +254,7 @@ async function openScriptsFolder() {
         <div class="mb-3 sm:mb-4">
           <label
             class="block mb-1 sm:mb-1.5 font-semibold text-xs sm:text-sm text-text-secondary"
-            >{{ t('categoryOptional') }}</label
+            >{{ t('category') }}</label
           >
           <select
             v-if="!showCustomCategory"

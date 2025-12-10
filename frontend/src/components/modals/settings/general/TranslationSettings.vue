@@ -65,7 +65,9 @@ defineProps<Props>();
         <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
           <PhKey :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
           <div class="flex-1 min-w-0">
-            <div class="font-medium mb-0 sm:mb-1 text-sm">{{ t('deeplApiKey') }}</div>
+            <div class="font-medium mb-0 sm:mb-1 text-sm">
+              {{ t('deeplApiKey') }} <span class="text-red-500">*</span>
+            </div>
             <div class="text-xs text-text-secondary hidden sm:block">
               {{ t('deeplApiKeyDesc') || 'Enter your DeepL API key' }}
             </div>
@@ -75,7 +77,14 @@ defineProps<Props>();
           type="password"
           v-model="settings.deepl_api_key"
           :placeholder="t('deeplApiKeyPlaceholder')"
-          class="input-field w-32 sm:w-48 text-xs sm:text-sm"
+          :class="[
+            'input-field w-32 sm:w-48 text-xs sm:text-sm',
+            settings.translation_enabled &&
+            settings.translation_provider === 'deepl' &&
+            !settings.deepl_api_key?.trim()
+              ? 'border-red-500'
+              : '',
+          ]"
         />
       </div>
 
@@ -85,7 +94,9 @@ defineProps<Props>();
           <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
             <PhKey :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
             <div class="flex-1 min-w-0">
-              <div class="font-medium mb-0 sm:mb-1 text-sm">{{ t('baiduAppId') }}</div>
+              <div class="font-medium mb-0 sm:mb-1 text-sm">
+                {{ t('baiduAppId') }} <span class="text-red-500">*</span>
+              </div>
               <div class="text-xs text-text-secondary hidden sm:block">
                 {{ t('baiduAppIdDesc') }}
               </div>
@@ -95,14 +106,23 @@ defineProps<Props>();
             type="text"
             v-model="settings.baidu_app_id"
             :placeholder="t('baiduAppIdPlaceholder')"
-            class="input-field w-32 sm:w-48 text-xs sm:text-sm"
+            :class="[
+              'input-field w-32 sm:w-48 text-xs sm:text-sm',
+              settings.translation_enabled &&
+              settings.translation_provider === 'baidu' &&
+              !settings.baidu_app_id?.trim()
+                ? 'border-red-500'
+                : '',
+            ]"
           />
         </div>
         <div class="sub-setting-item">
           <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
             <PhKey :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
             <div class="flex-1 min-w-0">
-              <div class="font-medium mb-0 sm:mb-1 text-sm">{{ t('baiduSecretKey') }}</div>
+              <div class="font-medium mb-0 sm:mb-1 text-sm">
+                {{ t('baiduSecretKey') }} <span class="text-red-500">*</span>
+              </div>
               <div class="text-xs text-text-secondary hidden sm:block">
                 {{ t('baiduSecretKeyDesc') }}
               </div>
@@ -112,7 +132,14 @@ defineProps<Props>();
             type="password"
             v-model="settings.baidu_secret_key"
             :placeholder="t('baiduSecretKeyPlaceholder')"
-            class="input-field w-32 sm:w-48 text-xs sm:text-sm"
+            :class="[
+              'input-field w-32 sm:w-48 text-xs sm:text-sm',
+              settings.translation_enabled &&
+              settings.translation_provider === 'baidu' &&
+              !settings.baidu_secret_key?.trim()
+                ? 'border-red-500'
+                : '',
+            ]"
           />
         </div>
       </template>
@@ -123,7 +150,9 @@ defineProps<Props>();
           <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
             <PhKey :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
             <div class="flex-1 min-w-0">
-              <div class="font-medium mb-0 sm:mb-1 text-sm">{{ t('aiApiKey') }}</div>
+              <div class="font-medium mb-0 sm:mb-1 text-sm">
+                {{ t('aiApiKey') }} <span class="text-red-500">*</span>
+              </div>
               <div class="text-xs text-text-secondary hidden sm:block">
                 {{ t('aiApiKeyDesc') }}
               </div>
@@ -133,7 +162,14 @@ defineProps<Props>();
             type="password"
             v-model="settings.ai_api_key"
             :placeholder="t('aiApiKeyPlaceholder')"
-            class="input-field w-32 sm:w-48 text-xs sm:text-sm"
+            :class="[
+              'input-field w-32 sm:w-48 text-xs sm:text-sm',
+              settings.translation_enabled &&
+              settings.translation_provider === 'ai' &&
+              !settings.ai_api_key?.trim()
+                ? 'border-red-500'
+                : '',
+            ]"
           />
         </div>
         <div class="sub-setting-item">

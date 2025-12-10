@@ -19,6 +19,7 @@ const {
   openOriginal,
   toggleContentView,
   closeImageViewer,
+  attachImageEventListeners,
   t,
 } = useArticleDetail();
 </script>
@@ -65,6 +66,7 @@ const {
         :article="article"
         :article-content="articleContent"
         :is-loading-content="isLoadingContent"
+        :attach-image-event-listeners="attachImageEventListeners"
       />
     </div>
 
