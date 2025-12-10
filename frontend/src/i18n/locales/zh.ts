@@ -317,6 +317,8 @@ const zh: TranslationMessages = {
   cleanDatabaseTitle: '清理数据库',
   cleanDatabaseMessage: '这将删除除已读和已收藏外的所有文章。是否继续？',
   clean: '清理',
+  success: '成功',
+  failed: '失败',
 
   // Toast Messages
   feedAddedSuccess: '订阅添加成功',

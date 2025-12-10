@@ -321,6 +321,8 @@ const en: TranslationMessages = {
   cleanDatabaseTitle: 'Clean Database',
   cleanDatabaseMessage: 'This will delete all articles except read and favorited ones. Continue?',
   clean: 'Clean',
+  success: 'Success',
+  failed: 'Failed',
 
   // Toast Messages
   feedAddedSuccess: 'Feed added successfully',

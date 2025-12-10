@@ -63,7 +63,7 @@ const hiddenCount = computed(() => {
 }
 
 .label-badge:hover {
-  @apply bg-accent/10 border-accent/30;
+  @apply bg-bg-tertiary border-accent;
 }
 
 .label-text {

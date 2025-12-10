@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { PhSpinnerGap, PhTranslate } from '@phosphor-icons/vue';
+import { computed, ref, onMounted } from 'vue';
+import { PhSpinnerGap, PhTranslate, PhTag } from '@phosphor-icons/vue';
 import type { Article } from '@/types/models';
 import { formatDate } from '@/utils/date';
 import { useI18n } from 'vue-i18n';
+import { useArticleLabels } from '@/composables/article/useArticleLabels';
+import ArticleLabels from './ArticleLabels.vue';
 
 interface Props {
   article: Article;
@@ -15,6 +17,10 @@ interface Props {
 const props = defineProps<Props>();
 
 const { t } = useI18n();
+const { isGeneratingLabels, generateLabels, parseLabels } = useArticleLabels();
+
+const labelEnabled = ref(false);
+const currentLabels = ref<string[]>([]);
 
 // Computed: check if we should show bilingual title
 const showBilingualTitle = computed(() => {
@@ -24,6 +30,33 @@ const showBilingualTitle = computed(() => {
     props.translatedTitle !== props.article?.title
   );
 });
+
+onMounted(async () => {
+  // Load label settings
+  try {
+    const res = await fetch('/api/settings');
+    const settings = await res.json();
+    labelEnabled.value = settings.label_enabled === 'true';
+    currentLabels.value = parseLabels(props.article.labels);
+  } catch (e) {
+    console.error('Failed to load label settings:', e);
+  }
+});
+
+async function handleGenerateLabels() {
+  try {
+    const labels = await generateLabels(props.article.id);
+    currentLabels.value = labels;
+    // Update article object
+    if (props.article) {
+      props.article.labels = JSON.stringify(labels);
+    }
+    window.showToast(t('generateLabels') + ' - ' + t('success'), 'success');
+  } catch (error: any) {
+    console.error('Failed to generate labels:', error);
+    window.showToast(error.message || t('generateLabels') + ' - ' + t('failed'), 'error');
+  }
+}
 </script>
 
 <template>
@@ -58,4 +91,33 @@ const showBilingualTitle = computed(() => {
       <span class="text-xs">{{ t('autoTranslateEnabled') }}</span>
     </span>
   </div>
+
+  <!-- Labels Section -->
+  <div v-if="labelEnabled" class="mb-4 flex flex-wrap items-center gap-2">
+    <ArticleLabels v-if="currentLabels.length > 0" :labelsJson="JSON.stringify(currentLabels)" :maxDisplay="10" size="md" />
+    <button
+      @click="handleGenerateLabels"
+      :disabled="isGeneratingLabels"
+      class="label-generate-btn"
+      :class="{ loading: isGeneratingLabels }"
+    >
+      <PhSpinnerGap v-if="isGeneratingLabels" :size="14" class="animate-spin" />
+      <PhTag v-else :size="14" />
+      <span class="text-xs">{{ isGeneratingLabels ? t('generatingLabels') : t('generateLabels') }}</span>
+    </button>
+  </div>
 </template>
+
+<style scoped>
+.label-generate-btn {
+  @apply flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border bg-bg-secondary text-text-secondary hover:bg-bg-tertiary hover:border-accent transition-all;
+}
+
+.label-generate-btn:disabled {
+  @apply opacity-70 cursor-not-allowed;
+}
+
+.label-generate-btn.loading {
+  @apply pointer-events-none;
+}
+</style>
