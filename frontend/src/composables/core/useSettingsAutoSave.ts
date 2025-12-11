@@ -73,6 +73,7 @@ export function useSettingsAutoSave(settings: Ref<SettingsData>) {
           update_interval: (
             settings.value.update_interval ?? settingsDefaults.update_interval
           ).toString(),
+          refresh_mode: settings.value.refresh_mode ?? settingsDefaults.refresh_mode,
           translation_enabled: (
             settings.value.translation_enabled ?? settingsDefaults.translation_enabled
           ).toString(),
@@ -117,6 +118,14 @@ export function useSettingsAutoSave(settings: Ref<SettingsData>) {
           summary_ai_model: settings.value.summary_ai_model ?? settingsDefaults.summary_ai_model,
           summary_ai_system_prompt:
             settings.value.summary_ai_system_prompt ?? settingsDefaults.summary_ai_system_prompt,
+          proxy_enabled: (
+            settings.value.proxy_enabled ?? settingsDefaults.proxy_enabled
+          ).toString(),
+          proxy_type: settings.value.proxy_type ?? settingsDefaults.proxy_type,
+          proxy_host: settings.value.proxy_host ?? settingsDefaults.proxy_host,
+          proxy_port: settings.value.proxy_port ?? settingsDefaults.proxy_port,
+          proxy_username: settings.value.proxy_username ?? settingsDefaults.proxy_username,
+          proxy_password: settings.value.proxy_password ?? settingsDefaults.proxy_password,
         }),
       });
 

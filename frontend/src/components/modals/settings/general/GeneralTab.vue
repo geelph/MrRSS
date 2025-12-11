@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n';
 import { PhWarning } from '@phosphor-icons/vue';
 import AppearanceSettings from './AppearanceSettings.vue';
 import UpdateSettings from './UpdateSettings.vue';
+import ProxySettings from './ProxySettings.vue';
 import DatabaseSettings from './DatabaseSettings.vue';
 import TranslationSettings from './TranslationSettings.vue';
 import SummarySettings from './SummarySettings.vue';
@@ -23,7 +24,8 @@ const settingsRef = toRef(props, 'settings');
 useSettingsAutoSave(settingsRef);
 
 // Use validation composable
-const { isValid, isTranslationValid, isSummaryValid } = useSettingsValidation(settingsRef);
+const { isValid, isTranslationValid, isSummaryValid, isProxyValid } =
+  useSettingsValidation(settingsRef);
 </script>
 
 <template>
@@ -46,6 +48,10 @@ const { isValid, isTranslationValid, isSummaryValid } = useSettingsValidation(se
           <span v-if="!isSummaryValid">
             {{ t('summaryCredentialsRequired') }}
           </span>
+          <span v-if="(!isTranslationValid || !isSummaryValid) && !isProxyValid"> • </span>
+          <span v-if="!isProxyValid">
+            {{ t('proxyCredentialsRequired') }}
+          </span>
         </div>
       </div>
     </div>
@@ -53,6 +59,8 @@ const { isValid, isTranslationValid, isSummaryValid } = useSettingsValidation(se
     <AppearanceSettings :settings="settings" />
 
     <UpdateSettings :settings="settings" />
+
+    <ProxySettings :settings="settings" />
 
     <DatabaseSettings :settings="settings" />
 

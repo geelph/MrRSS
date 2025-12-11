@@ -18,11 +18,13 @@ type AITranslator struct {
 	Model        string
 	SystemPrompt string
 	client       *http.Client
+	db           DBInterface
 }
 
 // NewAITranslator creates a new AI translator with the given credentials.
 // endpoint should be the API base URL (e.g., "https://api.openai.com/v1" for OpenAI)
 // model should be the model name (e.g., "gpt-4o-mini", "claude-3-haiku-20240307")
+// db is optional - if nil, no proxy will be used
 func NewAITranslator(apiKey, endpoint, model string) *AITranslator {
 	defaults := config.Get()
 	// Default to OpenAI endpoint if not specified
@@ -39,6 +41,31 @@ func NewAITranslator(apiKey, endpoint, model string) *AITranslator {
 		Model:        model,
 		SystemPrompt: "", // Will be set from settings when used
 		client:       &http.Client{Timeout: 30 * time.Second},
+		db:           nil,
+	}
+}
+
+// NewAITranslatorWithDB creates a new AI translator with database for proxy support
+func NewAITranslatorWithDB(apiKey, endpoint, model string, db DBInterface) *AITranslator {
+	defaults := config.Get()
+	if endpoint == "" {
+		endpoint = defaults.AIEndpoint
+	}
+	if model == "" {
+		model = defaults.AIModel
+	}
+	client, err := CreateHTTPClientWithProxy(db, 30*time.Second)
+	if err != nil {
+		// Fallback to default client if proxy creation fails
+		client = &http.Client{Timeout: 30 * time.Second}
+	}
+	return &AITranslator{
+		APIKey:       apiKey,
+		Endpoint:     strings.TrimSuffix(endpoint, "/"),
+		Model:        model,
+		SystemPrompt: "",
+		client:       client,
+		db:           db,
 	}
 }
 

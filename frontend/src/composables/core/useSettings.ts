@@ -12,6 +12,7 @@ export function useSettings() {
 
   const settings: Ref<SettingsData> = ref({
     update_interval: settingsDefaults.update_interval,
+    refresh_mode: settingsDefaults.refresh_mode,
     translation_enabled: settingsDefaults.translation_enabled,
     target_language: settingsDefaults.target_language,
     translation_provider: settingsDefaults.translation_provider,
@@ -40,6 +41,12 @@ export function useSettings() {
     ai_endpoint: settingsDefaults.ai_endpoint,
     ai_model: settingsDefaults.ai_model,
     ai_system_prompt: settingsDefaults.ai_system_prompt,
+    proxy_enabled: settingsDefaults.proxy_enabled,
+    proxy_type: settingsDefaults.proxy_type,
+    proxy_host: settingsDefaults.proxy_host,
+    proxy_port: settingsDefaults.proxy_port,
+    proxy_username: settingsDefaults.proxy_username,
+    proxy_password: settingsDefaults.proxy_password,
   });
 
   /**
@@ -51,7 +58,8 @@ export function useSettings() {
       const data = await res.json();
 
       settings.value = {
-        update_interval: data.update_interval || settingsDefaults.update_interval,
+        update_interval: parseInt(data.update_interval) || settingsDefaults.update_interval,
+        refresh_mode: data.refresh_mode || settingsDefaults.refresh_mode,
         translation_enabled: data.translation_enabled === 'true',
         target_language: data.target_language || settingsDefaults.target_language,
         translation_provider: data.translation_provider || settingsDefaults.translation_provider,
@@ -82,6 +90,12 @@ export function useSettings() {
         ai_endpoint: data.ai_endpoint || settingsDefaults.ai_endpoint,
         ai_model: data.ai_model || settingsDefaults.ai_model,
         ai_system_prompt: data.ai_system_prompt || settingsDefaults.ai_system_prompt,
+        proxy_enabled: data.proxy_enabled === 'true',
+        proxy_type: data.proxy_type || settingsDefaults.proxy_type,
+        proxy_host: data.proxy_host || settingsDefaults.proxy_host,
+        proxy_port: data.proxy_port || settingsDefaults.proxy_port,
+        proxy_username: data.proxy_username || settingsDefaults.proxy_username,
+        proxy_password: data.proxy_password || settingsDefaults.proxy_password,
       };
 
       return settings.value;

@@ -10,11 +10,28 @@ import (
 
 type GoogleFreeTranslator struct {
 	client *http.Client
+	db     DBInterface
 }
 
+// NewGoogleFreeTranslator creates a new Google Free Translator
+// db is optional - if nil, no proxy will be used
 func NewGoogleFreeTranslator() *GoogleFreeTranslator {
 	return &GoogleFreeTranslator{
 		client: &http.Client{Timeout: 10 * time.Second},
+		db:     nil,
+	}
+}
+
+// NewGoogleFreeTranslatorWithDB creates a new Google Free Translator with database for proxy support
+func NewGoogleFreeTranslatorWithDB(db DBInterface) *GoogleFreeTranslator {
+	client, err := CreateHTTPClientWithProxy(db, 10*time.Second)
+	if err != nil {
+		// Fallback to default client if proxy creation fails
+		client = &http.Client{Timeout: 10 * time.Second}
+	}
+	return &GoogleFreeTranslator{
+		client: client,
+		db:     db,
 	}
 }
 

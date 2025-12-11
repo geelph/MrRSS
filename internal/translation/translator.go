@@ -1,13 +1,41 @@
 package translation
 
 import (
+	"MrRSS/internal/utils"
 	"fmt"
+	"net/http"
 	"strings"
+	"time"
 )
 
 // Translator defines the interface for translation services
 type Translator interface {
 	Translate(text, targetLang string) (string, error)
+}
+
+// DBInterface defines the minimal database interface needed for proxy settings
+type DBInterface interface {
+	GetSetting(key string) (string, error)
+}
+
+// CreateHTTPClientWithProxy creates an HTTP client with global proxy settings if enabled
+func CreateHTTPClientWithProxy(db DBInterface, timeout time.Duration) (*http.Client, error) {
+	var proxyURL string
+
+	// Check if global proxy is enabled
+	proxyEnabled, _ := db.GetSetting("proxy_enabled")
+	if proxyEnabled == "true" {
+		// Build proxy URL from global settings
+		proxyType, _ := db.GetSetting("proxy_type")
+		proxyHost, _ := db.GetSetting("proxy_host")
+		proxyPort, _ := db.GetSetting("proxy_port")
+		proxyUsername, _ := db.GetSetting("proxy_username")
+		proxyPassword, _ := db.GetSetting("proxy_password")
+		proxyURL = utils.BuildProxyURL(proxyType, proxyHost, proxyPort, proxyUsername, proxyPassword)
+	}
+
+	// Create HTTP client with or without proxy
+	return utils.CreateHTTPClient(proxyURL, timeout)
 }
 
 // MockTranslator is a simple translator for demonstration

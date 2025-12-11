@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"time"
 
 	"MrRSS/internal/handlers/core"
+	"MrRSS/internal/utils"
 	"MrRSS/internal/version"
 )
 
@@ -21,7 +23,30 @@ func HandleCheckUpdates(h *core.Handler, w http.ResponseWriter, r *http.Request)
 	currentVersion := version.Version
 	const githubAPI = "https://api.github.com/repos/WCY-dt/MrRSS/releases/latest"
 
-	resp, err := http.Get(githubAPI)
+	// Create HTTP client with global proxy support
+	var proxyURL string
+	proxyEnabled, _ := h.DB.GetSetting("proxy_enabled")
+	if proxyEnabled == "true" {
+		// Build proxy URL from global settings
+		proxyType, _ := h.DB.GetSetting("proxy_type")
+		proxyHost, _ := h.DB.GetSetting("proxy_host")
+		proxyPort, _ := h.DB.GetSetting("proxy_port")
+		proxyUsername, _ := h.DB.GetSetting("proxy_username")
+		proxyPassword, _ := h.DB.GetSetting("proxy_password")
+		proxyURL = utils.BuildProxyURL(proxyType, proxyHost, proxyPort, proxyUsername, proxyPassword)
+	}
+
+	client, err := utils.CreateHTTPClient(proxyURL, 30*time.Second)
+	if err != nil {
+		log.Printf("Error creating HTTP client: %v", err)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"current_version": currentVersion,
+			"error":           "Failed to create HTTP client",
+		})
+		return
+	}
+
+	resp, err := client.Get(githubAPI)
 	if err != nil {
 		log.Printf("Error checking for updates: %v", err)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -124,3 +149,5 @@ func HandleCheckUpdates(h *core.Handler, w http.ResponseWriter, r *http.Request)
 
 	json.NewEncoder(w).Encode(response)
 }
+
+

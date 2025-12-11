@@ -12,12 +12,30 @@ import (
 type DeepLTranslator struct {
 	APIKey string
 	client *http.Client
+	db     DBInterface
 }
 
+// NewDeepLTranslator creates a new DeepL Translator
+// db is optional - if nil, no proxy will be used
 func NewDeepLTranslator(apiKey string) *DeepLTranslator {
 	return &DeepLTranslator{
 		APIKey: apiKey,
 		client: &http.Client{Timeout: 10 * time.Second},
+		db:     nil,
+	}
+}
+
+// NewDeepLTranslatorWithDB creates a new DeepL Translator with database for proxy support
+func NewDeepLTranslatorWithDB(apiKey string, db DBInterface) *DeepLTranslator {
+	client, err := CreateHTTPClientWithProxy(db, 10*time.Second)
+	if err != nil {
+		// Fallback to default client if proxy creation fails
+		client = &http.Client{Timeout: 10 * time.Second}
+	}
+	return &DeepLTranslator{
+		APIKey: apiKey,
+		client: client,
+		db:     db,
 	}
 }
 

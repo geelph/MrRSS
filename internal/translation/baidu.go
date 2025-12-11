@@ -17,14 +17,32 @@ type BaiduTranslator struct {
 	AppID     string
 	SecretKey string
 	client    *http.Client
+	db        DBInterface
 }
 
 // NewBaiduTranslator creates a new Baidu translator with the given credentials.
+// db is optional - if nil, no proxy will be used
 func NewBaiduTranslator(appID, secretKey string) *BaiduTranslator {
 	return &BaiduTranslator{
 		AppID:     appID,
 		SecretKey: secretKey,
 		client:    &http.Client{Timeout: 10 * time.Second},
+		db:        nil,
+	}
+}
+
+// NewBaiduTranslatorWithDB creates a new Baidu translator with database for proxy support
+func NewBaiduTranslatorWithDB(appID, secretKey string, db DBInterface) *BaiduTranslator {
+	client, err := CreateHTTPClientWithProxy(db, 10*time.Second)
+	if err != nil {
+		// Fallback to default client if proxy creation fails
+		client = &http.Client{Timeout: 10 * time.Second}
+	}
+	return &BaiduTranslator{
+		AppID:     appID,
+		SecretKey: secretKey,
+		client:    client,
+		db:        db,
 	}
 }
 

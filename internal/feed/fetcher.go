@@ -8,6 +8,7 @@ import (
 	"MrRSS/internal/utils"
 	"context"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
@@ -21,12 +22,13 @@ type FeedParser interface {
 }
 
 type Fetcher struct {
-	db             *database.DB
-	fp             FeedParser
-	translator     translation.Translator
-	scriptExecutor *ScriptExecutor
-	progress       Progress
-	mu             sync.Mutex
+	db                *database.DB
+	fp                FeedParser
+	translator        translation.Translator
+	scriptExecutor    *ScriptExecutor
+	progress          Progress
+	mu                sync.Mutex
+	refreshCalculator *IntelligentRefreshCalculator
 }
 
 func NewFetcher(db *database.DB, translator translation.Translator) *Fetcher {
@@ -38,23 +40,89 @@ func NewFetcher(db *database.DB, translator translation.Translator) *Fetcher {
 	}
 
 	return &Fetcher{
-		db:             db,
-		fp:             gofeed.NewParser(),
-		translator:     translator,
-		scriptExecutor: executor,
+		db:                db,
+		fp:                gofeed.NewParser(),
+		translator:        translator,
+		scriptExecutor:    executor,
+		refreshCalculator: NewIntelligentRefreshCalculator(db),
 	}
 }
 
+// GetIntelligentRefreshCalculator returns the refresh calculator
+func (f *Fetcher) GetIntelligentRefreshCalculator() *IntelligentRefreshCalculator {
+	return f.refreshCalculator
+}
+
+// GetStaggeredDelay calculates a staggered delay for feed refresh
+func (f *Fetcher) GetStaggeredDelay(feedID int64, totalFeeds int) time.Duration {
+	return GetStaggeredDelay(feedID, totalFeeds)
+}
+
+// getHTTPClient returns an HTTP client configured with proxy if needed
+// Proxy precedence (highest to lowest):
+// 1. Feed custom proxy (ProxyEnabled=true, ProxyURL != "")
+// 2. Global proxy (ProxyEnabled=true, ProxyURL == "", global proxy_enabled=true)
+// 3. No proxy (ProxyEnabled=false or no global proxy)
+func (f *Fetcher) getHTTPClient(feed models.Feed) (*http.Client, error) {
+	var proxyURL string
+
+	// Check feed-level proxy settings
+	if feed.ProxyEnabled && feed.ProxyURL != "" {
+		// Feed has custom proxy configured - highest priority
+		proxyURL = feed.ProxyURL
+	} else if feed.ProxyEnabled {
+		// Feed requests to use global proxy
+		proxyEnabled, _ := f.db.GetSetting("proxy_enabled")
+		if proxyEnabled == "true" {
+			// Build global proxy URL from settings
+			proxyType, _ := f.db.GetSetting("proxy_type")
+			proxyHost, _ := f.db.GetSetting("proxy_host")
+			proxyPort, _ := f.db.GetSetting("proxy_port")
+			proxyUsername, _ := f.db.GetSetting("proxy_username")
+			proxyPassword, _ := f.db.GetSetting("proxy_password")
+			proxyURL = BuildProxyURL(proxyType, proxyHost, proxyPort, proxyUsername, proxyPassword)
+		}
+	}
+	// If ProxyEnabled=false, proxyURL remains empty (no proxy)
+
+	// Create HTTP client with or without proxy
+	return CreateHTTPClient(proxyURL)
+}
+
 // setupTranslator configures the translator based on database settings.
+// Now supports global proxy settings for all translation services.
 func (f *Fetcher) setupTranslator() {
 	provider, _ := f.db.GetSetting("translation_provider")
-	apiKey, _ := f.db.GetSetting("deepl_api_key")
 
 	var t translation.Translator
-	if provider == "deepl" && apiKey != "" {
-		t = translation.NewDeepLTranslator(apiKey)
-	} else {
-		t = translation.NewGoogleFreeTranslator()
+	switch provider {
+	case "deepl":
+		apiKey, _ := f.db.GetSetting("deepl_api_key")
+		if apiKey != "" {
+			t = translation.NewDeepLTranslatorWithDB(apiKey, f.db)
+		} else {
+			t = translation.NewGoogleFreeTranslatorWithDB(f.db)
+		}
+	case "baidu":
+		appID, _ := f.db.GetSetting("baidu_app_id")
+		secretKey, _ := f.db.GetSetting("baidu_secret_key")
+		if appID != "" && secretKey != "" {
+			t = translation.NewBaiduTranslatorWithDB(appID, secretKey, f.db)
+		} else {
+			t = translation.NewGoogleFreeTranslatorWithDB(f.db)
+		}
+	case "ai":
+		apiKey, _ := f.db.GetSetting("ai_api_key")
+		endpoint, _ := f.db.GetSetting("ai_endpoint")
+		model, _ := f.db.GetSetting("ai_model")
+		if apiKey != "" {
+			t = translation.NewAITranslatorWithDB(apiKey, endpoint, model, f.db)
+		} else {
+			t = translation.NewGoogleFreeTranslatorWithDB(f.db)
+		}
+	default:
+		// Default to Google Free Translator with proxy support
+		t = translation.NewGoogleFreeTranslatorWithDB(f.db)
 	}
 	f.translator = t
 }
@@ -147,8 +215,20 @@ func (f *Fetcher) FetchFeed(ctx context.Context, feed models.Feed) {
 			return
 		}
 	} else {
-		// Use traditional URL-based fetching
-		parsedFeed, err = f.fp.ParseURLWithContext(feed.URL, ctx)
+		// Get HTTP client with proxy support
+		httpClient, err := f.getHTTPClient(feed)
+		if err != nil {
+			log.Printf("Error creating HTTP client for feed %s: %v", feed.Title, err)
+			f.db.UpdateFeedError(feed.ID, err.Error())
+			return
+		}
+
+		// Create parser with custom HTTP client
+		parser := gofeed.NewParser()
+		parser.Client = httpClient
+
+		// Use traditional URL-based fetching with proxy support
+		parsedFeed, err = parser.ParseURLWithContext(feed.URL, ctx)
 		if err != nil {
 			log.Printf("Error parsing feed %s: %v", feed.URL, err)
 			f.db.UpdateFeedError(feed.ID, err.Error())
