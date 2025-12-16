@@ -16,7 +16,7 @@ help: ## Show this help message
 	@echo "MrRSS Development Makefile ($(DETECTED_OS))"
 	@echo ""
 	@echo "Available targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
 # Development
 dev: ## Start development server
@@ -38,6 +38,9 @@ test: test-frontend test-backend ## Run all tests
 test-frontend: ## Run frontend tests
 	cd frontend && npm test
 
+test-frontend-e2e: ## Run frontend E2E tests with Cypress
+	cd frontend && npm run test:e2e
+
 test-backend: ## Run backend tests
 	go test -v -timeout=5m -cover ./internal/...
 
@@ -45,6 +48,8 @@ test-coverage: ## Run backend tests with coverage
 	go test -v -timeout=5m -coverprofile=coverage.out -covermode=atomic ./internal/...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+test-all: test-frontend test-frontend-e2e test-backend ## Run all tests including E2E
 
 # Code Quality
 lint: lint-frontend lint-backend ## Run all linters

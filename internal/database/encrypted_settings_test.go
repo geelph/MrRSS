@@ -86,9 +86,9 @@ func TestMigrationFromPlainText(t *testing.T) {
 
 	// Store plain text values (simulating old version)
 	plainTextValues := map[string]string{
-		"deepl_api_key":      "plain-text-api-key-123",
-		"baidu_secret_key":   "plain-baidu-secret",
-		"proxy_password":     "plain-proxy-pass",
+		"deepl_api_key":    "plain-text-api-key-123",
+		"baidu_secret_key": "plain-baidu-secret",
+		"proxy_password":   "plain-proxy-pass",
 	}
 
 	for key, value := range plainTextValues {

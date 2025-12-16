@@ -6,26 +6,6 @@ import (
 	"testing"
 )
 
-// Test extractZip function
-func TestExtractZip(t *testing.T) {
-	// This is a placeholder test that checks if the function signature is correct
-	// In a real scenario, you would create a test zip file and verify extraction
-	t.Run("function_exists", func(t *testing.T) {
-		// Just verify the function exists and can be called
-		// Real test would need a valid zip file
-		t.Log("extractZip function available")
-	})
-}
-
-// Test extractTarGz function
-func TestExtractTarGz(t *testing.T) {
-	// This is a placeholder test that checks if the function signature is correct
-	t.Run("function_exists", func(t *testing.T) {
-		// Just verify the function exists and can be called
-		t.Log("extractTarGz function available")
-	})
-}
-
 // Test copyFile function
 func TestCopyFile(t *testing.T) {
 	// Create a temporary source file

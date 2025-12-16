@@ -875,6 +875,7 @@ watch(localSettings, (newSettings) => {
 ```
 
 **Problems with this approach**:
+
 1. `localSettings` is a shallow copy that doesn't sync when `props.settings` changes
 2. User modifies localSettings → emits to parent → parent updates → **but localSettings doesn't update**
 3. v-if conditions checking different data source than v-model causes UI inconsistencies
@@ -976,6 +977,7 @@ const emit = defineEmits<{ 'update:settings': [settings: SettingsData] }>();
 ```
 
 **Benefits of this approach**:
+
 1. ✅ Single source of truth (`props.settings`)
 2. ✅ Real-time reactivity - changes immediately reflected
 3. ✅ v-if conditions and bindings use same data source
@@ -983,6 +985,7 @@ const emit = defineEmits<{ 'update:settings': [settings: SettingsData] }>();
 5. ✅ Settings persist correctly when closing and reopening
 
 **Reference Components**:
+
 - ✅ `DatabaseSettings.vue` - Correct pattern
 - ✅ `AppearanceSettings.vue` - Correct pattern
 - ✅ `TranslationSettings.vue` - Fixed (was broken)
@@ -991,6 +994,7 @@ const emit = defineEmits<{ 'update:settings': [settings: SettingsData] }>();
 - ✅ `ProxySettings.vue` - Fixed (was broken)
 
 **Common Mistakes to Avoid**:
+
 - ❌ Don't create `localSettings` ref as a copy of props
 - ❌ Don't use `v-model` on props-based data (use `:value` + `@input`)
 - ❌ Don't mix `v-if="props.settings.x"` with `v-model="localSettings.x"`

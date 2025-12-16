@@ -31,8 +31,8 @@ type Fetcher struct {
 	mu                sync.Mutex
 	refreshCalculator *IntelligentRefreshCalculator
 	// Queue tracking for individual feed refreshes
-	queuedFeeds       map[int64]bool // Tracks feeds that are queued for refresh
-	queueMu           sync.Mutex
+	queuedFeeds map[int64]bool // Tracks feeds that are queued for refresh
+	queueMu     sync.Mutex
 }
 
 func NewFetcher(db *database.DB, translator translation.Translator) *Fetcher {
@@ -70,17 +70,17 @@ func (f *Fetcher) getConcurrencyLimit() int {
 	if err != nil || concurrencyStr == "" {
 		return 5 // Default concurrency
 	}
-	
+
 	concurrency, err := strconv.Atoi(concurrencyStr)
 	if err != nil || concurrency < 1 {
 		return 5 // Default on parse error or invalid value
 	}
-	
+
 	// Cap at reasonable limits
 	if concurrency > 20 {
 		concurrency = 20
 	}
-	
+
 	return concurrency
 }
 

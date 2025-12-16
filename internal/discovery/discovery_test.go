@@ -2,6 +2,9 @@ package discovery
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -147,5 +150,127 @@ func TestProgressStructFields(t *testing.T) {
 	}
 	if p.FoundCount != 3 {
 		t.Errorf("Expected found_count 3, got %d", p.FoundCount)
+	}
+}
+
+// Helper to create a service with a custom http client (used in network tests)
+func newServiceWithClient(client *http.Client) *Service {
+	s := NewService()
+	if client != nil {
+		s.client = client
+	}
+	return s
+}
+
+func TestIsValidFeed_HEAD_OK(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "HEAD" {
+			w.Header().Set("Content-Type", "application/rss+xml")
+			w.WriteHeader(200)
+			return
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("<rss></rss>"))
+	}))
+	defer srv.Close()
+
+	s := newServiceWithClient(srv.Client())
+	ok := s.isValidFeed(context.Background(), srv.URL)
+	if !ok {
+		t.Fatalf("expected feed to be valid via HEAD")
+	}
+}
+
+func TestIsValidFeed_HEAD_FallbackToGET_XML(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "HEAD" {
+			w.WriteHeader(404)
+			return
+		}
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("<?xml version=\"1.0\"?><rss><channel><title>t</title></channel></rss>"))
+	}))
+	defer srv.Close()
+
+	s := newServiceWithClient(srv.Client())
+	ok := s.isValidFeed(context.Background(), srv.URL)
+	if !ok {
+		t.Fatalf("expected feed to be valid via GET content check")
+	}
+}
+
+func TestFindRSSFeed_LinkInHead(t *testing.T) {
+	// Serve homepage with link rel to /feed.xml and feed at /feed.xml
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		html := `<html><head><link rel="alternate" type="application/rss+xml" href="/feed.xml"></head><body></body></html>`
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(html))
+	})
+	mux.HandleFunc("/feed.xml", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("<?xml version=\"1.0\"?><rss><channel><title>Feed</title><item><title>one</title></item></channel></rss>"))
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	s := newServiceWithClient(srv.Client())
+	feedURL, err := s.findRSSFeed(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatalf("findRSSFeed error: %v", err)
+	}
+	if !strings.HasSuffix(feedURL, "/feed.xml") {
+		t.Fatalf("expected feed URL to end with /feed.xml, got %s", feedURL)
+	}
+}
+
+func TestGetFaviconAndResolveURLAndExtractLinks(t *testing.T) {
+	// Serve homepage with friend link page and friends page pointing to external blog
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		html := `<html><body><a href="/friends">Friend Links</a></body></html>`
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(html))
+	})
+	mux.HandleFunc("/friends", func(w http.ResponseWriter, r *http.Request) {
+		html := `<html><body><a href="https://external.example.com/blog">Blog</a></body></html>`
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte(html))
+	})
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	s := newServiceWithClient(srv.Client())
+
+	// getFavicon
+	fav := s.getFavicon(srv.URL)
+	if fav == "" || !strings.Contains(fav, "google.com/s2/favicons") {
+		t.Fatalf("unexpected favicon: %s", fav)
+	}
+
+	// findFriendLinkPage
+	friendURL, err := s.findFriendLinkPage(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatalf("findFriendLinkPage error: %v", err)
+	}
+	if !strings.HasSuffix(friendURL, "/friends") {
+		t.Fatalf("expected friend page to end with /friends, got %s", friendURL)
+	}
+
+	// fetch and extract external links via findFriendLinks
+	links, err := s.findFriendLinks(context.Background(), srv.URL)
+	if err != nil {
+		t.Fatalf("findFriendLinks error: %v", err)
+	}
+	if len(links) != 1 || !strings.Contains(links[0], "external.example.com") {
+		t.Fatalf("expected external link, got %v", links)
+	}
+
+	// resolveURL
+	resolved := s.resolveURL(srv.URL, "/a/b")
+	if !strings.HasPrefix(resolved, srv.URL) {
+		t.Fatalf("resolveURL failed: %s", resolved)
 	}
 }

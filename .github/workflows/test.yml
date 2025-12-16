@@ -90,13 +90,101 @@ jobs:
         working-directory: ./frontend
         run: npm run lint
 
-      - name: Run tests
+      - name: Run unit tests
         working-directory: ./frontend
         run: npm test
 
       - name: Build frontend
         working-directory: ./frontend
         run: npm run build
+
+  test-frontend-e2e:
+    name: Test Frontend E2E
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Linux dependencies (for Wails backend)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            gcc \
+            pkg-config
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend (required for embed)
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Start backend server for E2E tests
+        env:
+          CGO_ENABLED: 1
+        run: |
+          go run main.go &
+          echo $! > backend.pid
+          # Wait for server to be ready (max 30 seconds)
+          for i in {1..30}; do
+            if curl -s http://localhost:34115 > /dev/null 2>&1; then
+              echo "Server is ready!"
+              break
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 1
+          done
+          # Final check
+          if ! curl -s http://localhost:34115 > /dev/null 2>&1; then
+            echo "Server failed to start"
+            exit 1
+          fi
+
+      - name: Run Cypress E2E tests
+        working-directory: ./frontend
+        run: npm run test:e2e
+        env:
+          CYPRESS_BASE_URL: http://localhost:34115
+
+      - name: Upload Cypress screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: cypress-screenshots
+          path: frontend/cypress/screenshots
+          if-no-files-found: ignore
+
+      - name: Upload Cypress videos
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: cypress-videos
+          path: frontend/cypress/videos
+          if-no-files-found: ignore
+
+      - name: Stop backend server
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then
+            kill $(cat backend.pid) || true
+            rm backend.pid
+          fi
 
   build-check:
     name: Build Check

@@ -1,7 +1,9 @@
 package translation
 
 import (
+	"net/http"
 	"testing"
+	"time"
 
 	"MrRSS/internal/config"
 )
@@ -176,5 +178,42 @@ func TestDynamicTranslator_RequiresCredentials(t *testing.T) {
 				t.Errorf("Translate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestCreateHTTPClientWithProxy_EnabledAndDisabled(t *testing.T) {
+	// Disabled
+	provider1 := &mockSettingsProvider{settings: map[string]string{"proxy_enabled": "false"}}
+	c1, err := CreateHTTPClientWithProxy(provider1, 1*time.Second)
+	if err != nil {
+		t.Fatalf("CreateHTTPClientWithProxy error: %v", err)
+	}
+	tr1, ok := c1.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("unexpected transport type")
+	}
+	if tr1.Proxy != nil {
+		t.Fatalf("expected no proxy when disabled")
+	}
+
+	// Enabled
+	provider2 := &mockSettingsProvider{settings: map[string]string{
+		"proxy_enabled":  "true",
+		"proxy_type":     "http",
+		"proxy_host":     "127.0.0.1",
+		"proxy_port":     "3128",
+		"proxy_username": "u",
+		"proxy_password": "p",
+	}}
+	c2, err := CreateHTTPClientWithProxy(provider2, 1*time.Second)
+	if err != nil {
+		t.Fatalf("CreateHTTPClientWithProxy error: %v", err)
+	}
+	tr2, ok := c2.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("unexpected transport type")
+	}
+	if tr2.Proxy == nil {
+		t.Fatalf("expected proxy to be configured when enabled")
 	}
 }

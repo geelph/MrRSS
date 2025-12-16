@@ -29,7 +29,7 @@ func (db *DB) SetSetting(key, value string) error {
 // and stored back to support migration from old versions.
 func (db *DB) GetEncryptedSetting(key string) (string, error) {
 	db.WaitForReady()
-	
+
 	// Get the stored value
 	storedValue, err := db.GetSetting(key)
 	if err != nil {
@@ -53,7 +53,7 @@ func (db *DB) GetEncryptedSetting(key string) (string, error) {
 
 	// Value is plain text - migrate it to encrypted format
 	log.Printf("Migrating plain text setting to encrypted storage")
-	
+
 	// Encrypt the plain text value
 	encrypted, err := crypto.Encrypt(storedValue)
 	if err != nil {

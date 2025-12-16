@@ -94,7 +94,7 @@ func TestDecryptInvalidInput(t *testing.T) {
 		input string
 	}{
 		{"not base64", "not-valid-base64!@#$"},
-		{"too short", "YWJj"}, // "abc" in base64, too short
+		{"too short", "YWJj"},                 // "abc" in base64, too short
 		{"random base64", "SGVsbG8gV29ybGQh"}, // "Hello World!" in base64
 		{"corrupted", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},
 	}
