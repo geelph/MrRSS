@@ -28,7 +28,6 @@
 - 📝 **Article Summarization**: Generate article summaries using local TF-IDF/TextRank algorithms or AI
 - 🎨 **Modern UI**: Clean, responsive interface with dark mode support
 - 📦 **OPML Import/Export**: Easy migration from other RSS readers
-- ⌨️ **Keyboard Shortcuts**: Boost productivity with customizable keyboard shortcuts for quick navigation and actions
 - 📋 **Smart Filtering Rules**: Automate feed organization with powerful custom rules
 - 🏭 **Custom Automation Scripts**: Support for running user-defined automation scripts to fetch feeds
 
