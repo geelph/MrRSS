@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, type Ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { Article, Feed, UnreadCounts, RefreshProgress } from '@/types/models';
 
 export type Filter = 'all' | 'unread' | 'favorites' | 'readLater' | 'imageGallery' | '';
@@ -43,6 +44,8 @@ export interface AppActions {
 }
 
 export const useAppStore = defineStore('app', () => {
+  const { t } = useI18n();
+
   // State
   const articles = ref<Article[]>([]);
   const feeds = ref<Feed[]>([]);
@@ -259,6 +262,7 @@ export const useAppStore = defineStore('app', () => {
           current: data.current,
           total: data.total,
           isRunning: data.is_running,
+          errors: data.errors,
         };
 
         // Update unread counts whenever progress advances (but don't refresh articles to avoid disrupting scroll position)
@@ -272,6 +276,18 @@ export const useAppStore = defineStore('app', () => {
           fetchFeeds();
           fetchArticles();
           fetchUnreadCounts();
+
+          // Show error toasts for any feed errors
+          if (data.errors && Object.keys(data.errors).length > 0) {
+            Object.entries(data.errors).forEach(([feedId, errorMsg]) => {
+              const feed = feeds.value.find((f) => f.id === parseInt(feedId));
+              const feedTitle = feed ? feed.title : `Feed ${feedId}`;
+              window.showToast(
+                `${t('feedRefreshError', { feed: feedTitle })}: ${errorMsg}`,
+                'error'
+              );
+            });
+          }
 
           // Check for app updates after initial refresh completes
           checkForAppUpdates();

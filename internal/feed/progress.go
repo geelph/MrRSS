@@ -7,9 +7,10 @@ import (
 
 // Progress tracks the progress of feed fetching operations
 type Progress struct {
-	Total     int  `json:"total"`
-	Current   int  `json:"current"`
-	IsRunning bool `json:"is_running"`
+	Total     int              `json:"total"`
+	Current   int              `json:"current"`
+	IsRunning bool             `json:"is_running"`
+	Errors    map[int64]string `json:"errors,omitempty"` // Map of feed ID to error message
 }
 
 // GetProgress returns the current progress of the feed fetching operation

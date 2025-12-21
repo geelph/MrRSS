@@ -46,6 +46,7 @@ export interface RefreshProgress {
   current: number;
   total: number;
   isRunning: boolean;
+  errors?: Record<number, string>; // Map of feed ID to error message
 }
 
 export interface UpdateInfo {

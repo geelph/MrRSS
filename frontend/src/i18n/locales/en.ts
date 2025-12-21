@@ -441,6 +441,7 @@ const en: TranslationMessages = {
   errorSavingSettings: 'Error saving settings',
   errorAddingFeed: 'Error adding feed',
   errorUpdatingFeed: 'Error updating feed',
+  feedRefreshError: 'Error refreshing feed "{feed}"',
   errorCleaningDatabase: 'Error cleaning up database',
   importFailed: 'Import failed: {error}',
   exportFailed: 'Export failed: {error}',

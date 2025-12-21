@@ -218,7 +218,9 @@ async function addFeed() {
       window.showToast(t('feedAddedSuccess'), 'success');
       close();
     } else {
-      window.showToast(t('errorAddingFeed'), 'error');
+      // Read error message from response
+      const errorText = await res.text();
+      window.showToast(`${t('errorAddingFeed')}: ${errorText}`, 'error');
     }
   } catch (e) {
     console.error(e);
@@ -313,15 +315,15 @@ async function openScriptsFolder() {
           >
             <p class="mb-2">{{ t('noScriptsFound') }}</p>
           </div>
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-2 gap-2">
+          <div class="flex flex-col gap-2 mt-2">
             <button
               type="button"
-              class="text-xs sm:text-sm text-accent hover:underline"
+              class="text-xs sm:text-sm text-accent hover:underline self-start"
               @click="feedType = 'url'"
             >
               {{ t('useRssUrl') }}
             </button>
-            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <a
                 href="https://github.com/WCY-dt/MrRSS/blob/main/docs/CUSTOM_SCRIPTS.md"
                 target="_blank"

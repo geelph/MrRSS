@@ -436,6 +436,7 @@ const zh: TranslationMessages = {
   errorSavingSettings: '保存设置时出错',
   errorAddingFeed: '添加订阅时出错',
   errorUpdatingFeed: '更新订阅时出错',
+  feedRefreshError: '刷新订阅"{feed}"时出错',
   errorCleaningDatabase: '清理数据库时出错',
   importFailed: '导入失败：{error}',
   exportFailed: '导出失败：{error}',

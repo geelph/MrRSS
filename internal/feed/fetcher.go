@@ -170,6 +170,7 @@ func (f *Fetcher) FetchAll(ctx context.Context) {
 	}
 	f.progress.IsRunning = true
 	f.progress.Current = 0
+	f.progress.Errors = make(map[int64]string)
 	f.mu.Unlock()
 
 	// Clear any queued individual feeds since we're doing a full refresh
@@ -243,6 +244,13 @@ func (f *Fetcher) FetchFeed(ctx context.Context, feed models.Feed) {
 	if err != nil {
 		log.Printf("Error parsing feed %s: %v", feed.URL, err)
 		f.db.UpdateFeedError(feed.ID, err.Error())
+		// Add error to progress for immediate feedback
+		f.mu.Lock()
+		if f.progress.Errors == nil {
+			f.progress.Errors = make(map[int64]string)
+		}
+		f.progress.Errors[feed.ID] = err.Error()
+		f.mu.Unlock()
 		return
 	}
 
@@ -313,6 +321,7 @@ func (f *Fetcher) FetchSingleFeed(ctx context.Context, feed models.Feed) {
 		f.progress.IsRunning = true
 		f.progress.Total = queuedCount
 		f.progress.Current = 0
+		f.progress.Errors = make(map[int64]string)
 	} else {
 		// Already running, just update total to include this new feed
 		f.progress.Total = f.progress.Current + queuedCount
