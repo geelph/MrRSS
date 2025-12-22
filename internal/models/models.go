@@ -10,6 +10,7 @@ type Feed struct {
 	Description        string    `json:"description"`
 	Category           string    `json:"category"`
 	ImageURL           string    `json:"image_url"` // New field
+	Position           int       `json:"position"`  // Position within category for custom ordering
 	LastUpdated        time.Time `json:"last_updated"`
 	LastError          string    `json:"last_error,omitempty"`  // Track last fetch error
 	DiscoveryCompleted bool      `json:"discovery_completed"`   // Track if discovery has been run

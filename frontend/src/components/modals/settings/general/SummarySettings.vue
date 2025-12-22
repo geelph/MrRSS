@@ -113,6 +113,33 @@ const emit = defineEmits<{
         />
       </div>
 
+      <!-- AI Trigger Mode (only show for AI provider) -->
+      <div v-if="props.settings.summary_provider === 'ai'" class="sub-setting-item">
+        <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
+          <PhRobot :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
+          <div class="flex-1 min-w-0">
+            <div class="font-medium mb-0 sm:mb-1 text-sm">{{ t('summaryTriggerMode') }}</div>
+            <div class="text-xs text-text-secondary hidden sm:block">
+              {{ t('summaryTriggerModeDesc') }}
+            </div>
+          </div>
+        </div>
+        <select
+          :value="props.settings.summary_trigger_mode"
+          class="input-field w-32 sm:w-48 text-xs sm:text-sm"
+          @change="
+            (e) =>
+              emit('update:settings', {
+                ...props.settings,
+                summary_trigger_mode: (e.target as HTMLSelectElement).value,
+              })
+          "
+        >
+          <option value="auto">{{ t('summaryTriggerModeAuto') }}</option>
+          <option value="manual">{{ t('summaryTriggerModeManual') }}</option>
+        </select>
+      </div>
+
       <div class="sub-setting-item">
         <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
           <PhTextAlignLeft :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />

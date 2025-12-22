@@ -25,6 +25,7 @@ export interface Feed {
   title: string;
   category: string;
   last_fetched_at: string;
+  position?: number; // Position within category for custom ordering
   is_discovered?: boolean;
   website_url?: string;
   image_url?: string;

@@ -76,16 +76,15 @@ func HandleSummarizeArticle(h *core.Handler, w http.ResponseWriter, r *http.Requ
 			result = summarizer.Summarize(content, summaryLength)
 			usedFallback = true
 		} else {
-			// Use AI summarization (use encrypted method for API key)
+			// Use AI summarization (API key is optional for some providers)
 			apiKey, err := h.DB.GetEncryptedSetting("ai_api_key")
-			if err != nil || apiKey == "" {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusBadRequest)
-				json.NewEncoder(w).Encode(map[string]interface{}{
-					"error": "missing_ai_api_key",
-				})
-				return
-			}
+			// Some AI providers don't require API keys, so we proceed regardless
+			log.Printf("Using AI summarization (API key: %s)", func() string {
+				if apiKey != "" {
+					return "configured"
+				}
+				return "not configured (using keyless provider)"
+			}())
 
 			// Apply rate limiting for AI requests
 			h.AITracker.WaitForRateLimit()

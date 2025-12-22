@@ -37,9 +37,11 @@ type Defaults struct {
 	AISummaryPrompt          string `json:"ai_summary_prompt"`
 	AIUsageTokens            string `json:"ai_usage_tokens"`
 	AIUsageLimit             string `json:"ai_usage_limit"`
+	AIChatEnabled            bool   `json:"ai_chat_enabled"`
 	SummaryEnabled           bool   `json:"summary_enabled"`
 	SummaryLength            string `json:"summary_length"`
 	SummaryProvider          string `json:"summary_provider"`
+	SummaryTriggerMode       string `json:"summary_trigger_mode"`
 	AutoCleanupEnabled       bool   `json:"auto_cleanup_enabled"`
 	MaxCacheSizeMB           int    `json:"max_cache_size_mb"`
 	MaxArticleAgeDays        int    `json:"max_article_age_days"`
@@ -57,6 +59,9 @@ type Defaults struct {
 	LastArticleUpdate        string `json:"last_article_update"`
 	GoogleTranslateEndpoint  string `json:"google_translate_endpoint"`
 	ShowArticlePreviewImages bool   `json:"show_article_preview_images"`
+	ObsidianEnabled          bool   `json:"obsidian_enabled"`
+	ObsidianVault            string `json:"obsidian_vault"`
+	ObsidianVaultPath        string `json:"obsidian_vault_path"`
 	WindowX                  string `json:"window_x"`
 	WindowY                  string `json:"window_y"`
 	WindowWidth              string `json:"window_width"`
@@ -131,12 +136,16 @@ func GetString(key string) string {
 		return defaults.AIUsageTokens
 	case "ai_usage_limit":
 		return defaults.AIUsageLimit
+	case "ai_chat_enabled":
+		return strconv.FormatBool(defaults.AIChatEnabled)
 	case "summary_enabled":
 		return strconv.FormatBool(defaults.SummaryEnabled)
 	case "summary_length":
 		return defaults.SummaryLength
 	case "summary_provider":
 		return defaults.SummaryProvider
+	case "summary_trigger_mode":
+		return defaults.SummaryTriggerMode
 	case "auto_cleanup_enabled":
 		return strconv.FormatBool(defaults.AutoCleanupEnabled)
 	case "max_cache_size_mb":
@@ -181,6 +190,12 @@ func GetString(key string) string {
 		return defaults.WindowMaximized
 	case "show_article_preview_images":
 		return strconv.FormatBool(defaults.ShowArticlePreviewImages)
+	case "obsidian_enabled":
+		return strconv.FormatBool(defaults.ObsidianEnabled)
+	case "obsidian_vault":
+		return defaults.ObsidianVault
+	case "obsidian_vault_path":
+		return defaults.ObsidianVaultPath
 	case "image_gallery_enabled":
 		return strconv.FormatBool(defaults.ImageGalleryEnabled)
 	case "freshrss_enabled":

@@ -6,6 +6,7 @@ import {
   PhTranslate,
   PhArticle,
   PhImage,
+  PhImages,
   PhCursorClick,
 } from '@phosphor-icons/vue';
 import type { SettingsData } from '@/types/settings';
@@ -129,7 +130,7 @@ const emit = defineEmits<{
     </div>
     <div class="setting-item mt-2 sm:mt-3">
       <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
-        <PhImage :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
+        <PhImages :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
         <div class="flex-1 min-w-0">
           <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
             {{ t('imageGalleryEnabled') }}

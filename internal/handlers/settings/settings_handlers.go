@@ -29,6 +29,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		aiSummaryPrompt, _ := h.DB.GetSetting("ai_summary_prompt")
 		aiUsageTokens, _ := h.DB.GetSetting("ai_usage_tokens")
 		aiUsageLimit, _ := h.DB.GetSetting("ai_usage_limit")
+		aiChatEnabled, _ := h.DB.GetSetting("ai_chat_enabled")
 		autoCleanup, _ := h.DB.GetSetting("auto_cleanup_enabled")
 		maxCacheSize, _ := h.DB.GetSetting("max_cache_size_mb")
 		maxArticleAge, _ := h.DB.GetSetting("max_article_age_days")
@@ -48,6 +49,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		summaryEnabled, _ := h.DB.GetSetting("summary_enabled")
 		summaryLength, _ := h.DB.GetSetting("summary_length")
 		summaryProvider, _ := h.DB.GetSetting("summary_provider")
+		summaryTriggerMode, _ := h.DB.GetSetting("summary_trigger_mode")
 		proxyEnabled, _ := h.DB.GetSetting("proxy_enabled")
 		proxyType, _ := h.DB.GetSetting("proxy_type")
 		proxyHost, _ := h.DB.GetSetting("proxy_host")
@@ -56,6 +58,9 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		proxyPassword, _ := h.DB.GetEncryptedSetting("proxy_password")
 		googleTranslateEndpoint, _ := h.DB.GetSetting("google_translate_endpoint")
 		showArticlePreviewImages, _ := h.DB.GetSetting("show_article_preview_images")
+		obsidianEnabled, _ := h.DB.GetSetting("obsidian_enabled")
+		obsidianVault, _ := h.DB.GetSetting("obsidian_vault")
+		obsidianVaultPath, _ := h.DB.GetSetting("obsidian_vault_path")
 		networkSpeed, _ := h.DB.GetSetting("network_speed")
 		networkBandwidth, _ := h.DB.GetSetting("network_bandwidth_mbps")
 		networkLatency, _ := h.DB.GetSetting("network_latency_ms")
@@ -83,6 +88,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			"ai_summary_prompt":           aiSummaryPrompt,
 			"ai_usage_tokens":             aiUsageTokens,
 			"ai_usage_limit":              aiUsageLimit,
+			"ai_chat_enabled":             aiChatEnabled,
 			"auto_cleanup_enabled":        autoCleanup,
 			"max_cache_size_mb":           maxCacheSize,
 			"max_article_age_days":        maxArticleAge,
@@ -102,6 +108,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			"summary_enabled":             summaryEnabled,
 			"summary_length":              summaryLength,
 			"summary_provider":            summaryProvider,
+			"summary_trigger_mode":        summaryTriggerMode,
 			"proxy_enabled":               proxyEnabled,
 			"proxy_type":                  proxyType,
 			"proxy_host":                  proxyHost,
@@ -110,6 +117,9 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			"proxy_password":              proxyPassword,
 			"google_translate_endpoint":   googleTranslateEndpoint,
 			"show_article_preview_images": showArticlePreviewImages,
+			"obsidian_enabled":            obsidianEnabled,
+			"obsidian_vault":              obsidianVault,
+			"obsidian_vault_path":         obsidianVaultPath,
 			"network_speed":               networkSpeed,
 			"network_bandwidth_mbps":      networkBandwidth,
 			"network_latency_ms":          networkLatency,
@@ -139,6 +149,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			AISummaryPrompt          string `json:"ai_summary_prompt"`
 			AIUsageTokens            string `json:"ai_usage_tokens"`
 			AIUsageLimit             string `json:"ai_usage_limit"`
+			AIChatEnabled            string `json:"ai_chat_enabled"`
 			AutoCleanupEnabled       string `json:"auto_cleanup_enabled"`
 			MaxCacheSizeMB           string `json:"max_cache_size_mb"`
 			MaxArticleAgeDays        string `json:"max_article_age_days"`
@@ -157,6 +168,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			SummaryEnabled           string `json:"summary_enabled"`
 			SummaryLength            string `json:"summary_length"`
 			SummaryProvider          string `json:"summary_provider"`
+			SummaryTriggerMode       string `json:"summary_trigger_mode"`
 			ProxyEnabled             string `json:"proxy_enabled"`
 			ProxyType                string `json:"proxy_type"`
 			ProxyHost                string `json:"proxy_host"`
@@ -165,6 +177,9 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			ProxyPassword            string `json:"proxy_password"`
 			GoogleTranslateEndpoint  string `json:"google_translate_endpoint"`
 			ShowArticlePreviewImages string `json:"show_article_preview_images"`
+			ObsidianEnabled          string `json:"obsidian_enabled"`
+			ObsidianVault            string `json:"obsidian_vault"`
+			ObsidianVaultPath        string `json:"obsidian_vault_path"`
 			NetworkSpeed             string `json:"network_speed"`
 			NetworkBandwidth         string `json:"network_bandwidth_mbps"`
 			NetworkLatency           string `json:"network_latency_ms"`
@@ -222,6 +237,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		// Always update AI usage settings
 		h.DB.SetSetting("ai_usage_tokens", req.AIUsageTokens)
 		h.DB.SetSetting("ai_usage_limit", req.AIUsageLimit)
+		h.DB.SetSetting("ai_chat_enabled", req.AIChatEnabled)
 
 		if req.AutoCleanupEnabled != "" {
 			h.DB.SetSetting("auto_cleanup_enabled", req.AutoCleanupEnabled)
@@ -289,6 +305,10 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			h.DB.SetSetting("summary_provider", req.SummaryProvider)
 		}
 
+		if req.SummaryTriggerMode != "" {
+			h.DB.SetSetting("summary_trigger_mode", req.SummaryTriggerMode)
+		}
+
 		// AI summary prompt is now handled by common AI settings (ai_summary_prompt)
 
 		if req.ProxyEnabled != "" {
@@ -315,6 +335,18 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 
 		if req.ShowArticlePreviewImages != "" {
 			h.DB.SetSetting("show_article_preview_images", req.ShowArticlePreviewImages)
+		}
+
+		if req.ObsidianEnabled != "" {
+			h.DB.SetSetting("obsidian_enabled", req.ObsidianEnabled)
+		}
+
+		if req.ObsidianVault != "" {
+			h.DB.SetSetting("obsidian_vault", req.ObsidianVault)
+		}
+
+		if req.ObsidianVaultPath != "" {
+			h.DB.SetSetting("obsidian_vault_path", req.ObsidianVaultPath)
 		}
 
 		if req.NetworkSpeed != "" {

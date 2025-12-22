@@ -69,3 +69,7 @@ frontend/cypress/downloads/
 # taskfile cache
 .task/cache/
 .task/checksum
+
+# Claude
+.claude/
+.plan/

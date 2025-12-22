@@ -19,6 +19,7 @@ export interface SettingsData {
   ai_summary_prompt: string;
   ai_usage_tokens: string;
   ai_usage_limit: string;
+  ai_chat_enabled: boolean;
   auto_cleanup_enabled: boolean;
   max_cache_size_mb: number;
   max_article_age_days: number;
@@ -38,6 +39,7 @@ export interface SettingsData {
   summary_enabled: boolean;
   summary_length: string;
   summary_provider: string;
+  summary_trigger_mode: string;
   proxy_enabled: boolean;
   proxy_type: string;
   proxy_host: string;
@@ -46,6 +48,9 @@ export interface SettingsData {
   proxy_password: string;
   google_translate_endpoint: string;
   show_article_preview_images: boolean;
+  obsidian_enabled: boolean;
+  obsidian_vault: string;
+  obsidian_vault_path: string;
   network_speed: string;
   network_bandwidth_mbps: string;
   network_latency_ms: string;
@@ -88,4 +93,12 @@ export interface InstallResponse {
   success: boolean;
 }
 
-export type TabName = 'general' | 'feeds' | 'ai' | 'rules' | 'network' | 'shortcuts' | 'about';
+export type TabName =
+  | 'general'
+  | 'feeds'
+  | 'ai'
+  | 'rules'
+  | 'network'
+  | 'plugins'
+  | 'shortcuts'
+  | 'about';

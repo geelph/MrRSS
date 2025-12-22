@@ -37,6 +37,7 @@ export function useSettings() {
     summary_enabled: settingsDefaults.summary_enabled,
     summary_length: settingsDefaults.summary_length,
     summary_provider: settingsDefaults.summary_provider,
+    summary_trigger_mode: settingsDefaults.summary_trigger_mode,
     baidu_app_id: settingsDefaults.baidu_app_id,
     baidu_secret_key: settingsDefaults.baidu_secret_key,
     ai_api_key: settingsDefaults.ai_api_key,
@@ -46,6 +47,7 @@ export function useSettings() {
     ai_summary_prompt: settingsDefaults.ai_summary_prompt,
     ai_usage_tokens: settingsDefaults.ai_usage_tokens,
     ai_usage_limit: settingsDefaults.ai_usage_limit,
+    ai_chat_enabled: settingsDefaults.ai_chat_enabled,
     proxy_enabled: settingsDefaults.proxy_enabled,
     proxy_type: settingsDefaults.proxy_type,
     proxy_host: settingsDefaults.proxy_host,
@@ -54,6 +56,9 @@ export function useSettings() {
     proxy_password: settingsDefaults.proxy_password,
     google_translate_endpoint: settingsDefaults.google_translate_endpoint,
     show_article_preview_images: settingsDefaults.show_article_preview_images,
+    obsidian_enabled: settingsDefaults.obsidian_enabled,
+    obsidian_vault: settingsDefaults.obsidian_vault,
+    obsidian_vault_path: settingsDefaults.obsidian_vault_path,
     network_speed: settingsDefaults.network_speed,
     network_bandwidth_mbps: settingsDefaults.network_bandwidth_mbps,
     network_latency_ms: settingsDefaults.network_latency_ms,
@@ -105,6 +110,7 @@ export function useSettings() {
         summary_enabled: data.summary_enabled === 'true',
         summary_length: data.summary_length || settingsDefaults.summary_length,
         summary_provider: data.summary_provider || settingsDefaults.summary_provider,
+        summary_trigger_mode: data.summary_trigger_mode || settingsDefaults.summary_trigger_mode,
         baidu_app_id: data.baidu_app_id || settingsDefaults.baidu_app_id,
         baidu_secret_key: data.baidu_secret_key || settingsDefaults.baidu_secret_key,
         ai_api_key: data.ai_api_key || settingsDefaults.ai_api_key,
@@ -114,6 +120,7 @@ export function useSettings() {
         ai_summary_prompt: data.ai_summary_prompt || settingsDefaults.ai_summary_prompt,
         ai_usage_tokens: data.ai_usage_tokens || settingsDefaults.ai_usage_tokens,
         ai_usage_limit: data.ai_usage_limit || settingsDefaults.ai_usage_limit,
+        ai_chat_enabled: data.ai_chat_enabled === 'true',
         proxy_enabled: data.proxy_enabled === 'true',
         proxy_type: data.proxy_type || settingsDefaults.proxy_type,
         proxy_host: data.proxy_host || settingsDefaults.proxy_host,
@@ -123,6 +130,9 @@ export function useSettings() {
         google_translate_endpoint:
           data.google_translate_endpoint || settingsDefaults.google_translate_endpoint,
         show_article_preview_images: data.show_article_preview_images === 'true',
+        obsidian_enabled: data.obsidian_enabled === 'true',
+        obsidian_vault: data.obsidian_vault || settingsDefaults.obsidian_vault,
+        obsidian_vault_path: data.obsidian_vault_path || settingsDefaults.obsidian_vault_path,
         network_speed: data.network_speed || settingsDefaults.network_speed,
         network_bandwidth_mbps:
           data.network_bandwidth_mbps || settingsDefaults.network_bandwidth_mbps,
@@ -148,7 +158,7 @@ export function useSettings() {
    * Apply fetched settings to the app
    */
 
-  function applySettings(data: SettingsData, setTheme: (ThemePreference) => void) {
+  function applySettings(data: SettingsData, setTheme: (preference: ThemePreference) => void) {
     // Apply the saved language
     if (data.language) {
       locale.value = data.language;

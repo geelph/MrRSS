@@ -2,13 +2,21 @@
 import { ref, onMounted } from 'vue';
 import { useAppStore } from '@/stores/app';
 import { useI18n } from 'vue-i18n';
-import { PhPlus, PhGear, PhMagnifyingGlass, PhX } from '@phosphor-icons/vue';
+import { PhPlus, PhGear, PhMagnifyingGlass, PhX, PhPencil, PhCheck } from '@phosphor-icons/vue';
 import { useSidebar } from '@/composables/core/useSidebar';
+import { useDragDrop } from '@/composables/ui/useDragDrop';
 import SidebarNavItem from './SidebarNavItem.vue';
 import SidebarCategory from './SidebarCategory.vue';
 
 const store = useAppStore();
 const { t } = useI18n();
+
+// Edit mode for drag reordering
+const isEditMode = ref(false);
+
+function toggleEditMode() {
+  isEditMode.value = !isEditMode.value;
+}
 
 // Check if image gallery feature is enabled
 const imageGalleryEnabled = ref(false);
@@ -54,6 +62,52 @@ const {
   onFeedContextMenu,
   onCategoryContextMenu,
 } = useSidebar();
+
+// Drag and drop functionality
+const {
+  draggingFeedId,
+  dragOverCategory,
+  dropPreview,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+} = useDragDrop();
+
+// Handle drag events from categories
+function handleDragStart(feedId: number, event: Event) {
+  onDragStart(feedId, event);
+}
+
+function handleDragEnd() {
+  onDragEnd();
+}
+
+function handleDragOver(categoryName: string, feedId: number | null, event: Event) {
+  console.log('[Sidebar] handleDragOver called with:', { categoryName, feedId, event });
+  onDragOver(categoryName, feedId, event);
+}
+
+function handleDragLeave(categoryName: string, event: Event) {
+  onDragLeave(categoryName, event);
+}
+
+async function handleDrop(categoryName: string, feeds: any[]) {
+  if (!draggingFeedId.value) return;
+
+  const result = await onDrop(categoryName, feeds);
+
+  if (result.success) {
+    // Refresh feeds to show updated order
+    store.fetchFeeds();
+    window.showToast(t('feedReordered'), 'success');
+  } else {
+    window.showToast(t('errorReorderingFeed') + ': ' + result.error, 'error');
+  }
+
+  onDragEnd();
+}
 
 const emitShowAddFeed = () => window.dispatchEvent(new CustomEvent('show-add-feed'));
 const emitShowSettings = () => window.dispatchEvent(new CustomEvent('show-settings'));
@@ -145,11 +199,20 @@ const emitShowSettings = () => window.dispatchEvent(new CustomEvent('show-settin
         :unread-count="categoryUnreadCounts[name] || 0"
         :current-feed-id="store.currentFeedId"
         :feed-unread-counts="store.unreadCounts.feedCounts"
+        :is-drag-over="dragOverCategory === name"
+        :is-edit-mode="isEditMode"
+        :drop-preview="dropPreview"
+        :dragging-feed-id="draggingFeedId"
         @toggle="toggleCategory(name)"
         @select-category="store.setCategory(name)"
         @select-feed="store.setFeed"
         @category-context-menu="(e) => onCategoryContextMenu(e, name)"
         @feed-context-menu="onFeedContextMenu"
+        @dragstart="(feedId, e) => handleDragStart(feedId, e)"
+        @dragend="handleDragEnd"
+        @feed-drag-over="(feedId, e) => handleDragOver(name, feedId, e)"
+        @dragleave="(categoryName, e) => handleDragLeave(categoryName, e)"
+        @drop="() => handleDrop(name, data._feeds)"
       />
 
       <!-- Uncategorized -->
@@ -163,16 +226,34 @@ const emitShowSettings = () => window.dispatchEvent(new CustomEvent('show-settin
         :unread-count="categoryUnreadCounts['uncategorized'] || 0"
         :current-feed-id="store.currentFeedId"
         :feed-unread-counts="store.unreadCounts.feedCounts"
+        :is-drag-over="dragOverCategory === 'uncategorized'"
+        :is-edit-mode="isEditMode"
+        :drop-preview="dropPreview"
+        :dragging-feed-id="draggingFeedId"
         @toggle="toggleCategory('uncategorized')"
         @select-feed="store.setFeed"
         @category-context-menu="(e) => onCategoryContextMenu(e, 'uncategorized')"
         @feed-context-menu="onFeedContextMenu"
+        @dragstart="(feedId, e) => handleDragStart(feedId, e)"
+        @dragend="handleDragEnd"
+        @feed-drag-over="(feedId, e) => handleDragOver('uncategorized', feedId, e)"
+        @dragleave="(categoryName, e) => handleDragLeave(categoryName, e)"
+        @drop="() => handleDrop('uncategorized', tree.uncategorized)"
       />
     </div>
 
     <div class="p-2 sm:p-4 border-t border-border flex gap-1.5 sm:gap-2">
       <button class="footer-btn" :title="t('addFeed')" @click="emitShowAddFeed">
         <PhPlus :size="18" class="sm:w-5 sm:h-5" />
+      </button>
+      <button
+        class="footer-btn"
+        :class="{ 'text-accent': isEditMode }"
+        :title="isEditMode ? t('done') : t('edit')"
+        @click="toggleEditMode"
+      >
+        <PhPencil v-if="!isEditMode" :size="18" class="sm:w-5 sm:h-5" />
+        <PhCheck v-else :size="18" class="sm:w-5 sm:h-5" />
       </button>
       <button class="footer-btn" :title="t('settings')" @click="emitShowSettings">
         <PhGear :size="18" class="sm:w-5 sm:h-5" />
