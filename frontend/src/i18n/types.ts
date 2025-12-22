@@ -100,6 +100,7 @@ export interface TranslationMessages {
   general: string;
   feeds: string;
   ai: string;
+  plugins: string;
   about: string;
 
   // General Settings

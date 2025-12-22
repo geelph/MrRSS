@@ -59,6 +59,9 @@ type Defaults struct {
 	LastArticleUpdate        string `json:"last_article_update"`
 	GoogleTranslateEndpoint  string `json:"google_translate_endpoint"`
 	ShowArticlePreviewImages bool   `json:"show_article_preview_images"`
+	ObsidianEnabled          bool   `json:"obsidian_enabled"`
+	ObsidianVault            string `json:"obsidian_vault"`
+	ObsidianVaultPath        string `json:"obsidian_vault_path"`
 	WindowX                  string `json:"window_x"`
 	WindowY                  string `json:"window_y"`
 	WindowWidth              string `json:"window_width"`
@@ -187,6 +190,12 @@ func GetString(key string) string {
 		return defaults.WindowMaximized
 	case "show_article_preview_images":
 		return strconv.FormatBool(defaults.ShowArticlePreviewImages)
+	case "obsidian_enabled":
+		return strconv.FormatBool(defaults.ObsidianEnabled)
+	case "obsidian_vault":
+		return defaults.ObsidianVault
+	case "obsidian_vault_path":
+		return defaults.ObsidianVaultPath
 	case "image_gallery_enabled":
 		return strconv.FormatBool(defaults.ImageGalleryEnabled)
 	case "freshrss_enabled":

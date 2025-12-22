@@ -48,6 +48,9 @@ export interface SettingsData {
   proxy_password: string;
   google_translate_endpoint: string;
   show_article_preview_images: boolean;
+  obsidian_enabled: boolean;
+  obsidian_vault: string;
+  obsidian_vault_path: string;
   network_speed: string;
   network_bandwidth_mbps: string;
   network_latency_ms: string;
@@ -90,4 +93,12 @@ export interface InstallResponse {
   success: boolean;
 }
 
-export type TabName = 'general' | 'feeds' | 'ai' | 'rules' | 'network' | 'shortcuts' | 'about';
+export type TabName =
+  | 'general'
+  | 'feeds'
+  | 'ai'
+  | 'rules'
+  | 'network'
+  | 'plugins'
+  | 'shortcuts'
+  | 'about';

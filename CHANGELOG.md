@@ -11,10 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported drag-and-drop to reorder feeds or change feed categories. (#288)
 - Supported AI Chat on article content. And of course **it's disabled by default**! (#286)
+- Supported exporting articles to Obsidian. (#289)
 
 ### Changed
 
 - AI summarization is now triggered manually on default to avoid excessive API usage. Users can enable automatic summarization in settings if desired. (#287)
+- Added Plugin setting tab in settings page and moved FreshRSS synchronization settings there.
 
 ## [1.3.6] - 2025-12-22
 

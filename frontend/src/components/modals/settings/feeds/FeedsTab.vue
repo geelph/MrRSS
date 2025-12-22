@@ -2,7 +2,6 @@
 import { computed } from 'vue';
 import DataManagementSettings from './DataManagementSettings.vue';
 import FeedManagementSettings from './FeedManagementSettings.vue';
-import FreshRSSSettings from './FreshRSSSettings.vue';
 import type { Feed } from '@/types/models';
 import type { SettingsData } from '@/types/settings';
 import { useSettingsAutoSave } from '@/composables/core/useSettingsAutoSave';
@@ -69,10 +68,6 @@ function handleBatchDelete(ids: number[]) {
 function handleBatchMove(ids: number[]) {
   emit('batch-move', ids);
 }
-
-function handleUpdateSettings(settings: SettingsData) {
-  emit('update:settings', settings);
-}
 </script>
 
 <template>
@@ -91,7 +86,5 @@ function handleUpdateSettings(settings: SettingsData) {
       @batch-delete="handleBatchDelete"
       @batch-move="handleBatchMove"
     />
-
-    <FreshRSSSettings :settings="settings" @update:settings="handleUpdateSettings" />
   </div>
 </template>

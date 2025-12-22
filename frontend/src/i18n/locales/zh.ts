@@ -117,6 +117,7 @@ const zh: TranslationMessages = {
   general: '常规',
   feeds: '订阅源',
   ai: 'AI',
+  plugins: '插件',
   about: '关于',
 
   // General Settings
@@ -317,6 +318,14 @@ const zh: TranslationMessages = {
   translatingContent: '正在翻译内容...',
   autoTranslateEnabled: '自动翻译已启用',
   originalContent: '原文',
+
+  // Obsidian Integration
+  enableObsidianIntegration: '启用 Obsidian 集成',
+  exportToObsidian: '导出到 Obsidian',
+  exportingToObsidian: '正在导出到 Obsidian...',
+  exportedToObsidian: '文章已成功导出到 Obsidian',
+  obsidianExportFailed: '导出到 Obsidian 失败',
+  obsidianVaultNotConfigured: 'Obsidian 仓库未配置。请在设置中配置 Obsidian 集成。',
 
   // Languages
   english: 'english',
@@ -701,7 +710,17 @@ const zh: TranslationMessages = {
   neverSynced: '从未',
   freshrssMissingCredentials: '请提供所有 FreshRSS 凭据以启用同步',
 
-  isInDevelopment: '该功能仍在开发中，可能不稳定且存在问题。',
+  // Obsidian Integration
+  obsidianIntegration: 'Obsidian 集成',
+  obsidianIntegrationDescription: '直接将文章导出到您的 Obsidian 仓库',
+  obsidianVaultName: '仓库名称',
+  obsidianVaultNameDesc: '您的 Obsidian 仓库名称',
+  obsidianVaultNamePlaceholder: '我的仓库',
+  obsidianVaultPath: '仓库路径',
+  obsidianVaultPathDesc: 'Obsidian 仓库目录的完整路径',
+  obsidianVaultPathPlaceholder: 'C:\\Users\\username\\Documents\\Obsidian Vault',
+
+  isInDevelopment: '该功能涉及到第三方工具，可能不稳定且存在问题。',
 
   // Drag and Drop
   dragToReorder: '拖动可重新排序或移动到其他分组',

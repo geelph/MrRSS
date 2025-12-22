@@ -56,6 +56,9 @@ export function useSettings() {
     proxy_password: settingsDefaults.proxy_password,
     google_translate_endpoint: settingsDefaults.google_translate_endpoint,
     show_article_preview_images: settingsDefaults.show_article_preview_images,
+    obsidian_enabled: settingsDefaults.obsidian_enabled,
+    obsidian_vault: settingsDefaults.obsidian_vault,
+    obsidian_vault_path: settingsDefaults.obsidian_vault_path,
     network_speed: settingsDefaults.network_speed,
     network_bandwidth_mbps: settingsDefaults.network_bandwidth_mbps,
     network_latency_ms: settingsDefaults.network_latency_ms,
@@ -127,6 +130,9 @@ export function useSettings() {
         google_translate_endpoint:
           data.google_translate_endpoint || settingsDefaults.google_translate_endpoint,
         show_article_preview_images: data.show_article_preview_images === 'true',
+        obsidian_enabled: data.obsidian_enabled === 'true',
+        obsidian_vault: data.obsidian_vault || settingsDefaults.obsidian_vault,
+        obsidian_vault_path: data.obsidian_vault_path || settingsDefaults.obsidian_vault_path,
         network_speed: data.network_speed || settingsDefaults.network_speed,
         network_bandwidth_mbps:
           data.network_bandwidth_mbps || settingsDefaults.network_bandwidth_mbps,

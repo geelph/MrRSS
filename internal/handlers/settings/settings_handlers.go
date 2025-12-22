@@ -58,6 +58,9 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		proxyPassword, _ := h.DB.GetEncryptedSetting("proxy_password")
 		googleTranslateEndpoint, _ := h.DB.GetSetting("google_translate_endpoint")
 		showArticlePreviewImages, _ := h.DB.GetSetting("show_article_preview_images")
+		obsidianEnabled, _ := h.DB.GetSetting("obsidian_enabled")
+		obsidianVault, _ := h.DB.GetSetting("obsidian_vault")
+		obsidianVaultPath, _ := h.DB.GetSetting("obsidian_vault_path")
 		networkSpeed, _ := h.DB.GetSetting("network_speed")
 		networkBandwidth, _ := h.DB.GetSetting("network_bandwidth_mbps")
 		networkLatency, _ := h.DB.GetSetting("network_latency_ms")
@@ -114,6 +117,9 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			"proxy_password":              proxyPassword,
 			"google_translate_endpoint":   googleTranslateEndpoint,
 			"show_article_preview_images": showArticlePreviewImages,
+			"obsidian_enabled":            obsidianEnabled,
+			"obsidian_vault":              obsidianVault,
+			"obsidian_vault_path":         obsidianVaultPath,
 			"network_speed":               networkSpeed,
 			"network_bandwidth_mbps":      networkBandwidth,
 			"network_latency_ms":          networkLatency,
@@ -171,6 +177,9 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			ProxyPassword            string `json:"proxy_password"`
 			GoogleTranslateEndpoint  string `json:"google_translate_endpoint"`
 			ShowArticlePreviewImages string `json:"show_article_preview_images"`
+			ObsidianEnabled          string `json:"obsidian_enabled"`
+			ObsidianVault            string `json:"obsidian_vault"`
+			ObsidianVaultPath        string `json:"obsidian_vault_path"`
 			NetworkSpeed             string `json:"network_speed"`
 			NetworkBandwidth         string `json:"network_bandwidth_mbps"`
 			NetworkLatency           string `json:"network_latency_ms"`
@@ -326,6 +335,18 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 
 		if req.ShowArticlePreviewImages != "" {
 			h.DB.SetSetting("show_article_preview_images", req.ShowArticlePreviewImages)
+		}
+
+		if req.ObsidianEnabled != "" {
+			h.DB.SetSetting("obsidian_enabled", req.ObsidianEnabled)
+		}
+
+		if req.ObsidianVault != "" {
+			h.DB.SetSetting("obsidian_vault", req.ObsidianVault)
+		}
+
+		if req.ObsidianVaultPath != "" {
+			h.DB.SetSetting("obsidian_vault_path", req.ObsidianVaultPath)
 		}
 
 		if req.NetworkSpeed != "" {

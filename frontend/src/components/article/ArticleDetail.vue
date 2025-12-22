@@ -22,6 +22,7 @@ const {
   toggleContentView,
   closeImageViewer,
   attachImageEventListeners,
+  exportToObsidian,
   t,
 } = useArticleDetail();
 
@@ -59,6 +60,7 @@ function toggleTranslations() {
         @toggle-read-later="toggleReadLater"
         @open-original="openOriginal"
         @toggle-translations="toggleTranslations"
+        @export-to-obsidian="exportToObsidian"
       />
 
       <!-- Original webpage view -->

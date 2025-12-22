@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import { useSettings } from '@/composables/core/useSettings';
+import { onMounted } from 'vue';
 import {
   PhArrowLeft,
   PhGlobe,
@@ -10,10 +12,20 @@ import {
   PhClockCountdown,
   PhArrowSquareOut,
   PhTranslate,
+  PhShareNetwork,
 } from '@phosphor-icons/vue';
 import type { Article } from '@/types/models';
 
 const { t } = useI18n();
+const { settings, fetchSettings } = useSettings();
+
+onMounted(async () => {
+  try {
+    await fetchSettings();
+  } catch (e) {
+    console.error('Error loading settings:', e);
+  }
+});
 
 interface Props {
   article: Article;
@@ -33,6 +45,7 @@ defineEmits<{
   toggleReadLater: [];
   openOriginal: [];
   toggleTranslations: [];
+  exportToObsidian: [];
 }>();
 </script>
 
@@ -106,6 +119,14 @@ defineEmits<{
       </button>
       <button class="action-btn" :title="t('openInBrowser')" @click="$emit('openOriginal')">
         <PhArrowSquareOut :size="18" class="sm:w-5 sm:h-5" />
+      </button>
+      <button
+        v-if="settings.obsidian_enabled"
+        class="action-btn"
+        :title="t('exportToObsidian')"
+        @click="$emit('exportToObsidian')"
+      >
+        <PhShareNetwork :size="18" class="sm:w-5 sm:h-5" />
       </button>
     </div>
   </div>

@@ -173,6 +173,12 @@ export function useSettingsAutoSave(settings: Ref<SettingsData> | (() => Setting
             settingsRef.value.show_article_preview_images ??
             settingsDefaults.show_article_preview_images
           ).toString(),
+          obsidian_enabled: (
+            settingsRef.value.obsidian_enabled ?? settingsDefaults.obsidian_enabled
+          ).toString(),
+          obsidian_vault: settingsRef.value.obsidian_vault ?? settingsDefaults.obsidian_vault,
+          obsidian_vault_path:
+            settingsRef.value.obsidian_vault_path ?? settingsDefaults.obsidian_vault_path,
           network_speed: settingsRef.value.network_speed ?? settingsDefaults.network_speed,
           network_bandwidth_mbps:
             settingsRef.value.network_bandwidth_mbps ?? settingsDefaults.network_bandwidth_mbps,

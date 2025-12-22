@@ -120,6 +120,7 @@ const en: TranslationMessages = {
   general: 'General',
   feeds: 'Feeds',
   ai: 'AI',
+  plugins: 'Plugins',
   about: 'About',
 
   // General Settings
@@ -709,7 +710,18 @@ const en: TranslationMessages = {
   neverSynced: 'Never',
   freshrssMissingCredentials: 'Please enter FreshRSS server URL, username, and password',
 
-  isInDevelopment: 'This feature is in development and may not work as expected.',
+  // Obsidian Integration
+  obsidianIntegration: 'Obsidian Integration',
+  obsidianIntegrationDescription: 'Export articles directly to your Obsidian vault',
+  obsidianVaultName: 'Vault Name',
+  obsidianVaultNameDesc: 'Name of your Obsidian vault (for URI scheme compatibility)',
+  obsidianVaultNamePlaceholder: 'My Vault',
+  obsidianVaultPath: 'Vault Path',
+  obsidianVaultPathDesc: 'Full path to your Obsidian vault directory',
+  obsidianVaultPathPlaceholder: 'C:\\Users\\username\\Documents\\Obsidian Vault',
+
+  isInDevelopment:
+    'This feature involves a third-party tool, which may be unstable and have issues.',
 
   // Drag and Drop
   dragToReorder: 'Drag to reorder or move to another category',

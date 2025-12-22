@@ -75,6 +75,7 @@ func (db *DB) Init() error {
 			"summary_provider", "summary_trigger_mode", "media_cache_enabled", "media_cache_max_size_mb", "media_cache_max_age_days",
 			"proxy_enabled", "proxy_type", "proxy_host", "proxy_port", "proxy_username", "proxy_password",
 			"shortcuts", "rules", "startup_on_boot", "close_to_tray", "google_translate_endpoint", "show_article_preview_images",
+			"obsidian_enabled", "obsidian_vault", "obsidian_vault_path",
 			"window_x", "window_y", "window_width", "window_height", "window_maximized",
 			"network_speed", "network_bandwidth_mbps", "network_latency_ms", "max_concurrent_refreshes", "last_network_test",
 			"image_gallery_enabled", "freshrss_enabled", "freshrss_server_url", "freshrss_username", "freshrss_api_password",
