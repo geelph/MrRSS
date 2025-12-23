@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -138,5 +139,62 @@ func TestArticleActions_MarkRead_Favorite_Hide_ReadLater(t *testing.T) {
 	article.HandleToggleReadLater(h, w5, req5)
 	if w5.Result().StatusCode != http.StatusOK {
 		t.Fatalf("toggle read later failed: %d", w5.Result().StatusCode)
+	}
+}
+
+func TestHandleExportToObsidian(t *testing.T) {
+	h := setupHandler(t)
+
+	// Enable Obsidian integration
+	if err := h.DB.SetSetting("obsidian_enabled", "true"); err != nil {
+		t.Fatalf("SetSetting obsidian_enabled: %v", err)
+	}
+	if err := h.DB.SetSetting("obsidian_vault_path", t.TempDir()); err != nil {
+		t.Fatalf("SetSetting obsidian_vault_path: %v", err)
+	}
+
+	// Add a feed and article
+	feedID, err := h.DB.AddFeed(&models.Feed{Title: "Test Feed", URL: "http://example.com"})
+	if err != nil {
+		t.Fatalf("AddFeed: %v", err)
+	}
+
+	articleModel := &models.Article{
+		FeedID:      feedID,
+		Title:       "Test Article",
+		URL:         "http://example.com/article",
+		PublishedAt: time.Now(),
+	}
+	if err := h.DB.SaveArticles(context.Background(), []*models.Article{articleModel}); err != nil {
+		t.Fatalf("SaveArticles: %v", err)
+	}
+
+	// Get the article ID
+	articles, err := h.DB.GetArticles("", feedID, "", false, 10, 0)
+	if err != nil || len(articles) == 0 {
+		t.Fatalf("GetArticles: %v", err)
+	}
+	articleID := articles[0].ID
+
+	// Test export request
+	reqBody := fmt.Sprintf(`{"article_id": %d}`, articleID)
+	req := httptest.NewRequest(http.MethodPost, "/api/articles/export/obsidian", strings.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	article.HandleExportToObsidian(h, w, req)
+
+	if w.Result().StatusCode != http.StatusOK {
+		t.Fatalf("Export failed: %d, body: %s", w.Result().StatusCode, w.Body.String())
+	}
+
+	// Verify response
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if response["success"] != "true" {
+		t.Fatalf("Export not successful: %v", response)
 	}
 }

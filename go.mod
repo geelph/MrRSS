@@ -6,6 +6,7 @@ toolchain go1.24.2
 
 require (
 	codeberg.org/readeck/go-readability/v2 v2.1.0
+	github.com/JohannesKaufmann/html-to-markdown v1.6.0
 	github.com/PuerkitoBio/goquery v1.11.0
 	github.com/antchfx/htmlquery v1.3.5
 	github.com/antchfx/xmlquery v1.5.0

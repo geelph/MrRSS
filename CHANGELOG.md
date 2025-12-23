@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AI summarization is now triggered manually on default to avoid excessive API usage. Users can enable automatic summarization in settings if desired. (#287)
 - Added Plugin setting tab in settings page and moved FreshRSS synchronization settings there.
 - Improved icons and translations for better user experience.
+- Enhanced the conversion from HTML to Markdown when exporting articles to Obsidian. (#299)
 
 ### Fixed
 

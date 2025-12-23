@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	"MrRSS/internal/handlers/core"
 	"MrRSS/internal/models"
+
+	md "github.com/JohannesKaufmann/html-to-markdown"
 )
 
 // ExportToObsidianRequest represents the request for exporting to Obsidian
@@ -183,82 +184,20 @@ func escapeYamlString(s string) string {
 	return strings.ReplaceAll(s, "\"", "\\\"")
 }
 
-// htmlToMarkdown performs basic HTML to Markdown conversion
+// htmlToMarkdown converts HTML to Markdown using html-to-markdown library
 func htmlToMarkdown(html string) string {
-	// Basic conversions
-	result := html
+	// Create a new converter with default plugins
+	converter := md.NewConverter("", true, nil)
 
-	// Images - convert to Markdown format ![alt](url)
-	// Use regex to properly extract and convert img tags
-	re := regexp.MustCompile(`<img[^>]*src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>|<img[^>]*alt="([^"]*)"[^>]*src="([^"]*)"[^>]*>`)
-	result = re.ReplaceAllStringFunc(result, func(match string) string {
-		// Extract src and alt from the match
-		submatches := re.FindStringSubmatch(match)
-		var src, alt string
-		if submatches[1] != "" && submatches[2] != "" {
-			// <img src="..." alt="...">
-			src = submatches[1]
-			alt = submatches[2]
-		} else if submatches[3] != "" && submatches[4] != "" {
-			// <img alt="..." src="...">
-			alt = submatches[3]
-			src = submatches[4]
-		}
-		if src != "" && alt != "" {
-			return fmt.Sprintf("![%s](%s)", alt, src)
-		}
-		return match // Return original if parsing failed
-	})
-
-	// Headers
-	result = strings.ReplaceAll(result, "<h1>", "# ")
-	result = strings.ReplaceAll(result, "</h1>", "\n\n")
-	result = strings.ReplaceAll(result, "<h2>", "## ")
-	result = strings.ReplaceAll(result, "</h2>", "\n\n")
-	result = strings.ReplaceAll(result, "<h3>", "### ")
-	result = strings.ReplaceAll(result, "</h3>", "\n\n")
-
-	// Paragraphs - use single newline instead of double
-	result = strings.ReplaceAll(result, "<p>", "")
-	result = strings.ReplaceAll(result, "</p>", "\n")
-
-	// Links
-	result = strings.ReplaceAll(result, "<a href=\"", "[")
-	result = strings.ReplaceAll(result, "\">", "](")
-	result = strings.ReplaceAll(result, "</a>", ")")
-
-	// Bold
-	result = strings.ReplaceAll(result, "<strong>", "**")
-	result = strings.ReplaceAll(result, "</strong>", "**")
-	result = strings.ReplaceAll(result, "<b>", "**")
-	result = strings.ReplaceAll(result, "</b>", "**")
-
-	// Italic
-	result = strings.ReplaceAll(result, "<em>", "*")
-	result = strings.ReplaceAll(result, "</em>", "*")
-	result = strings.ReplaceAll(result, "<i>", "*")
-	result = strings.ReplaceAll(result, "</i>", "*")
-
-	// Lists
-	result = strings.ReplaceAll(result, "<ul>", "")
-	result = strings.ReplaceAll(result, "</ul>", "")
-	result = strings.ReplaceAll(result, "<ol>", "")
-	result = strings.ReplaceAll(result, "</ol>", "")
-	result = strings.ReplaceAll(result, "<li>", "- ")
-	result = strings.ReplaceAll(result, "</li>", "\n")
-
-	// Line breaks
-	result = strings.ReplaceAll(result, "<br>", "\n")
-	result = strings.ReplaceAll(result, "<br/>", "\n")
-	result = strings.ReplaceAll(result, "<br />", "\n")
-
-	// Remove other HTML tags (basic)
-	result = removeHTMLTags(result)
+	// Convert HTML to Markdown
+	markdown, err := converter.ConvertString(html)
+	if err != nil {
+		// If conversion fails, return the original HTML with basic cleanup
+		return cleanWhitespace(removeHTMLTags(html))
+	}
 
 	// Clean up excessive whitespace
-	result = cleanWhitespace(result)
-
-	return strings.TrimSpace(result)
+	return cleanWhitespace(markdown)
 }
 
 // removeHTMLTags removes HTML tags (basic implementation)
