@@ -8,7 +8,7 @@ services:
     ports:
       - "1234:1234"
     volumes:
-      - ./data:/app/data
+      - mrrss-data:/app/data
     environment:
       - MRRSS_DEBUG=false
     restart: unless-stopped

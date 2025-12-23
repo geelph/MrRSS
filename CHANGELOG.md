@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- AI generated summaries are now stored in the database to avoid redundant requests and improve performance. (#295)
+
+### Fixed
+
+- Fixed the issue where docker image failed to access local files due to permission issues. (#296)
+
 ## [1.3.7] - 2025-12-23
 
 ### Added
