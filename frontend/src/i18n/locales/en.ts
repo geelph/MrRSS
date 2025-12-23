@@ -312,6 +312,7 @@ const en: TranslationMessages = {
   generatingAISummary: 'Generating AI summary...',
   generatingSummary: 'Generating summary...',
   generatingSummaryTime: '{seconds} seconds elapsed',
+  regenerateSummary: 'Regenerate',
   german: 'deutsch',
   googleTranslate: 'Google Translate',
   googleTranslateEndpoint: 'Google Translate Endpoint',

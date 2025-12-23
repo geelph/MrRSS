@@ -118,6 +118,12 @@ func HandleSummarizeArticle(h *core.Handler, w http.ResponseWriter, r *http.Requ
 		result = summarizer.Summarize(content, summaryLength)
 	}
 
+	// Cache the summary in the database
+	if err := h.DB.UpdateArticleSummary(req.ArticleID, result.Summary); err != nil {
+		log.Printf("Failed to cache summary for article %d: %v", req.ArticleID, err)
+		// Don't fail the request if caching fails
+	}
+
 	response := map[string]interface{}{
 		"summary":        result.Summary,
 		"sentence_count": result.SentenceCount,

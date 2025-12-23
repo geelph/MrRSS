@@ -309,6 +309,7 @@ const zh: TranslationMessages = {
   generatingAISummary: '正在生成AI摘要...',
   generatingSummary: '正在生成摘要...',
   generatingSummaryTime: '已耗时 {seconds} 秒',
+  regenerateSummary: '重新生成',
   german: 'deutsch',
   googleTranslate: '谷歌翻译',
   googleTranslateEndpoint: '谷歌翻译端点',

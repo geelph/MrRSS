@@ -48,13 +48,32 @@ export function useArticleSummary() {
   // Generate summary for an article
   async function generateSummary(
     article: Article,
-    content?: string
+    content?: string,
+    force: boolean = false
   ): Promise<SummaryResult | null> {
     if (!summarySettings.value.enabled) {
       return null;
     }
 
-    // Check cache first
+    // If forcing regeneration, clear cache first
+    if (force) {
+      summaryCache.value.delete(article.id);
+    }
+
+    // Check if article already has a cached summary (only if not forcing)
+    // This is the FIRST check - always return cached summary if available
+    if (!force && article.summary && article.summary.trim() !== '') {
+      const cachedResult: SummaryResult = {
+        summary: article.summary,
+        sentence_count: 0, // We don't store this in DB
+        is_too_short: false,
+      };
+      // Store in cache but don't mark as loading since it's already done
+      summaryCache.value.set(article.id, cachedResult);
+      return cachedResult;
+    }
+
+    // Check in-memory cache (for summaries generated in current session)
     if (summaryCache.value.has(article.id)) {
       return summaryCache.value.get(article.id) || null;
     }

@@ -231,6 +231,9 @@ func runMigrations(db *sql.DB) error {
 	_, _ = db.Exec(`ALTER TABLE feeds ADD COLUMN xpath_item_categories TEXT DEFAULT ''`)
 	_, _ = db.Exec(`ALTER TABLE feeds ADD COLUMN xpath_item_uid TEXT DEFAULT ''`)
 
+	// Migration: Add summary column for caching AI-generated summaries
+	_, _ = db.Exec(`ALTER TABLE articles ADD COLUMN summary TEXT DEFAULT ''`)
+
 	return nil
 }
 

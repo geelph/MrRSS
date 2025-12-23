@@ -20,6 +20,7 @@ import {
   hasOnlyPreservedContent,
 } from '@/composables/article/useContentTranslation';
 import { useSettings } from '@/composables/core/useSettings';
+import { useAppStore } from '@/stores/app';
 import './ArticleContent.css';
 
 interface SummaryResult {
@@ -48,6 +49,7 @@ const { t } = useI18n();
 
 // Chat state
 const { settings: appSettings, fetchSettings } = useSettings();
+const store = useAppStore();
 const isChatPanelOpen = ref(false);
 
 // Full-text fetching state
@@ -202,18 +204,27 @@ async function fetchFullArticle() {
 }
 
 // Generate summary for the current article
-async function generateSummary(article: Article) {
+async function generateSummary(article: Article, force: boolean = false) {
   if (!summaryEnabled.value || !article) {
     return;
   }
 
-  summaryResult.value = null;
-  translatedSummary.value = '';
+  // Only clear state if forcing regeneration
+  if (force) {
+    summaryResult.value = null;
+    translatedSummary.value = '';
+  }
 
-  const result = await generateSummaryComposable(article, displayContent.value);
+  const result = await generateSummaryComposable(article, displayContent.value, force);
   summaryResult.value = result;
 
+  // Update the article summary in store for caching
+  if (result?.summary) {
+    store.updateArticleSummary(article.id, result.summary);
+  }
+
   // Auto-translate summary if translation is enabled
+  // Only translate if we got a new summary (result is from API, not cached)
   if (translationEnabled.value && result?.summary && !result.is_too_short) {
     isTranslatingSummary.value = true;
     translatedSummary.value = await translateText(result.summary);
@@ -411,7 +422,7 @@ async function reattachImageInteractions() {
 // Watch for article changes and regenerate summary + translations
 watch(
   () => props.article?.id,
-  (newId, oldId) => {
+  async (newId, oldId) => {
     if (newId !== oldId) {
       summaryResult.value = null;
       translatedSummary.value = '';
@@ -420,10 +431,27 @@ watch(
       fullArticleContent.value = ''; // Reset full article content when switching articles
 
       if (props.article) {
-        if (shouldAutoGenerateSummary()) {
-          // Delay summary generation when switching articles
+        // Check if article has a cached summary first
+        if (props.article.summary && props.article.summary.trim() !== '') {
+          // Load the cached summary immediately
+          summaryResult.value = {
+            summary: props.article.summary,
+            sentence_count: 0,
+            is_too_short: false,
+          };
+
+          // Translate the cached summary if translation is enabled
+          if (translationEnabled.value) {
+            isTranslatingSummary.value = true;
+            translatedSummary.value = await translateText(props.article.summary);
+            isTranslatingSummary.value = false;
+          }
+        } else if (shouldAutoGenerateSummary()) {
+          // Only auto-generate if no cached summary exists
           setTimeout(() => generateSummary(props.article), 100);
         }
+
+        // Translate title
         if (translationEnabled.value) {
           translateTitle(props.article);
         }
@@ -467,10 +495,26 @@ onMounted(async () => {
       await reattachImageInteractions();
     }
 
-    if (shouldAutoGenerateSummary() && props.articleContent) {
-      // Delay summary generation to ensure content displays first
+    // Check for cached summary first
+    if (props.article.summary && props.article.summary.trim() !== '') {
+      // Load the cached summary immediately
+      summaryResult.value = {
+        summary: props.article.summary,
+        sentence_count: 0,
+        is_too_short: false,
+      };
+
+      // Translate the cached summary if translation is enabled
+      if (translationEnabled.value) {
+        isTranslatingSummary.value = true;
+        translatedSummary.value = await translateText(props.article.summary);
+        isTranslatingSummary.value = false;
+      }
+    } else if (shouldAutoGenerateSummary() && props.articleContent) {
+      // Only auto-generate if no cached summary exists
       setTimeout(() => generateSummary(props.article), 100);
     }
+
     if (translationEnabled.value) {
       translateTitle(props.article);
       if (props.articleContent && !props.isLoadingContent) {
@@ -530,23 +574,9 @@ watch(
         :translation-enabled="translationEnabled"
         :summary-provider="summaryProvider"
         :summary-trigger-mode="summaryTriggerMode"
-        @generate-summary="generateSummary(props.article)"
+        :is-loading-content="props.isLoadingContent"
+        @generate-summary="generateSummary(props.article, true)"
       />
-
-      <!-- Full-text fetch button -->
-      <div v-if="showFullTextButton" class="flex justify-center mt-4 mb-4">
-        <button
-          :disabled="isFetchingFullArticle"
-          class="btn-secondary flex items-center gap-2"
-          @click="fetchFullArticle"
-        >
-          <PhSpinnerGap v-if="isFetchingFullArticle" :size="16" class="animate-spin" />
-          <PhArticleNyTimes v-else :size="16" />
-          <span>{{
-            isFetchingFullArticle ? t('fetchingFullArticle') : t('fetchFullArticle')
-          }}</span>
-        </button>
-      </div>
 
       <ArticleLoading v-if="isLoadingContent" />
 
@@ -556,6 +586,21 @@ watch(
         :is-translating-content="isTranslatingContent"
         :has-media-content="!!(article.audio_url || article.video_url)"
       />
+
+      <!-- Full-text fetch button -->
+      <div v-if="showFullTextButton" class="flex justify-center mt-4 mb-4">
+        <button
+          :disabled="isFetchingFullArticle"
+          class="btn-secondary-compact flex items-center gap-1.5"
+          @click="fetchFullArticle"
+        >
+          <PhSpinnerGap v-if="isFetchingFullArticle" :size="12" class="animate-spin" />
+          <PhArticleNyTimes v-else :size="12" />
+          <span class="text-xs">{{
+            isFetchingFullArticle ? t('fetchingFullArticle') : t('fetchFullArticle')
+          }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- Chat Button (shown when content is loaded and chat is enabled) -->
@@ -577,5 +622,9 @@ watch(
 
 .btn-secondary {
   @apply bg-bg-tertiary border border-border text-text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-medium hover:bg-bg-secondary transition-colors;
+}
+
+.btn-secondary-compact {
+  @apply bg-bg-tertiary border border-border text-text-primary px-2 py-1 rounded cursor-pointer flex items-center gap-1.5 text-xs hover:bg-bg-secondary transition-colors opacity-70 hover:opacity-100;
 }
 </style>

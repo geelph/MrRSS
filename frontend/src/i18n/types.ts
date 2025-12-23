@@ -219,6 +219,7 @@ export interface TranslationMessages {
   generatingAISummary: string;
   generatingSummary: string;
   generatingSummaryTime: string;
+  regenerateSummary: string;
   german: string;
   googleTranslate: string;
   goToAllArticles: string;

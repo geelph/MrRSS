@@ -17,6 +17,7 @@ export interface Article {
   is_favorite: boolean;
   is_hidden: boolean;
   is_read_later: boolean;
+  summary?: string; // Cached AI-generated summary
 }
 
 export interface Feed {

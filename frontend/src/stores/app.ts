@@ -25,22 +25,23 @@ export interface AppState {
 }
 
 export interface AppActions {
-  setFilter: (Filter) => void;
-  setFeed: (number) => void;
-  setCategory: (string) => void;
-  fetchArticles: (boolean?) => Promise<void>;
+  setFilter: (filter: Filter) => void;
+  setFeed: (feedId: number) => void;
+  setCategory: (category: string) => void;
+  fetchArticles: (append?: boolean) => Promise<void>;
   loadMore: () => Promise<void>;
   fetchFeeds: () => Promise<void>;
   fetchUnreadCounts: () => Promise<void>;
-  markAllAsRead: (number?) => Promise<void>;
+  markAllAsRead: (feedId?: number) => Promise<void>;
+  updateArticleSummary: (articleId: number, summary: string) => void;
   toggleTheme: () => void;
-  setTheme: (ThemePreference) => void;
+  setTheme: (preference: ThemePreference) => void;
   applyTheme: () => void;
   initTheme: () => void;
   refreshFeeds: () => Promise<void>;
   pollProgress: () => void;
   checkForAppUpdates: () => Promise<void>;
-  startAutoRefresh: (number) => void;
+  startAutoRefresh: (minutes: number) => void;
 }
 
 export const useAppStore = defineStore('app', () => {
@@ -188,6 +189,17 @@ export const useAppStore = defineStore('app', () => {
       await fetchUnreadCounts();
     } catch {
       // Error handled silently
+    }
+  }
+
+  // Update article summary in store
+  function updateArticleSummary(articleId: number, summary: string): void {
+    const articleIndex = articles.value.findIndex((a) => a.id === articleId);
+    if (articleIndex !== -1) {
+      articles.value[articleIndex] = {
+        ...articles.value[articleIndex],
+        summary,
+      };
     }
   }
 
@@ -410,6 +422,7 @@ export const useAppStore = defineStore('app', () => {
     fetchFeeds,
     fetchUnreadCounts,
     markAllAsRead,
+    updateArticleSummary,
     toggleTheme,
     setTheme,
     applyTheme,

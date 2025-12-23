@@ -16,11 +16,13 @@ interface Props {
   translationEnabled: boolean;
   summaryProvider?: string;
   summaryTriggerMode?: string;
+  isLoadingContent?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   summaryProvider: 'local',
   summaryTriggerMode: 'auto',
+  isLoadingContent: false,
 });
 
 const emit = defineEmits<{
@@ -71,7 +73,8 @@ const shouldShowManualTrigger = computed(() => {
     props.summaryProvider === 'ai' &&
     props.summaryTriggerMode === 'manual' &&
     !props.summaryResult &&
-    !props.isLoadingSummary
+    !props.isLoadingSummary &&
+    !props.isLoadingContent
   );
 });
 
@@ -170,6 +173,19 @@ function handleGenerateSummary() {
 
       <!-- Summary Display -->
       <div v-else-if="summaryResult?.summary">
+        <!-- Regenerate Button -->
+        <div class="flex justify-end mb-2">
+          <button
+            class="flex items-center gap-1 px-2 py-1 text-xs bg-bg-secondary text-text-secondary rounded hover:bg-bg-tertiary transition-colors"
+            :disabled="isLoadingSummary"
+            @click="handleGenerateSummary"
+          >
+            <PhSpinnerGap v-if="isLoadingSummary" :size="12" class="animate-spin" />
+            <PhPlay v-else :size="12" />
+            <span>{{ t('regenerateSummary') }}</span>
+          </button>
+        </div>
+
         <!-- Show translated summary only when translation is enabled -->
         <div
           v-if="translationEnabled && translatedSummary"
