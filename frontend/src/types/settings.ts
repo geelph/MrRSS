@@ -17,6 +17,7 @@ export interface SettingsData {
   ai_model: string;
   ai_translation_prompt: string;
   ai_summary_prompt: string;
+  ai_custom_headers: string;
   ai_usage_tokens: string;
   ai_usage_limit: string;
   ai_chat_enabled: boolean;

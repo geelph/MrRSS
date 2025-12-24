@@ -45,6 +45,13 @@ const en: TranslationMessages = {
   aiModel: 'Model Name',
   aiModelDesc: 'AI model to use for translation and summarization',
   aiModelPlaceholder: 'gpt-4o-mini',
+  aiCustomHeaders: 'Custom Headers',
+  aiCustomHeadersDesc: 'Additional HTTP headers to send with AI requests (JSON format)',
+  aiCustomHeadersAdd: 'Add Header',
+  aiCustomHeadersName: 'Header Name',
+  aiCustomHeadersValue: 'Header Value',
+  aiCustomHeadersRemove: 'Remove',
+  aiCustomHeadersInvalid: 'Invalid JSON format for custom headers',
   aiSettings: 'AI Settings',
   aiSettingsConfiguredInAITab:
     'AI API Key, Endpoint, and Model are configured in the AI tab. This feature can consume a significant number of tokens, please use with caution.',

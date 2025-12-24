@@ -75,7 +75,7 @@ function handleDiscoverAll() {
     @click.self="emit('close')"
   >
     <div
-      class="bg-bg-primary w-full max-w-4xl h-full sm:h-[700px] sm:max-h-[90vh] flex flex-col rounded-none sm:rounded-2xl shadow-2xl border border-border overflow-hidden animate-fade-in"
+      class="bg-bg-primary w-full max-w-4xl h-full sm:h-[900px] sm:max-h-[90vh] flex flex-col rounded-none sm:rounded-2xl shadow-2xl border border-border overflow-hidden animate-fade-in"
     >
       <div class="p-3 sm:p-5 border-b border-border flex justify-between items-center shrink-0">
         <h3 class="text-text-secondary sm:text-lg font-semibold m-0 flex items-center gap-2">

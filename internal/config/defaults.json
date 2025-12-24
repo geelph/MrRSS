@@ -20,6 +20,7 @@
   "ai_model": "gpt-4o-mini",
   "ai_translation_prompt": "",
   "ai_summary_prompt": "",
+  "ai_custom_headers": "",
   "ai_usage_tokens": "0",
   "ai_usage_limit": "0",
   "summary_enabled": true,

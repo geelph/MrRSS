@@ -111,6 +111,8 @@ export function useSettingsAutoSave(settings: Ref<SettingsData> | (() => Setting
             settingsRef.value.ai_translation_prompt ?? settingsDefaults.ai_translation_prompt,
           ai_summary_prompt:
             settingsRef.value.ai_summary_prompt ?? settingsDefaults.ai_summary_prompt,
+          ai_custom_headers:
+            settingsRef.value.ai_custom_headers ?? settingsDefaults.ai_custom_headers,
           ai_usage_tokens: settingsRef.value.ai_usage_tokens ?? settingsDefaults.ai_usage_tokens,
           ai_usage_limit: settingsRef.value.ai_usage_limit ?? settingsDefaults.ai_usage_limit,
           ai_chat_enabled: (

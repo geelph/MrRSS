@@ -20,6 +20,7 @@
   "ai_model": "gpt-4o-mini",
   "ai_translation_prompt": "You are a translator. Translate the given text accurately. Output ONLY the translated text, nothing else.",
   "ai_summary_prompt": "You are a summarizer. Generate a concise summary of the given text. Output ONLY the summary, nothing else.",
+  "ai_custom_headers": "",
   "ai_usage_tokens": "0",
   "ai_usage_limit": "200",
   "ai_chat_enabled": false,

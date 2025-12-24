@@ -27,6 +27,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		aiModel, _ := h.DB.GetSetting("ai_model")
 		aiTranslationPrompt, _ := h.DB.GetSetting("ai_translation_prompt")
 		aiSummaryPrompt, _ := h.DB.GetSetting("ai_summary_prompt")
+		aiCustomHeaders, _ := h.DB.GetSetting("ai_custom_headers")
 		aiUsageTokens, _ := h.DB.GetSetting("ai_usage_tokens")
 		aiUsageLimit, _ := h.DB.GetSetting("ai_usage_limit")
 		aiChatEnabled, _ := h.DB.GetSetting("ai_chat_enabled")
@@ -87,6 +88,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			"ai_model":                    aiModel,
 			"ai_translation_prompt":       aiTranslationPrompt,
 			"ai_summary_prompt":           aiSummaryPrompt,
+			"ai_custom_headers":           aiCustomHeaders,
 			"ai_usage_tokens":             aiUsageTokens,
 			"ai_usage_limit":              aiUsageLimit,
 			"ai_chat_enabled":             aiChatEnabled,
@@ -149,6 +151,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			AIModel                  string `json:"ai_model"`
 			AITranslationPrompt      string `json:"ai_translation_prompt"`
 			AISummaryPrompt          string `json:"ai_summary_prompt"`
+			AICustomHeaders          string `json:"ai_custom_headers"`
 			AIUsageTokens            string `json:"ai_usage_tokens"`
 			AIUsageLimit             string `json:"ai_usage_limit"`
 			AIChatEnabled            string `json:"ai_chat_enabled"`
@@ -236,6 +239,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		h.DB.SetSetting("ai_model", req.AIModel)
 		h.DB.SetSetting("ai_translation_prompt", req.AITranslationPrompt)
 		h.DB.SetSetting("ai_summary_prompt", req.AISummaryPrompt)
+		h.DB.SetSetting("ai_custom_headers", req.AICustomHeaders)
 
 		// Always update AI usage settings
 		h.DB.SetSetting("ai_usage_tokens", req.AIUsageTokens)

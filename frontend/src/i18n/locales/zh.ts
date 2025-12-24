@@ -45,6 +45,13 @@ const zh: TranslationMessages = {
   aiModel: '模型名称',
   aiModelDesc: '用于翻译和摘要的 AI 模型',
   aiModelPlaceholder: 'gpt-4o-mini',
+  aiCustomHeaders: '自定义请求头',
+  aiCustomHeadersDesc: '发送 AI 请求时附加的 HTTP 请求头（JSON 格式）',
+  aiCustomHeadersAdd: '添加请求头',
+  aiCustomHeadersName: '请求头名称',
+  aiCustomHeadersValue: '请求头内容',
+  aiCustomHeadersRemove: '删除',
+  aiCustomHeadersInvalid: '自定义请求头的 JSON 格式无效',
   aiSettings: 'AI 设置',
   aiSettingsConfiguredInAITab:
     'AI API 密钥、端点和模型在 AI 标签页中配置。该功能消耗 Token 较多，请谨慎使用。',
