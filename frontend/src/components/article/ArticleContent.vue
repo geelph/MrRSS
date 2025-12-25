@@ -66,6 +66,20 @@ const isFetchingFullArticle = ref(false);
 const fullArticleContent = ref('');
 const autoShowAllContent = ref(false);
 
+// Computed property to determine if auto-expand should be enabled for this feed
+const shouldAutoExpandContent = computed(() => {
+  // First check if feed has auto_expand_content setting
+  const feed = store.feeds.find((f) => f.id === props.article.feed_id);
+  if (feed?.auto_expand_content) {
+    if (feed.auto_expand_content === 'enabled') return true;
+    if (feed.auto_expand_content === 'disabled') return false;
+    // If 'global', fall through to global setting
+  }
+
+  // Fall back to global setting
+  return autoShowAllContent.value;
+});
+
 // Fetch settings on mount to get actual values
 onMounted(async () => {
   try {
@@ -497,7 +511,7 @@ watch(
       await reattachImageInteractions();
 
       // Auto-fetch full article if setting is enabled
-      if (autoShowAllContent.value && !fullArticleContent.value) {
+      if (shouldAutoExpandContent.value && !fullArticleContent.value) {
         setTimeout(() => fetchFullArticle(), 200);
       }
 
@@ -524,7 +538,11 @@ onMounted(async () => {
       await reattachImageInteractions();
 
       // Auto-fetch full article if setting is enabled and content is already loaded
-      if (autoShowAllContent.value && !fullArticleContent.value && !isFetchingFullArticle.value) {
+      if (
+        shouldAutoExpandContent.value &&
+        !fullArticleContent.value &&
+        !isFetchingFullArticle.value
+      ) {
         setTimeout(() => fetchFullArticle(), 200);
       }
     }

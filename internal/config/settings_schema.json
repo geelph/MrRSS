@@ -465,6 +465,13 @@
       "category": "reading",
       "encrypted": false,
       "frontend_key": "autoShowAllContent"
+    },
+    "custom_css_file": {
+      "type": "string",
+      "default": "",
+      "category": "reading",
+      "encrypted": false,
+      "frontend_key": "customCSSFile"
     }
   }
 }

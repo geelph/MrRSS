@@ -8,6 +8,7 @@ interface Props {
   isImageMode: boolean;
   hideFromTimeline: boolean;
   articleViewMode: 'global' | 'webpage' | 'rendered';
+  autoExpandContent: 'global' | 'enabled' | 'disabled';
   proxyMode: ProxyMode;
   proxyType: string;
   proxyHost: string;
@@ -24,6 +25,7 @@ const emit = defineEmits<{
   'update:isImageMode': [value: boolean];
   'update:hideFromTimeline': [value: boolean];
   'update:articleViewMode': [value: 'global' | 'webpage' | 'rendered'];
+  'update:autoExpandContent': [value: 'global' | 'enabled' | 'disabled'];
   'update:proxyMode': [value: ProxyMode];
   'update:proxyType': [value: string];
   'update:proxyHost': [value: string];
@@ -104,6 +106,30 @@ const { t } = useI18n();
         <option value="global">{{ t('useGlobalSettings') }}</option>
         <option value="webpage">{{ t('viewAsWebpage') }}</option>
         <option value="rendered">{{ t('viewAsRendered') }}</option>
+      </select>
+    </div>
+
+    <!-- Auto Expand Content -->
+    <div class="p-3 rounded-lg bg-bg-secondary border border-border">
+      <label class="block mb-1.5 font-semibold text-xs sm:text-sm text-text-primary">
+        {{ t('autoExpandContent') }}
+      </label>
+      <p class="text-[10px] sm:text-xs text-text-secondary mb-2">
+        {{ t('autoExpandContentDesc') }}
+      </p>
+      <select
+        :value="props.autoExpandContent"
+        class="input-field w-full"
+        @change="
+          emit(
+            'update:autoExpandContent',
+            ($event.target as HTMLSelectElement).value as 'global' | 'enabled' | 'disabled'
+          )
+        "
+      >
+        <option value="global">{{ t('useGlobalSettings') }}</option>
+        <option value="enabled">{{ t('enabled') }}</option>
+        <option value="disabled">{{ t('disabled') }}</option>
       </select>
     </div>
 

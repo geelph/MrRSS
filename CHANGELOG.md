@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Supported import and export feeds in JSON format. (#317)
+- Supported choosing auto expand content for each feed. (#306)
+- Supported uploading CSS files for customized styling of articles. (#324)
+
+### Changed
+
+- Improved I18n translations, icons, and descriptions in settings page for better clarity and user experience.
+- Improved UX of feed adding/editing modal. (#317)
+- Expand status of categories in sidebar is now persisted across application restarts. (#315)
+
+### Fixed
+
+- Fixed the issue where length limit for AI-generated summaries was not applied correctly. (#323)
+- Fixed the issue where the last time of network detect displays 739609 days ago if never detected before. (#314)
+
 ## [1.3.9] - 2025-12-25
 
 ### Added

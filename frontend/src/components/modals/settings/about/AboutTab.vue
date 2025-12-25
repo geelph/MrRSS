@@ -167,6 +167,12 @@ function handleDownloadInstall() {
         {{ t('viewOnGitHub') }}
       </a>
     </div>
+
+    <!-- Copyright information at the bottom -->
+    <div class="mt-auto pt-4 text-center">
+      <p class="text-text-secondary text-xs">© 2026 MrRSS. All rights reserved.</p>
+      <p class="text-text-secondary text-xs">Open source and available under GPL-3.0 License.</p>
+    </div>
   </div>
 </template>
 

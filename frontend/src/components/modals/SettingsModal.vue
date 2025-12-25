@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useAppStore } from '@/stores/app';
 import { useI18n } from 'vue-i18n';
-import { ref, onMounted, type Ref } from 'vue';
+import { ref, onMounted, onUnmounted, type Ref } from 'vue';
 import GeneralTab from './settings/general/GeneralTab.vue';
 import FeedsTab from './settings/feeds/FeedsTab.vue';
 import ContentTab from './settings/content/ContentTab.vue';
@@ -51,6 +51,7 @@ const emit = defineEmits<{
 
 const activeTab: Ref<TabName> = ref('general');
 const showDiscoverAllModal = ref(false);
+const tabsContainer = ref<HTMLElement>();
 
 // Modal close handling
 useModalClose(() => emit('close'));
@@ -61,6 +62,25 @@ onMounted(async () => {
     applySettings(data, (theme: string) => store.setTheme(theme as ThemePreference));
   } catch (e) {
     console.error('Error loading settings:', e);
+  }
+
+  // Add wheel event listener for horizontal scrolling
+  if (tabsContainer.value) {
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      tabsContainer.value!.scrollLeft += e.deltaY * 0.1; // Reduce scroll speed
+    };
+    tabsContainer.value.addEventListener('wheel', handleWheel);
+
+    // Store cleanup function
+    const cleanup = () => {
+      if (tabsContainer.value) {
+        tabsContainer.value.removeEventListener('wheel', handleWheel);
+      }
+    };
+
+    // Cleanup on unmount
+    onUnmounted(cleanup);
   }
 });
 
@@ -91,6 +111,7 @@ function handleDiscoverAll() {
       </div>
 
       <div
+        ref="tabsContainer"
         class="flex border-b border-border bg-bg-secondary shrink-0 overflow-x-auto scrollbar-hide"
       >
         <button

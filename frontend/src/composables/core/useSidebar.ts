@@ -20,7 +20,11 @@ export function useSidebar() {
   const store = useAppStore();
   const { t } = useI18n();
 
-  const openCategories: Ref<Set<string>> = ref(new Set());
+  // Load saved category state from localStorage
+  const savedCategories = localStorage.getItem('openCategories');
+  const openCategories: Ref<Set<string>> = ref(
+    savedCategories ? new Set(JSON.parse(savedCategories)) : new Set()
+  );
   const searchQuery: Ref<string> = ref('');
 
   // Build category tree with search filtering
@@ -88,13 +92,15 @@ export function useSidebar() {
     return counts;
   });
 
-  // Auto-expand all categories by default
+  // Auto-expand new categories only if no saved state exists
   watch(
     () => tree.value.categories,
     (newCategories) => {
       if (newCategories) {
+        const hasSavedState = localStorage.getItem('openCategories') !== null;
         newCategories.forEach((cat) => {
-          if (!openCategories.value.has(cat)) {
+          // Only auto-expand if this is a new category and no saved state exists
+          if (!openCategories.value.has(cat) && !hasSavedState) {
             openCategories.value.add(cat);
           }
         });
@@ -109,6 +115,8 @@ export function useSidebar() {
     } else {
       openCategories.value.add(path);
     }
+    // Save to localStorage
+    localStorage.setItem('openCategories', JSON.stringify([...openCategories.value]));
   }
 
   function isCategoryOpen(path: string): boolean {
@@ -158,13 +166,13 @@ export function useSidebar() {
           y: e.clientY,
           items: [
             { label: t('refreshFeed'), action: 'refreshFeed', icon: 'PhArrowsClockwise' },
-            { label: t('markAllAsReadFeed'), action: 'markAllRead', icon: 'ph-check-circle' },
+            { label: t('markAllAsReadFeed'), action: 'markAllRead', icon: 'PhCheckCircle' },
             { separator: true },
-            { label: t('openWebsite'), action: 'openWebsite', icon: 'ph-globe' },
-            { label: t('discoverFeeds'), action: 'discover', icon: 'PhMagnifyingGlass' },
+            { label: t('openWebsite'), action: 'openWebsite', icon: 'PhGlobe' },
+            { label: t('discoverFeeds'), action: 'discover', icon: 'PhBinoculars' },
             { separator: true },
-            { label: t('editSubscription'), action: 'edit', icon: 'ph-pencil' },
-            { label: t('unsubscribe'), action: 'delete', icon: 'ph-trash', danger: true },
+            { label: t('editSubscription'), action: 'edit', icon: 'PhPencil' },
+            { label: t('unsubscribe'), action: 'delete', icon: 'PhTrash', danger: true },
           ],
           data: feed,
           callback: handleFeedAction,

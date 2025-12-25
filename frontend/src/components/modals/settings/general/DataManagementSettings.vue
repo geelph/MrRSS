@@ -269,11 +269,8 @@ onMounted(() => {
             </div>
           </div>
         </div>
-        <button
-          :disabled="isCleaningCache"
-          class="btn-secondary text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5"
-          @click="cleanMediaCache"
-        >
+        <button :disabled="isCleaningCache" class="btn-secondary" @click="cleanMediaCache">
+          <PhBroom :size="16" class="sm:w-5 sm:h-5" />
           {{ isCleaningCache ? t('cleaning') : t('cleanupMediaCache') }}
         </button>
       </div>
@@ -304,7 +301,7 @@ onMounted(() => {
   @apply flex items-center sm:items-start justify-between gap-2 sm:gap-4 p-2 sm:p-2.5 rounded-md bg-bg-tertiary;
 }
 .btn-secondary {
-  @apply bg-bg-tertiary hover:bg-bg-secondary border border-border text-text-primary rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply bg-bg-tertiary border border-border text-text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-medium hover:bg-bg-secondary transition-colors;
 }
 .setting-group {
   @apply space-y-2 sm:space-y-3;

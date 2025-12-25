@@ -40,6 +40,9 @@ export function useFeedForm(feed?: Feed) {
   // Article view mode
   const articleViewMode = ref<'global' | 'webpage' | 'rendered'>('global');
 
+  // Auto expand content mode
+  const autoExpandContent = ref<'global' | 'enabled' | 'disabled'>('global');
+
   // Proxy settings
   const proxyMode = ref<ProxyMode>('global');
   const proxyType = ref('http');
@@ -192,6 +195,10 @@ export function useFeedForm(feed?: Feed) {
     articleViewMode.value =
       (feed.article_view_mode as 'global' | 'webpage' | 'rendered') || 'global';
 
+    // Initialize auto expand content mode
+    autoExpandContent.value =
+      (feed.auto_expand_content as 'global' | 'enabled' | 'disabled') || 'global';
+
     // Determine feed type based on feed properties
     if (feed.script_path) {
       feedType.value = 'script';
@@ -262,6 +269,7 @@ export function useFeedForm(feed?: Feed) {
     xpathItemCategories.value = '';
     xpathItemUid.value = '';
     articleViewMode.value = 'global';
+    autoExpandContent.value = 'global';
     proxyMode.value = 'global';
     proxyType.value = 'http';
     proxyHost.value = '';
@@ -320,6 +328,7 @@ export function useFeedForm(feed?: Feed) {
     xpathItemCategories,
     xpathItemUid,
     articleViewMode,
+    autoExpandContent,
     proxyMode,
     proxyType,
     proxyHost,

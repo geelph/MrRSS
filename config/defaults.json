@@ -13,6 +13,7 @@
   "baidu_app_id": "",
   "baidu_secret_key": "",
   "close_to_tray": true,
+  "custom_css_file": "",
   "deepl_api_key": "",
   "deepl_endpoint": "",
   "default_view_mode": "rendered",

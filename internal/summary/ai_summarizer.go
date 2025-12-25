@@ -191,7 +191,6 @@ func (s *AISummarizer) tryOpenAIFormat(systemPrompt, userPrompt string) (string,
 			{"role": "user", "content": userPrompt},
 		},
 		"temperature": 0.3, // Low temperature for consistent summaries
-		"max_tokens":  512, // Limit output tokens for summaries
 	}
 
 	jsonBody, err := json.Marshal(requestBody)
