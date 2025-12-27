@@ -88,7 +88,10 @@ func (f *Fetcher) AddSubscription(url string, category string, customTitle strin
 	} else {
 		// Try parsing the sanitized XML
 		parser := gofeed.NewParser()
-		parser.Client = f.fp.(*gofeed.Parser).Client // Use the same HTTP client
+		// Use the same HTTP client if available (for proxy settings, etc.)
+		if gofeedParser, ok := f.fp.(*gofeed.Parser); ok {
+			parser.Client = gofeedParser.Client
+		}
 		parsedFeed, parseErr := parser.ParseString(cleanedXML)
 		if parseErr == nil {
 			utils.DebugLog("AddSubscription: Successfully parsed sanitized feed for URL: %s", url)
@@ -334,7 +337,10 @@ func (f *Fetcher) parseFeedWithFeedInternal(ctx context.Context, feed *models.Fe
 	if sanitizeErr == nil {
 		// Successfully fetched and sanitized, try parsing
 		parser := gofeed.NewParser()
-		parser.Client = f.fp.(*gofeed.Parser).Client // Use the same HTTP client
+		// Use the same HTTP client if available (for proxy settings, etc.)
+		if gofeedParser, ok := f.fp.(*gofeed.Parser); ok {
+			parser.Client = gofeedParser.Client
+		}
 		parsedFeed, err := parser.ParseString(cleanedXML)
 		if err == nil {
 			utils.DebugLog("parseFeedWithFeedInternal: Successfully parsed sanitized feed for %s", feed.URL)
