@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Offer users a setting to enable or disable auto installation of updates after download. (#336)
+
 ### Fixed
 
 - Fixed the issue where macOS privacy permission dialog appears repeatedly when opening articles. (#337)

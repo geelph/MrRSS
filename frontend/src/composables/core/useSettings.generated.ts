@@ -24,6 +24,7 @@ export function generateInitialSettings(): SettingsData {
     ai_usage_tokens: settingsDefaults.ai_usage_tokens,
     auto_cleanup_enabled: settingsDefaults.auto_cleanup_enabled,
     auto_show_all_content: settingsDefaults.auto_show_all_content,
+    auto_update: settingsDefaults.auto_update,
     baidu_app_id: settingsDefaults.baidu_app_id,
     baidu_secret_key: settingsDefaults.baidu_secret_key,
     close_to_tray: settingsDefaults.close_to_tray,
@@ -100,6 +101,7 @@ export function parseSettingsData(data: Record<string, string>): SettingsData {
     ai_usage_tokens: data.ai_usage_tokens || settingsDefaults.ai_usage_tokens,
     auto_cleanup_enabled: data.auto_cleanup_enabled === 'true',
     auto_show_all_content: data.auto_show_all_content === 'true',
+    auto_update: data.auto_update === 'true',
     baidu_app_id: data.baidu_app_id || settingsDefaults.baidu_app_id,
     baidu_secret_key: data.baidu_secret_key || settingsDefaults.baidu_secret_key,
     close_to_tray: data.close_to_tray === 'true',
@@ -188,6 +190,7 @@ export function buildAutoSavePayload(settingsRef: Ref<SettingsData>): Record<str
     auto_show_all_content: (
       settingsRef.value.auto_show_all_content ?? settingsDefaults.auto_show_all_content
     ).toString(),
+    auto_update: (settingsRef.value.auto_update ?? settingsDefaults.auto_update).toString(),
     baidu_app_id: settingsRef.value.baidu_app_id ?? settingsDefaults.baidu_app_id,
     baidu_secret_key: settingsRef.value.baidu_secret_key ?? settingsDefaults.baidu_secret_key,
     close_to_tray: (settingsRef.value.close_to_tray ?? settingsDefaults.close_to_tray).toString(),

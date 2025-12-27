@@ -16,6 +16,7 @@ export interface SettingsData {
   ai_usage_tokens: string;
   auto_cleanup_enabled: boolean;
   auto_show_all_content: boolean;
+  auto_update: boolean;
   baidu_app_id: string;
   baidu_secret_key: string;
   close_to_tray: boolean;

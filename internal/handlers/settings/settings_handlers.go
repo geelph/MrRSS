@@ -25,6 +25,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		aiUsageTokens, _ := h.DB.GetSetting("ai_usage_tokens")
 		autoCleanupEnabled, _ := h.DB.GetSetting("auto_cleanup_enabled")
 		autoShowAllContent, _ := h.DB.GetSetting("auto_show_all_content")
+		autoUpdate, _ := h.DB.GetSetting("auto_update")
 		baiduAppId, _ := h.DB.GetSetting("baidu_app_id")
 		baiduSecretKey, _ := h.DB.GetEncryptedSetting("baidu_secret_key")
 		closeToTray, _ := h.DB.GetSetting("close_to_tray")
@@ -93,6 +94,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			"ai_usage_tokens":             aiUsageTokens,
 			"auto_cleanup_enabled":        autoCleanupEnabled,
 			"auto_show_all_content":       autoShowAllContent,
+			"auto_update":                 autoUpdate,
 			"baidu_app_id":                baiduAppId,
 			"baidu_secret_key":            baiduSecretKey,
 			"close_to_tray":               closeToTray,
@@ -163,6 +165,7 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			AIUsageTokens            string `json:"ai_usage_tokens"`
 			AutoCleanupEnabled       string `json:"auto_cleanup_enabled"`
 			AutoShowAllContent       string `json:"auto_show_all_content"`
+			AutoUpdate               string `json:"auto_update"`
 			BaiduAppId               string `json:"baidu_app_id"`
 			BaiduSecretKey           string `json:"baidu_secret_key"`
 			CloseToTray              string `json:"close_to_tray"`
@@ -268,6 +271,10 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 
 		if req.AutoShowAllContent != "" {
 			h.DB.SetSetting("auto_show_all_content", req.AutoShowAllContent)
+		}
+
+		if req.AutoUpdate != "" {
+			h.DB.SetSetting("auto_update", req.AutoUpdate)
 		}
 
 		if req.BaiduAppId != "" {

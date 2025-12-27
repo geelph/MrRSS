@@ -472,6 +472,13 @@
       "category": "reading",
       "encrypted": false,
       "frontend_key": "customCSSFile"
+    },
+    "auto_update": {
+      "type": "bool",
+      "default": false,
+      "category": "general",
+      "encrypted": false,
+      "frontend_key": "autoUpdate"
     }
   }
 }
