@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the issue where GPU occupation is high when opening settings page. (#339)
 - Fixed the issue where some invalid feeds cause feed refresh to fail. (#341)
 - Fixed the issue where some images in article content rendering mode cannot be displayed correctly. (#327)
+- Fixed the issue where server mode fails to start due to newly added custom CSS file upload feature. (#343)
 
 ## [1.3.11] - 2025-12-26
 
