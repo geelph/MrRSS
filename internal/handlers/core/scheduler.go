@@ -13,17 +13,18 @@ import (
 
 // StartBackgroundScheduler starts the background scheduler for auto-updates and cleanup.
 func (h *Handler) StartBackgroundScheduler(ctx context.Context) {
+	// Trigger initial cleanup on startup
+	go func() {
+		log.Println("Triggering initial cleanup on startup")
+		h.Fetcher.GetCleanupManager().RequestCleanup()
+	}()
+
 	// Run initial cleanup only if auto_cleanup is enabled
+	// This is now handled by the cleanup manager
 	go func() {
 		autoCleanup, _ := h.DB.GetSetting("auto_cleanup_enabled")
 		if autoCleanup == "true" {
-			log.Println("Running initial article cleanup...")
-			count, err := h.DB.CleanupOldArticles()
-			if err != nil {
-				log.Printf("Error during initial cleanup: %v", err)
-			} else {
-				log.Printf("Initial cleanup: removed %d old articles", count)
-			}
+			log.Println("Auto cleanup enabled, will run after tasks complete")
 		}
 
 		// Run initial media cache cleanup if enabled
@@ -121,22 +122,27 @@ func (h *Handler) refreshFeedsWithFixedInterval(ctx context.Context, globalInter
 			staggerDelay := h.Fetcher.GetStaggeredDelay(currentFeed.ID, len(feeds))
 
 			// Schedule feed refresh with stagger
-			go func(f models.Feed, delay time.Duration, interval time.Duration) {
-				time.Sleep(delay)
-				select {
-				case <-ctx.Done():
-					return
-				default:
-					log.Printf("Refreshing feed %s (interval: %v, fixed mode)", f.Title, interval)
-					h.Fetcher.FetchSingleFeed(ctx, f)
-				}
+			// If custom interval (>0 or -1), add to queue tail individually
+			// If global interval (0), it will be handled by FetchAll instead
+			if currentFeed.RefreshInterval != 0 {
+				go func(f models.Feed, delay time.Duration, interval time.Duration) {
+					time.Sleep(delay)
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						log.Printf("Auto-refreshing feed %s (interval: %v, fixed mode)", f.Title, interval)
+						// Scheduled refresh = add to queue tail
+						h.Fetcher.FetchSingleFeed(ctx, f, false)
+					}
 
-				// Run media cache cleanup if enabled
-				mediaCacheEnabled, _ := h.DB.GetSetting("media_cache_enabled")
-				if mediaCacheEnabled == "true" {
-					h.cleanupMediaCache()
-				}
-			}(currentFeed, staggerDelay, refreshInterval)
+					// Run media cache cleanup if enabled
+					mediaCacheEnabled, _ := h.DB.GetSetting("media_cache_enabled")
+					if mediaCacheEnabled == "true" {
+						h.cleanupMediaCache()
+					}
+				}(currentFeed, staggerDelay, refreshInterval)
+			}
 		}
 
 		// Small delay between checking feeds to avoid CPU spikes
@@ -145,8 +151,29 @@ func (h *Handler) refreshFeedsWithFixedInterval(ctx context.Context, globalInter
 		}
 	}
 
-	// Run cleanup after refresh cycle
-	h.runCleanup()
+	// For feeds with RefreshInterval == 0 (use global setting), trigger FetchAll once
+	// This will add them all to queue tail together
+	needsGlobalRefresh := false
+	for _, feed := range feeds {
+		if feed.RefreshInterval == 0 {
+			needsGlobalRefresh = true
+			break
+		}
+	}
+
+	if needsGlobalRefresh {
+		// Filter feeds that use global interval
+		globalFeeds := make([]models.Feed, 0)
+		for _, feed := range feeds {
+			if feed.RefreshInterval == 0 {
+				globalFeeds = append(globalFeeds, feed)
+			}
+		}
+		if len(globalFeeds) > 0 {
+			log.Printf("Triggering global refresh for %d feeds using global interval", len(globalFeeds))
+			h.Fetcher.FetchAll(ctx)
+		}
+	}
 }
 
 // startIntelligentScheduler uses per-feed intervals with staggered refresh
@@ -215,6 +242,7 @@ func (h *Handler) refreshFeedsIntelligently(ctx context.Context) {
 			staggerDelay := h.Fetcher.GetStaggeredDelay(currentFeed.ID, len(feeds))
 
 			// Schedule feed refresh with stagger
+			// All feeds go to queue tail in intelligent mode
 			go func(f models.Feed, delay time.Duration, interval time.Duration) {
 				time.Sleep(delay)
 				select {
@@ -222,7 +250,8 @@ func (h *Handler) refreshFeedsIntelligently(ctx context.Context) {
 					return
 				default:
 					log.Printf("Intelligently refreshing feed %s (interval: %v)", f.Title, interval)
-					h.Fetcher.FetchSingleFeed(ctx, f)
+					// Scheduled refresh = add to queue tail
+					h.Fetcher.FetchSingleFeed(ctx, f, false)
 				}
 			}(currentFeed, staggerDelay, refreshInterval)
 		}
@@ -232,9 +261,6 @@ func (h *Handler) refreshFeedsIntelligently(ctx context.Context) {
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
-
-	// Run cleanup after refresh cycle
-	h.runCleanup()
 }
 
 // runCleanup runs the cleanup routine if enabled

@@ -167,7 +167,7 @@
     },
     "ai_usage_limit": {
       "type": "string",
-      "default": "200",
+      "default": "20000",
       "category": "ai",
       "encrypted": false,
       "frontend_key": "aiUsageLimit"
@@ -216,7 +216,7 @@
     },
     "max_cache_size_mb": {
       "type": "int",
-      "default": 100,
+      "default": 500,
       "category": "storage",
       "encrypted": false,
       "frontend_key": "maxCacheSizeMB"
@@ -237,7 +237,7 @@
     },
     "media_cache_max_size_mb": {
       "type": "int",
-      "default": 100,
+      "default": 200,
       "category": "storage",
       "encrypted": false,
       "frontend_key": "mediaCacheMaxSizeMB"

@@ -112,6 +112,76 @@ func (db *DB) Init() error {
 		// Migration: Add auto_expand_content column to feeds table for per-feed content expansion override
 		// Error is ignored - if column exists, the operation fails harmlessly.
 		_, _ = db.Exec(`ALTER TABLE feeds ADD COLUMN auto_expand_content TEXT DEFAULT 'global'`)
+
+		// Migration: Add summary column to articles table for AI-generated summaries
+		// Error is ignored - if column exists, the operation fails harmlessly.
+		_, _ = db.Exec(`ALTER TABLE articles ADD COLUMN summary TEXT DEFAULT ''`)
+
+		// Migration: Add unique_id column to articles table for better deduplication
+		// This replaces URL-based deduplication with title+feed_id+published_at based deduplication
+		_, _ = db.Exec(`ALTER TABLE articles ADD COLUMN unique_id TEXT UNIQUE`)
+
+		// Migration: Migrate existing articles to generate unique_id
+		// For existing articles, generate unique_id from title+feed_id+published_at
+		// If url was UNIQUE before, keep it but unique_id is now the primary deduplication key
+		db.Exec(`
+			UPDATE articles
+			SET unique_id = LOWER(HEX(MD5(title || '|' || feed_id || '|' || COALESCE(strftime('%Y-%m-%d %H:%M:%S', published_at), ''))))
+			WHERE unique_id IS NULL
+		`)
+
+		// Migration: Drop the UNIQUE constraint on url column if it exists
+		// SQLite doesn't support DROP CONSTRAINT directly, so we need to recreate the table
+		// Check if we need to migrate by checking if url is still UNIQUE
+		var tableInfo string
+		_ = db.QueryRow("SELECT sql FROM sqlite_master WHERE type='table' AND name='articles'").Scan(&tableInfo)
+		if strings.Contains(tableInfo, "url TEXT UNIQUE") {
+			// Need to recreate table without UNIQUE constraint on url
+			_, err = db.Exec(`
+				CREATE TABLE articles_new (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					feed_id INTEGER,
+					title TEXT,
+					url TEXT,
+					image_url TEXT,
+					audio_url TEXT DEFAULT '',
+					video_url TEXT DEFAULT '',
+					translated_title TEXT,
+					published_at DATETIME,
+					is_read BOOLEAN DEFAULT 0,
+					is_favorite BOOLEAN DEFAULT 0,
+					is_hidden BOOLEAN DEFAULT 0,
+					is_read_later BOOLEAN DEFAULT 0,
+					summary TEXT DEFAULT '',
+					unique_id TEXT UNIQUE,
+					FOREIGN KEY(feed_id) REFERENCES feeds(id)
+				)
+			`)
+			if err == nil {
+				// Copy data from old table to new table
+				_, _ = db.Exec(`
+					INSERT INTO articles_new (id, feed_id, title, url, image_url, audio_url, video_url, translated_title, published_at, is_read, is_favorite, is_hidden, is_read_later, summary, unique_id)
+					SELECT id, feed_id, title, url, image_url, audio_url, video_url, translated_title, published_at, is_read, is_favorite, is_hidden, is_read_later,
+						COALESCE(summary, '') as summary,
+						LOWER(HEX(MD5(title || '|' || feed_id || '|' || COALESCE(strftime('%Y-%m-%d %H:%M:%S', published_at), '')))) as unique_id
+					FROM articles
+				`)
+				// Drop old table and rename new table
+				_, _ = db.Exec(`DROP TABLE articles`)
+				_, _ = db.Exec(`ALTER TABLE articles_new RENAME TO articles`)
+				// Recreate indexes
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_feed_id ON articles(feed_id)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at DESC)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_is_read ON articles(is_read)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_is_favorite ON articles(is_favorite)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_is_hidden ON articles(is_hidden)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_is_read_later ON articles(is_read_later)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_feed_published ON articles(feed_id, published_at DESC)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_read_published ON articles(is_read, published_at DESC)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_fav_published ON articles(is_favorite, published_at DESC)`)
+				_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_articles_readlater_published ON articles(is_read_later, published_at DESC)`)
+			}
+		}
 	})
 	return err
 }
@@ -140,7 +210,7 @@ func initSchema(db *sql.DB) error {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		feed_id INTEGER,
 		title TEXT,
-		url TEXT UNIQUE,
+		url TEXT,
 		image_url TEXT,
 		audio_url TEXT DEFAULT '',
 		video_url TEXT DEFAULT '',
@@ -150,6 +220,8 @@ func initSchema(db *sql.DB) error {
 		is_favorite BOOLEAN DEFAULT 0,
 		is_hidden BOOLEAN DEFAULT 0,
 		is_read_later BOOLEAN DEFAULT 0,
+		summary TEXT DEFAULT '',
+		unique_id TEXT UNIQUE,
 		FOREIGN KEY(feed_id) REFERENCES feeds(id)
 	);
 

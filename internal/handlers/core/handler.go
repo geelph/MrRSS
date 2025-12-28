@@ -60,7 +60,7 @@ type Handler struct {
 
 // NewHandler creates a new Handler with the given dependencies.
 func NewHandler(db *database.DB, fetcher *feed.Fetcher, translator translation.Translator) *Handler {
-	return &Handler{
+	h := &Handler{
 		DB:               db,
 		Fetcher:          fetcher,
 		Translator:       translator,
@@ -68,6 +68,21 @@ func NewHandler(db *database.DB, fetcher *feed.Fetcher, translator translation.T
 		DiscoveryService: discovery.NewService(),
 		ContentCache:     cache.NewContentCache(100, 30*time.Minute), // Cache up to 100 articles for 30 minutes
 	}
+
+	return h
+}
+
+// CallAppMethod calls a method on the Wails app instance if available
+func (h *Handler) CallAppMethod(method string, args ...interface{}) error {
+	if h.App == nil {
+		return fmt.Errorf("app instance not set")
+	}
+
+	// Use reflection or type assertion to call the method
+	// This is a simplified version - you may need to adjust based on your actual Wails app structure
+	// For now, just log that we want to call this method
+	log.Printf("Would call app method: %s with args: %v", method, args)
+	return nil
 }
 
 // SetApp sets the Wails application instance for browser integration.
@@ -98,40 +113,31 @@ func (h *Handler) GetArticleContent(articleID int64) (string, error) {
 	}
 
 	// Get the feed
-	feeds, err := h.DB.GetFeeds()
+	targetFeed, err := h.DB.GetFeedByID(article.FeedID)
 	if err != nil {
 		return "", err
-	}
-
-	var targetFeed *models.Feed
-	for _, f := range feeds {
-		if f.ID == article.FeedID {
-			targetFeed = &f
-			break
-		}
 	}
 
 	if targetFeed == nil {
 		return "", nil
 	}
 
-	// Try to get feed from cache first
-	var parsedFeed *gofeed.Feed
-	if cachedFeed, found := h.ContentCache.GetFeed(targetFeed.ID); found {
-		parsedFeed = cachedFeed
-	} else {
-		// Parse the feed to get fresh content
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
+	// Trigger immediate feed refresh using the new task manager
+	// This bypasses the queue and pool limits
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-		parsedFeed, err = h.Fetcher.ParseFeedWithFeed(ctx, targetFeed, true) // High priority for content fetching
-		if err != nil {
-			return "", err
-		}
+	// Fetch the feed immediately (article click triggered)
+	h.Fetcher.FetchFeedForArticle(ctx, *targetFeed)
 
-		// Cache the feed for future use
-		h.ContentCache.SetFeed(targetFeed.ID, parsedFeed)
+	// Parse the feed to get fresh content
+	parsedFeed, err := h.Fetcher.ParseFeedWithFeed(ctx, targetFeed, true) // High priority for content fetching
+	if err != nil {
+		return "", err
 	}
+
+	// Cache the feed for future use
+	h.ContentCache.SetFeed(targetFeed.ID, parsedFeed)
 
 	// Find the article in the feed by multiple criteria for better matching
 	matchingItem := h.findMatchingFeedItem(article, parsedFeed.Items)

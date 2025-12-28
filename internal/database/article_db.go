@@ -4,28 +4,52 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"time"
 
 	"MrRSS/internal/models"
+	"MrRSS/internal/utils"
 )
 
 // SaveArticle saves a single article to the database.
 func (db *DB) SaveArticle(article *models.Article) error {
 	db.WaitForReady()
-	query := `INSERT OR IGNORE INTO articles (feed_id, title, url, image_url, audio_url, video_url, published_at, translated_title, is_read, is_favorite, is_hidden, is_read_later, summary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	_, err := db.Exec(query, article.FeedID, article.Title, article.URL, article.ImageURL, article.AudioURL, article.VideoURL, article.PublishedAt, article.TranslatedTitle, article.IsRead, article.IsFavorite, article.IsHidden, article.IsReadLater, article.Summary)
+
+	// Generate unique_id for deduplication
+	uniqueID := utils.GenerateArticleUniqueID(article.Title, article.FeedID, article.PublishedAt)
+	query := `INSERT OR IGNORE INTO articles (feed_id, title, url, image_url, audio_url, video_url, published_at, translated_title, is_read, is_favorite, is_hidden, is_read_later, summary, unique_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	_, err := db.Exec(query, article.FeedID, article.Title, article.URL, article.ImageURL, article.AudioURL, article.VideoURL, article.PublishedAt, article.TranslatedTitle, article.IsRead, article.IsFavorite, article.IsHidden, article.IsReadLater, article.Summary, uniqueID)
 	return err
 }
 
 // SaveArticles saves multiple articles in a transaction.
+// Includes progressive cleanup check to prevent database from exceeding size limit during refresh.
 func (db *DB) SaveArticles(ctx context.Context, articles []*models.Article) error {
 	db.WaitForReady()
+
+	// Progressive cleanup: check if we need to clean up before saving
+	if len(articles) > 10 {
+		// Only check for larger batches to avoid overhead
+		shouldCleanup, _ := db.ShouldCleanupBeforeSave()
+		if shouldCleanup {
+			log.Printf("Database approaching size limit, running progressive cleanup...")
+			go func() {
+				deleted, err := db.CleanupBySize()
+				if err != nil {
+					log.Printf("Progressive cleanup error: %v", err)
+				} else if deleted > 0 {
+					log.Printf("Progressive cleanup removed %d articles", deleted)
+				}
+			}()
+		}
+	}
+
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO articles (feed_id, title, url, image_url, audio_url, video_url, published_at, translated_title, is_read, is_favorite, is_hidden, is_read_later, summary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT OR IGNORE INTO articles (feed_id, title, url, image_url, audio_url, video_url, published_at, translated_title, is_read, is_favorite, is_hidden, is_read_later, summary, unique_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
@@ -39,7 +63,9 @@ func (db *DB) SaveArticles(ctx context.Context, articles []*models.Article) erro
 		default:
 		}
 
-		_, err := stmt.ExecContext(ctx, article.FeedID, article.Title, article.URL, article.ImageURL, article.AudioURL, article.VideoURL, article.PublishedAt, article.TranslatedTitle, article.IsRead, article.IsFavorite, article.IsHidden, article.IsReadLater, article.Summary)
+		// Generate unique_id for deduplication
+		uniqueID := utils.GenerateArticleUniqueID(article.Title, article.FeedID, article.PublishedAt)
+		_, err := stmt.ExecContext(ctx, article.FeedID, article.Title, article.URL, article.ImageURL, article.AudioURL, article.VideoURL, article.PublishedAt, article.TranslatedTitle, article.IsRead, article.IsFavorite, article.IsHidden, article.IsReadLater, article.Summary, uniqueID)
 		if err != nil {
 			log.Println("Error saving article in batch:", err)
 			// Continue even if one fails
@@ -414,7 +440,22 @@ func (db *DB) UpdateArticleSummary(id int64, summary string) error {
 	return err
 }
 
+// GetArticleIDByUniqueID retrieves an article's ID by its unique identifier.
+// This is the preferred method for looking up articles as it uses the title+feed_id+published_at based deduplication.
+func (db *DB) GetArticleIDByUniqueID(title string, feedID int64, publishedAt time.Time) (int64, error) {
+	db.WaitForReady()
+	uniqueID := utils.GenerateArticleUniqueID(title, feedID, publishedAt)
+	var id int64
+	err := db.QueryRow("SELECT id FROM articles WHERE unique_id = ?", uniqueID).Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
 // GetArticleIDByURL retrieves an article's ID by its URL.
+// Note: This is deprecated in favor of GetArticleIDByUniqueID for new code,
+// but kept for backward compatibility.
 func (db *DB) GetArticleIDByURL(url string) (int64, error) {
 	db.WaitForReady()
 	var id int64

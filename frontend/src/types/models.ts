@@ -59,10 +59,26 @@ export interface UnreadCounts {
 }
 
 export interface RefreshProgress {
-  current: number;
-  total: number;
   isRunning: boolean;
   errors?: Record<number, string>; // Map of feed ID to error message
+  pool_task_count?: number; // Tasks currently in pool
+  article_click_count?: number; // Article click triggered tasks
+  queue_task_count?: number; // Tasks in queue
+  pool_tasks?: PoolTaskInfo[]; // Detailed pool task information
+  queue_tasks?: QueueTaskInfo[]; // Detailed queue task information (max 3)
+}
+
+export interface PoolTaskInfo {
+  feed_id: number;
+  feed_title: string;
+  reason: number; // TaskReason enum value
+  created_at: string;
+}
+
+export interface QueueTaskInfo {
+  feed_id: number;
+  feed_title: string;
+  position: number;
 }
 
 export interface UpdateInfo {

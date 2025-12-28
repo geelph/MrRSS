@@ -10,8 +10,8 @@ import (
 const (
 	// Minimum refresh interval (5 minutes)
 	MinRefreshInterval = 5 * time.Minute
-	// Maximum refresh interval (3 hours)
-	MaxRefreshInterval = 3 * time.Hour
+	// Maximum refresh interval (24 hours)
+	MaxRefreshInterval = 24 * time.Hour
 	// Default interval if no history
 	DefaultRefreshInterval = 30 * time.Minute
 )
@@ -28,6 +28,7 @@ func NewIntelligentRefreshCalculator(db *database.DB) *IntelligentRefreshCalcula
 
 // CalculateInterval calculates the optimal refresh interval for a feed
 // based on its recent article publication frequency
+// Interval range: 5 minutes to 24 hours
 func (irc *IntelligentRefreshCalculator) CalculateInterval(feed models.Feed) time.Duration {
 	// Get recent articles (last 30 days) to analyze frequency
 	articles, err := irc.db.GetArticles("", feed.ID, "", false, 100, 0)
@@ -42,7 +43,7 @@ func (irc *IntelligentRefreshCalculator) CalculateInterval(feed models.Feed) tim
 	// but with reasonable bounds
 	optimalInterval := avgInterval / 2
 
-	// Clamp to min/max bounds
+	// Clamp to min/max bounds (5 minutes to 24 hours)
 	if optimalInterval < MinRefreshInterval {
 		return MinRefreshInterval
 	}

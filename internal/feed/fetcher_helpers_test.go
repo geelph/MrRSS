@@ -56,18 +56,18 @@ func TestGetConcurrencyLimitVariants(t *testing.T) {
 	}
 
 	db.SetSetting("max_concurrent_refreshes", "100")
-	if got := f.getConcurrencyLimit(5); got != 20 {
-		t.Fatalf("capped at 20, got %d", got)
+	if got := f.getConcurrencyLimit(5); got != 30 {
+		t.Fatalf("capped at 30, got %d", got)
 	}
 
-	// Test with large feed count (reduced concurrency)
+	// Test with various feed counts - concurrency is now independent of feed count
 	db.SetSetting("max_concurrent_refreshes", "10")
-	if got := f.getConcurrencyLimit(30); got != 5 {
-		t.Fatalf("expected reduced to 5 for 30 feeds, got %d", got)
+	if got := f.getConcurrencyLimit(30); got != 10 {
+		t.Fatalf("expected 10 for 30 feeds, got %d", got)
 	}
 
-	if got := f.getConcurrencyLimit(60); got != 3 {
-		t.Fatalf("expected reduced to 3 for 60 feeds, got %d", got)
+	if got := f.getConcurrencyLimit(60); got != 10 {
+		t.Fatalf("expected 10 for 60 feeds, got %d", got)
 	}
 }
 

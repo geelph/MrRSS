@@ -142,13 +142,36 @@ onMounted(async () => {
     store.fetchFeeds();
     store.fetchArticles();
 
-    // Only trigger feed refresh if enough time has passed since last update
-    setTimeout(() => {
+    // Check if backend is already refreshing (e.g., from auto-refresh on startup)
+    // and start polling progress if so
+    setTimeout(async () => {
+      try {
+        const progressRes = await fetch('/api/progress');
+        const progressData = await progressRes.json();
+
+        if (progressData.is_running) {
+          // Backend is already refreshing, start polling
+          store.refreshProgress.value = {
+            ...store.refreshProgress.value,
+            isRunning: true,
+            pool_task_count: progressData.pool_task_count,
+            article_click_count: progressData.article_click_count,
+            queue_task_count: progressData.queue_task_count,
+          };
+          store.pollProgress();
+          return; // Don't trigger another refresh
+        }
+      } catch (e) {
+        console.error('Error checking initial refresh progress:', e);
+      }
+
+      // Only trigger feed refresh if enough time has passed since last update
+      // and backend is not already refreshing
       const shouldRefresh = shouldTriggerRefresh(lastArticleUpdate, updateInterval);
       if (shouldRefresh) {
         store.refreshFeeds();
       }
-    }, 1000);
+    }, 500);
   }, 100);
 
   // Listen for events from Sidebar

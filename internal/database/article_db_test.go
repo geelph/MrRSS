@@ -223,3 +223,103 @@ func TestSaveArticlesBatchContextCancel(t *testing.T) {
 		t.Fatalf("expected error due to canceled context")
 	}
 }
+
+func TestArticleDeduplicationByUniqueID(t *testing.T) {
+	db := setupDBWithFeed(t)
+
+	// Get feed id
+	var feedID int64
+	row := db.QueryRow(`SELECT id FROM feeds WHERE url = ?`, "https://example.com/feed")
+	if err := row.Scan(&feedID); err != nil {
+		t.Fatalf("scan feed id: %v", err)
+	}
+
+	publishedAt := time.Now()
+
+	// Save same article multiple times with different URLs (should be deduplicated by unique_id)
+	article1 := &models.Article{
+		FeedID:      feedID,
+		Title:       "Test Article",
+		URL:         "https://example.com/article/1",
+		PublishedAt: publishedAt,
+	}
+
+	article2 := &models.Article{
+		FeedID:      feedID,
+		Title:       "Test Article",                                  // Same title
+		URL:         "https://example.com/article/1?utm_source=test", // Different URL
+		PublishedAt: publishedAt,                                     // Same time
+	}
+
+	// Save first article
+	if err := db.SaveArticle(article1); err != nil {
+		t.Fatalf("SaveArticle error: %v", err)
+	}
+
+	// Try to save the same article again (should be ignored due to unique_id)
+	if err := db.SaveArticle(article2); err != nil {
+		t.Fatalf("SaveArticle error: %v", err)
+	}
+
+	// Verify only one article exists
+	articles, err := db.GetArticles("all", feedID, "", false, 10, 0)
+	if err != nil {
+		t.Fatalf("GetArticles error: %v", err)
+	}
+
+	if len(articles) != 1 {
+		t.Fatalf("expected 1 article after deduplication, got %d", len(articles))
+	}
+
+	// Verify the article has the correct unique_id
+	if articles[0].Title != "Test Article" {
+		t.Fatalf("expected title 'Test Article', got '%s'", articles[0].Title)
+	}
+}
+
+func TestArticleDifferentTitlesNotDeduplicated(t *testing.T) {
+	db := setupDBWithFeed(t)
+
+	// Get feed id
+	var feedID int64
+	row := db.QueryRow(`SELECT id FROM feeds WHERE url = ?`, "https://example.com/feed")
+	if err := row.Scan(&feedID); err != nil {
+		t.Fatalf("scan feed id: %v", err)
+	}
+
+	publishedAt := time.Now()
+
+	// Save different articles with same feed and time (should NOT be deduplicated)
+	article1 := &models.Article{
+		FeedID:      feedID,
+		Title:       "Article One",
+		URL:         "https://example.com/article/1",
+		PublishedAt: publishedAt,
+	}
+
+	article2 := &models.Article{
+		FeedID:      feedID,
+		Title:       "Article Two", // Different title
+		URL:         "https://example.com/article/2",
+		PublishedAt: publishedAt, // Same time
+	}
+
+	// Save both articles
+	if err := db.SaveArticle(article1); err != nil {
+		t.Fatalf("SaveArticle error: %v", err)
+	}
+
+	if err := db.SaveArticle(article2); err != nil {
+		t.Fatalf("SaveArticle error: %v", err)
+	}
+
+	// Verify both articles exist
+	articles, err := db.GetArticles("all", feedID, "", false, 10, 0)
+	if err != nil {
+		t.Fatalf("GetArticles error: %v", err)
+	}
+
+	if len(articles) != 2 {
+		t.Fatalf("expected 2 articles with different titles, got %d", len(articles))
+	}
+}

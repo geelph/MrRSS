@@ -51,5 +51,6 @@ type Article struct {
 	IsReadLater     bool      `json:"is_read_later"`
 	FeedTitle       string    `json:"feed_title,omitempty"` // Joined field
 	TranslatedTitle string    `json:"translated_title"`
-	Summary         string    `json:"summary"` // Cached AI-generated summary
+	Summary         string    `json:"summary"`   // Cached AI-generated summary
+	UniqueID        string    `json:"unique_id"` // Unique identifier for deduplication (title+feed_id+published_at)
 }

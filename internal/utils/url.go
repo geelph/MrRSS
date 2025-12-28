@@ -1,8 +1,12 @@
 package utils
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
 	"net/url"
 	"strings"
+	"time"
 )
 
 // NormalizeURLForComparison returns a normalized URL for comparison purposes.
@@ -227,4 +231,16 @@ func containsMeaningfulWords(key string) bool {
 	}
 
 	return false
+}
+
+// GenerateArticleUniqueID generates a unique identifier for an article based on title + feed_id + published_at.
+// This provides better deduplication than URL-based approaches, especially when feeds use tracking parameters
+// or when the same article appears in multiple feeds with different URLs.
+func GenerateArticleUniqueID(title string, feedID int64, publishedAt time.Time) string {
+	// Format: title|feed_id|published_at (RFC3339 format includes timezone for consistency)
+	data := fmt.Sprintf("%s|%d|%s", title, feedID, publishedAt.Format(time.RFC3339))
+
+	// Generate MD5 hash and convert to lowercase hex string
+	hash := md5.Sum([]byte(data))
+	return strings.ToLower(hex.EncodeToString(hash[:]))
 }

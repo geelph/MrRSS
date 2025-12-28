@@ -88,7 +88,8 @@ func HandleAddFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return
 		}
-		h.Fetcher.FetchSingleFeed(context.Background(), *feed)
+		// Use manual refresh (queue head) for newly added feed
+		h.Fetcher.FetchSingleFeed(context.Background(), *feed, true)
 	}()
 
 	w.WriteHeader(http.StatusOK)
@@ -165,8 +166,8 @@ func HandleRefreshFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Refresh the feed in background with progress tracking
-	go h.Fetcher.FetchSingleFeed(context.Background(), *feed)
+	// Refresh the feed in background with progress tracking (manual = queue head)
+	go h.Fetcher.FetchSingleFeed(context.Background(), *feed, true)
 
 	w.WriteHeader(http.StatusOK)
 }

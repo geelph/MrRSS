@@ -273,16 +273,8 @@ func (f *Fetcher) ParseFeedWithScript(ctx context.Context, url string, scriptPat
 
 // ParseFeedWithFeed parses a feed using the feed configuration (script or XPath)
 func (f *Fetcher) ParseFeedWithFeed(ctx context.Context, feed *models.Feed, priority bool) (*gofeed.Feed, error) {
-	if priority {
-		// High priority requests get dedicated processing without interference from low priority operations
-		f.priorityMu.Lock()
-		defer f.priorityMu.Unlock()
-
-		return f.parseFeedWithFeedInternal(ctx, feed, true)
-	}
-
-	// Normal priority requests
-	return f.parseFeedWithFeedInternal(ctx, feed, false)
+	// Parse the feed - priority parameter is kept for compatibility but no longer uses priorityMu
+	return f.parseFeedWithFeedInternal(ctx, feed, priority)
 }
 
 // parseFeedWithFeedInternal does the actual parsing work

@@ -3,15 +3,72 @@ package article
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"MrRSS/internal/handlers/core"
 	"MrRSS/internal/models"
 )
 
-// HandleProgress returns the current fetch progress.
+// HandleProgress returns the current fetch progress with statistics.
 func HandleProgress(h *core.Handler, w http.ResponseWriter, r *http.Request) {
-	progress := h.Fetcher.GetProgress()
+	progress := h.Fetcher.GetProgressWithStats()
 	json.NewEncoder(w).Encode(progress)
+}
+
+// TaskDetailsResponse contains detailed task information
+type TaskDetailsResponse struct {
+	PoolTasks  []PoolTaskInfo  `json:"pool_tasks"`
+	QueueTasks []QueueTaskInfo `json:"queue_tasks"`
+}
+
+// PoolTaskInfo contains information about a task in the pool
+type PoolTaskInfo struct {
+	FeedID    int64  `json:"feed_id"`
+	FeedTitle string `json:"feed_title"`
+	Reason    int    `json:"reason"`
+	CreatedAt string `json:"created_at"`
+}
+
+// QueueTaskInfo contains information about a task in the queue
+type QueueTaskInfo struct {
+	FeedID    int64  `json:"feed_id"`
+	FeedTitle string `json:"feed_title"`
+	Position  int    `json:"position"`
+}
+
+// HandleTaskDetails returns detailed information about tasks in pool and queue
+func HandleTaskDetails(h *core.Handler, w http.ResponseWriter, r *http.Request) {
+	tm := h.Fetcher.GetTaskManager()
+
+	// Get pool tasks
+	poolTasksRaw := tm.GetPoolTasks()
+	poolTasks := make([]PoolTaskInfo, len(poolTasksRaw))
+	for i, task := range poolTasksRaw {
+		poolTasks[i] = PoolTaskInfo{
+			FeedID:    task.FeedID,
+			FeedTitle: task.FeedTitle,
+			Reason:    int(task.Reason),
+			CreatedAt: task.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	// Get queue tasks (limit to first 3)
+	queueTasksRaw := tm.GetQueueTasks(3)
+	queueTasks := make([]QueueTaskInfo, len(queueTasksRaw))
+	for i, task := range queueTasksRaw {
+		queueTasks[i] = QueueTaskInfo{
+			FeedID:    task.FeedID,
+			FeedTitle: task.FeedTitle,
+			Position:  task.Position,
+		}
+	}
+
+	response := TaskDetailsResponse{
+		PoolTasks:  poolTasks,
+		QueueTasks: queueTasks,
+	}
+
+	json.NewEncoder(w).Encode(response)
 }
 
 // HandleFilteredArticles returns articles filtered by advanced conditions from the database.

@@ -28,6 +28,7 @@ const defaultViewMode = ref<'original' | 'rendered'>('original');
 const showFilterModal = ref(false);
 const isRefreshing = ref(false);
 const savedScrollTop = ref(0);
+const showRefreshTooltip = ref(false);
 
 interface Props {
   isSidebarOpen?: boolean;
@@ -204,6 +205,16 @@ function onToggleFilter(): void {
   showFilterModal.value = !showFilterModal.value;
 }
 
+// Show tooltip when hovering over refresh button
+function onRefreshTooltipShow(): void {
+  showRefreshTooltip.value = true;
+  // Task details are automatically updated via pollProgress()
+}
+
+function onRefreshTooltipHide(): void {
+  showRefreshTooltip.value = false;
+}
+
 // Article selection and interaction
 function selectArticle(article: Article): void {
   // If clicking the same article, close the detail view
@@ -349,7 +360,11 @@ function handleHoverMarkAsRead(articleId: number): void {
               {{ activeFilters.length }}
             </div>
           </div>
-          <div class="relative">
+          <div
+            class="relative"
+            @mouseenter="onRefreshTooltipShow"
+            @mouseleave="onRefreshTooltipHide"
+          >
             <button
               class="text-text-secondary hover:text-text-primary hover:bg-bg-tertiary p-1 sm:p-1.5 rounded transition-colors"
               :title="t('refresh')"
@@ -364,12 +379,85 @@ function handleHoverMarkAsRead(articleId: number): void {
             <div
               v-if="
                 store.refreshProgress.isRunning &&
-                store.refreshProgress.total > store.refreshProgress.current
+                (store.refreshProgress.queue_task_count || 0) +
+                  (store.refreshProgress.pool_task_count || 0) >
+                  0
               "
               class="absolute -top-1 -right-1 bg-accent text-white text-[9px] sm:text-[10px] font-bold rounded-full min-w-[14px] sm:min-w-[16px] h-3.5 sm:h-4 px-0.5 sm:px-1 flex items-center justify-center"
             >
-              {{ store.refreshProgress.total - store.refreshProgress.current }}
+              {{
+                (store.refreshProgress.queue_task_count || 0) +
+                (store.refreshProgress.pool_task_count || 0)
+              }}
             </div>
+
+            <!-- Task Pool Tooltip -->
+            <Transition
+              enter-active-class="transition ease-out duration-200"
+              enter-from-class="opacity-0 scale-95"
+              enter-to-class="opacity-100 scale-100"
+              leave-active-class="transition ease-in duration-150"
+              leave-from-class="opacity-100 scale-100"
+              leave-to-class="opacity-0 scale-95"
+            >
+              <div
+                v-if="
+                  showRefreshTooltip &&
+                  ((store.refreshProgress.pool_task_count || 0) > 0 ||
+                    (store.refreshProgress.queue_task_count || 0) > 0 ||
+                    (store.refreshProgress.article_click_count || 0) > 0)
+                "
+                class="absolute right-0 top-full mt-2 z-50 w-72 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-xl overflow-hidden"
+              >
+                <div class="p-3">
+                  <div class="text-xs font-semibold text-text-primary mb-2">
+                    {{ t('refreshing') }}
+                  </div>
+
+                  <!-- Pool Tasks - Show all tasks in order of creation -->
+                  <div v-if="(store.refreshProgress.pool_task_count || 0) > 0" class="mb-2">
+                    <div class="text-[10px] text-text-secondary uppercase tracking-wide mb-1">
+                      {{ t('activeTasks') }} ({{ store.refreshProgress.pool_task_count || 0 }})
+                    </div>
+                    <div
+                      v-for="(task, index) in store.refreshProgress.pool_tasks || []"
+                      :key="'pool-' + index"
+                      class="text-xs text-text-primary bg-bg-tertiary px-2 py-1 rounded mb-1 last:mb-0 truncate"
+                      :title="task.feed_title"
+                    >
+                      {{ task.feed_title }}
+                    </div>
+                  </div>
+
+                  <!-- Queue Tasks - Show first 3 -->
+                  <div v-if="(store.refreshProgress.queue_task_count || 0) > 0">
+                    <div class="text-[10px] text-text-secondary uppercase tracking-wide mb-1">
+                      {{ t('queuedTasks') }} ({{ store.refreshProgress.queue_task_count || 0 }})
+                    </div>
+                    <div
+                      v-for="(task, index) in store.refreshProgress.queue_tasks || []"
+                      :key="'queue-' + index"
+                      class="text-xs text-text-secondary bg-bg-tertiary/50 px-2 py-1 rounded mb-1 last:mb-0 truncate"
+                      :title="task.feed_title"
+                    >
+                      {{ task.feed_title }}
+                    </div>
+                  </div>
+
+                  <!-- Article Click Tasks -->
+                  <div v-if="(store.refreshProgress.article_click_count || 0) > 0" class="mt-2">
+                    <div class="text-[10px] text-text-secondary uppercase tracking-wide mb-1">
+                      {{ t('immediateTasks') }} ({{
+                        store.refreshProgress.article_click_count || 0
+                      }})
+                    </div>
+                    <div class="text-xs text-text-primary bg-bg-tertiary px-2 py-1 rounded">
+                      {{ t('fetchingArticleContent') }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Transition>
           </div>
           <button class="md:hidden text-xl sm:text-2xl p-1" @click="emit('toggleSidebar')">
             <PhList :size="20" class="sm:w-6 sm:h-6" />
