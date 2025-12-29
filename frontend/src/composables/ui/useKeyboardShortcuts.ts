@@ -180,6 +180,20 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
       return;
     }
 
+    // Check if settings modal is open
+    const settingsModalOpen = document.querySelector('[data-settings-modal="true"]') !== null;
+
+    // If settings modal is open, only allow ESC key
+    if (settingsModalOpen) {
+      const key = buildKeyCombo(e);
+      if (key === shortcuts.value.closeArticle) {
+        // Let the modal's own ESC handler deal with it
+        return;
+      }
+      // Block all other shortcuts when settings modal is open
+      return;
+    }
+
     // Skip if we're in an input field, textarea, or contenteditable
     const target = e.target as HTMLElement;
     const tagName = target.tagName.toLowerCase();

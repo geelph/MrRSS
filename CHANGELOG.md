@@ -36,6 +36,10 @@ The following changes may affect existing setups:
 - Fixed the issue where some images in article content rendering mode cannot be displayed correctly. (#327)
 - Fixed the issue where server mode fails to start due to newly added custom CSS file upload feature. (#343)
 - Fixed the issue where popup confirm window cannot be translated correctly.
+- Fixed the issue where shorcuts conflict when settings page is opened. (#355)
+- Fixed the issue where clicking mark all as read button in article list does not work correctly. (#318)(#353)
+- Fixed the issue where opening an article makes it disappear from article list when filter is applied. (#318)(#353)
+- Fixed the issue where application name is displayed as `{{.info.ProductName}}` on Windows platform. (#351)
 
 ## [1.3.11] - 2025-12-26
 

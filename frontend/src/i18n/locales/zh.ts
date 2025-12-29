@@ -441,6 +441,7 @@ const zh: TranslationMessages = {
   markAsRead: '标记为已读',
   markAsUnread: '标记为未读',
   markedAllAsRead: '所有文章已标记为已读',
+  noArticlesToMark: '没有可标记的文章',
   maxArticleAge: '最大文章保留天数',
   maxArticleAgeDesc: '删除超过此天数的旧文章（收藏文章除外）',
   maxCacheSize: '最大缓存大小',

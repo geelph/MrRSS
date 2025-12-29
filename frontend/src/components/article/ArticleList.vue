@@ -32,6 +32,8 @@ const showFilterModal = ref(false);
 const isRefreshing = ref(false);
 const savedScrollTop = ref(0);
 const showRefreshTooltip = ref(false);
+// Track articles that should be temporarily kept in list even if read
+const temporarilyKeepArticles = ref<Set<number>>(new Set());
 
 interface Props {
   isSidebarOpen?: boolean;
@@ -71,8 +73,11 @@ const filteredArticles = computed(() => {
   let articles = activeFilters.value.length > 0 ? filteredArticlesFromServer.value : store.articles;
 
   // If show only unread is enabled, filter out read articles
+  // but keep articles that are temporarily marked (currently being viewed)
   if (store.showOnlyUnread) {
-    articles = articles.filter((article) => !article.is_read);
+    articles = articles.filter(
+      (article) => !article.is_read || temporarilyKeepArticles.value.has(article.id)
+    );
   }
 
   return articles;
@@ -223,15 +228,24 @@ function selectArticle(article: Article): void {
   // If clicking the same article, close the detail view
   if (store.currentArticleId === article.id) {
     store.currentArticleId = null;
+    // Remove from temporarily keep list when closing
+    temporarilyKeepArticles.value.delete(article.id);
     return;
   }
 
   // Reset user preference when selecting article via normal click
   window.dispatchEvent(new CustomEvent('reset-user-view-preference'));
 
+  // If switching from one article to another, remove the previous one from temp list
+  if (store.currentArticleId) {
+    temporarilyKeepArticles.value.delete(store.currentArticleId);
+  }
+
   store.currentArticleId = article.id;
   if (!article.is_read) {
     article.is_read = true;
+    // Add to temporarily keep list so it doesn't disappear immediately
+    temporarilyKeepArticles.value.add(article.id);
     fetch(`/api/articles/read?id=${article.id}&read=true`, { method: 'POST' })
       .then(() => {
         store.fetchUnreadCounts();
@@ -280,8 +294,41 @@ async function refreshArticles(): Promise<void> {
 }
 
 async function markAllAsRead(): Promise<void> {
-  await store.markAllAsRead();
-  window.showToast(t('markedAllAsRead'), 'success');
+  // If filters are active, mark only filtered articles as read
+  if (activeFilters.value.length > 0) {
+    try {
+      // Get IDs of filtered articles
+      const articleIds = filteredArticlesFromServer.value.map((a) => a.id);
+      if (articleIds.length === 0) {
+        window.showToast(t('noArticlesToMark'), 'info');
+        return;
+      }
+
+      // Mark all filtered articles as read
+      await Promise.all(
+        articleIds.map((id) => fetch(`/api/articles/read?id=${id}&read=true`, { method: 'POST' }))
+      );
+
+      // Refresh articles and counts
+      await store.fetchArticles();
+      await store.fetchUnreadCounts();
+      window.showToast(t('markedAllAsRead'), 'success');
+    } catch (e) {
+      console.error('Error marking filtered articles as read:', e);
+    }
+  } else {
+    // Use store's markAllAsRead which handles feed and category
+    const params: { feed_id?: number; category?: string } = {};
+
+    if (store.currentFeedId) {
+      params.feed_id = store.currentFeedId;
+    } else if (store.currentCategory) {
+      params.category = store.currentCategory;
+    }
+
+    await store.markAllAsRead(params.feed_id, params.category);
+    window.showToast(t('markedAllAsRead'), 'success');
+  }
 }
 
 async function clearReadLater(): Promise<void> {

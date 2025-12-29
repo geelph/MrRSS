@@ -93,8 +93,8 @@ function handleDiscoverAll() {
   <div
     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-2 sm:p-4"
     data-modal-open="true"
+    data-settings-modal="true"
     style="will-change: transform; transform: translateZ(0)"
-    @click.self="emit('close')"
   >
     <div
       class="bg-bg-primary w-full max-w-4xl h-full sm:h-[900px] sm:max-h-[90vh] flex flex-col rounded-none sm:rounded-2xl shadow-2xl border border-border overflow-hidden animate-fade-in"

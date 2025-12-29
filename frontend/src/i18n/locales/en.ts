@@ -449,6 +449,7 @@ const en: TranslationMessages = {
   markAsRead: 'Mark as Read',
   markAsUnread: 'Mark as Unread',
   markedAllAsRead: 'All articles marked as read',
+  noArticlesToMark: 'No articles to mark',
   maxArticleAge: 'Max Article Age',
   maxArticleAgeDesc: 'Delete articles older than this many days (except favorites)',
   maxCacheSize: 'Max Cache Size',

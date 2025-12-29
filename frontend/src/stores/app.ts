@@ -68,7 +68,7 @@ export const useAppStore = defineStore('app', () => {
     (localStorage.getItem('themePreference') as ThemePreference) || 'auto'
   );
   const theme = ref<Theme>('light');
-  const showOnlyUnread = ref<boolean>(false);
+  const showOnlyUnread = ref<boolean>(localStorage.getItem('showOnlyUnread') === 'true');
 
   // Refresh progress
   const refreshProgress = ref<RefreshProgress>({ isRunning: false });
@@ -181,10 +181,14 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
-  async function markAllAsRead(feedId?: number): Promise<void> {
+  async function markAllAsRead(feedId?: number, category?: string): Promise<void> {
     try {
-      const url = feedId
-        ? `/api/articles/mark-all-read?feed_id=${feedId}`
+      const params = new URLSearchParams();
+      if (feedId) params.append('feed_id', String(feedId));
+      if (category) params.append('category', category);
+
+      const url = params.toString()
+        ? `/api/articles/mark-all-read?${params.toString()}`
         : '/api/articles/mark-all-read';
       await fetch(url, { method: 'POST' });
       // Refresh articles and unread counts
@@ -436,6 +440,7 @@ export const useAppStore = defineStore('app', () => {
 
   function toggleShowOnlyUnread(): void {
     showOnlyUnread.value = !showOnlyUnread.value;
+    localStorage.setItem('showOnlyUnread', String(showOnlyUnread.value));
   }
 
   async function fetchTaskDetails(): Promise<void> {
