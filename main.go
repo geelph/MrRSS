@@ -412,6 +412,18 @@ func main() {
 		}
 	}
 
+	// Determine background color based on theme setting
+	// Default to dark gray to prevent white flash on startup/close
+	// This matches the CSS dark mode background color (#1e1e1e = rgb(30, 30, 30))
+	backgroundColour := application.NewRGB(30, 30, 30)
+	if theme, err := db.GetSetting("theme"); err == nil {
+		if theme == "light" {
+			// Use white for light theme
+			backgroundColour = application.NewRGB(255, 255, 255)
+		}
+		// For "dark" or "auto", use dark background
+	}
+
 	// Create main window options
 	windowOptions := application.WebviewWindowOptions{
 		Name:             "MrRSS-main-window",
@@ -422,7 +434,7 @@ func main() {
 		Mac:              application.MacWindow{},
 		Windows:          application.WindowsWindow{},
 		Linux:            application.LinuxWindow{},
-		BackgroundColour: application.NewRGB(255, 255, 255),
+		BackgroundColour: backgroundColour,
 	}
 
 	// Set position if restored from DB

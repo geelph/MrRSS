@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the style of the results highlight in article content search. (#361)
 - Fixed incorrect application name display (`{{.info.ProductName}}`) on Windows. (#351)
 - Fixed repeated macOS privacy permission dialogs when opening articles. (#337)
+- Fixed the issue where window will flash white when opening or closing. (#384)
 
 ### Removed
 

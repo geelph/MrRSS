@@ -254,9 +254,13 @@ export const useAppStore = defineStore('app', () => {
 
     theme.value = actualTheme;
 
+    // Apply to both html and body for consistency
+    const htmlElement = document.documentElement;
     if (actualTheme === 'dark') {
+      htmlElement.classList.add('dark-mode');
       document.body.classList.add('dark-mode');
     } else {
+      htmlElement.classList.remove('dark-mode');
       document.body.classList.remove('dark-mode');
     }
   }
