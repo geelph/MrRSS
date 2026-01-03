@@ -182,7 +182,10 @@ async function submit() {
         throw new Error(errorText || 'RSSHub add failed');
       } catch (e) {
         console.error('RSSHub add failed:', e);
-        window.showToast(`${t('errorAddingFeed')}: ${e instanceof Error ? e.message : 'Unknown error'}`, 'error');
+        window.showToast(
+          `${t('errorAddingFeed')}: ${e instanceof Error ? e.message : 'Unknown error'}`,
+          'error'
+        );
         isSubmitting.value = false;
         return;
       }

@@ -349,10 +349,8 @@ export const useAppStore = defineStore('app', () => {
           // Users can see error status in the feed list sidebar
 
           // Check for app updates after initial refresh completes (only if auto_update is enabled)
-          const { settings } = useSettings();
-          if (settings.value.auto_update) {
-            checkForAppUpdates();
-          }
+
+          checkForAppUpdates();
         }
       } catch {
         clearInterval(interval);

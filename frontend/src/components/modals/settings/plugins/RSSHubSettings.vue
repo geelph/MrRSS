@@ -59,9 +59,7 @@ async function testConnection() {
         class="w-5 h-5 sm:w-6 sm:h-6 mt-0.5 shrink-0"
       />
       <div class="flex-1 min-w-0">
-        <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
-          RSSHub
-        </div>
+        <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">RSSHub</div>
         <div class="text-xs text-text-secondary hidden sm:block">
           {{ t('rsshubDescription') }}
         </div>

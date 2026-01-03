@@ -3,7 +3,6 @@ import { computed } from 'vue';
 import type { SettingsData } from '@/types/settings';
 import { useSettingsAutoSave } from '@/composables/core/useSettingsAutoSave';
 import { useI18n } from 'vue-i18n';
-import { PhInfo } from '@phosphor-icons/vue';
 import ObsidianSettings from './ObsidianSettings.vue';
 import FreshRSSSettings from './FreshRSSSettings.vue';
 import RSSHubSettings from './RSSHubSettings.vue';

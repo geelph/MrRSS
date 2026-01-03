@@ -22,9 +22,12 @@ const { t } = useI18n();
 const localValue = ref(props.modelValue);
 
 // Sync with props.modelValue
-watch(() => props.modelValue, (newValue) => {
-  localValue.value = newValue;
-});
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    localValue.value = newValue;
+  }
+);
 
 // Check if current value is an RSSHub URL
 const isRSSHubUrl = computed(() => localValue.value.startsWith('rsshub://'));

@@ -101,9 +101,9 @@ onMounted(async () => {
       lastGlobalRefresh = data.last_global_refresh;
     }
 
-    // Get auto_update setting (convert string to boolean)
+    // Get auto_update setting
     if (data.auto_update !== undefined) {
-      autoUpdate = data.auto_update === 'true';
+      autoUpdate = data.auto_update; // ? 这个部分是不是返回的是 string，这样似乎都会默认为 true
     }
 
     // Load saved shortcuts
@@ -151,8 +151,8 @@ onMounted(async () => {
 
         if (progressData.is_running) {
           // Backend is already refreshing, start polling
-          store.refreshProgress = {
-            ...store.refreshProgress,
+          store.refreshProgress.value = {
+            ...store.refreshProgress.value,
             isRunning: true,
             pool_task_count: progressData.pool_task_count,
             article_click_count: progressData.article_click_count,
