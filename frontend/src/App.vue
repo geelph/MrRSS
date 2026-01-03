@@ -101,9 +101,9 @@ onMounted(async () => {
       lastGlobalRefresh = data.last_global_refresh;
     }
 
-    // Get auto_update setting
+    // Get auto_update setting (convert string to boolean)
     if (data.auto_update !== undefined) {
-      autoUpdate = data.auto_update;
+      autoUpdate = data.auto_update === 'true';
     }
 
     // Load saved shortcuts
@@ -151,8 +151,8 @@ onMounted(async () => {
 
         if (progressData.is_running) {
           // Backend is already refreshing, start polling
-          store.refreshProgress.value = {
-            ...store.refreshProgress.value,
+          store.refreshProgress = {
+            ...store.refreshProgress,
             isRunning: true,
             pool_task_count: progressData.pool_task_count,
             article_click_count: progressData.article_click_count,

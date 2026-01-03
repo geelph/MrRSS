@@ -49,6 +49,8 @@
   "proxy_type": "https",
   "proxy_username": "",
   "refresh_mode": "fixed",
+  "rsshub_api_key": "",
+  "rsshub_endpoint": "https://rsshub.app",
   "rules": "",
   "shortcuts": "",
   "shortcuts_enabled": true,

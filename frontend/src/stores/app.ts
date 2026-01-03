@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Article, Feed, UnreadCounts, RefreshProgress } from '@/types/models';
+import { useSettings } from '@/composables/core/useSettings';
 
 export type Filter = 'all' | 'unread' | 'favorites' | 'readLater' | 'imageGallery' | '';
 export type ThemePreference = 'light' | 'dark' | 'auto';
@@ -347,8 +348,11 @@ export const useAppStore = defineStore('app', () => {
           // Note: We no longer show error toasts for failed feeds
           // Users can see error status in the feed list sidebar
 
-          // Check for app updates after initial refresh completes
-          checkForAppUpdates();
+          // Check for app updates after initial refresh completes (only if auto_update is enabled)
+          const { settings } = useSettings();
+          if (settings.value.auto_update) {
+            checkForAppUpdates();
+          }
         }
       } catch {
         clearInterval(interval);
@@ -365,13 +369,18 @@ export const useAppStore = defineStore('app', () => {
 
         // Only proceed if there's an update available and a download URL
         if (data.has_update && data.download_url) {
-          // Show notification to user
-          if (window.showToast) {
-            window.showToast(`Update available: v${data.latest_version}`, 'info', 5000);
-          }
+          // Check if auto-update is enabled before downloading
+          const { settings } = useSettings();
 
-          // Auto download and install in background
-          autoDownloadAndInstall(data.download_url, data.asset_name);
+          if (settings.value.auto_update) {
+            // Auto download and install in background
+            autoDownloadAndInstall(data.download_url, data.asset_name);
+          } else {
+            // Just show notification that update is available
+            if (window.showToast) {
+              window.showToast(`Update available: v${data.latest_version}`, 'info', 5000);
+            }
+          }
         }
       }
     } catch {

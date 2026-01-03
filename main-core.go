@@ -30,6 +30,7 @@ import (
 	feedhandlers "MrRSS/internal/handlers/feed"
 	freshrssHandler "MrRSS/internal/handlers/freshrss"
 	media "MrRSS/internal/handlers/media"
+	rsshubHandler "MrRSS/internal/handlers/rsshub"
 	networkhandlers "MrRSS/internal/handlers/network"
 	opml "MrRSS/internal/handlers/opml"
 	rules "MrRSS/internal/handlers/rules"
@@ -231,6 +232,10 @@ func main() {
 	apiMux.HandleFunc("/api/custom-css/delete", func(w http.ResponseWriter, r *http.Request) { customcss.HandleDeleteCSS(h, w, r) })
 	apiMux.HandleFunc("/api/freshrss/sync", func(w http.ResponseWriter, r *http.Request) { freshrssHandler.HandleSync(h, w, r) })
 	apiMux.HandleFunc("/api/freshrss/test-connection", func(w http.ResponseWriter, r *http.Request) { freshrssHandler.HandleTestConnection(h, w, r) })
+	// RSSHub routes
+	apiMux.HandleFunc("/api/rsshub/add", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleAddFeed(h, w, r) })
+	apiMux.HandleFunc("/api/rsshub/test-connection", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleTestConnection(h, w, r) })
+	apiMux.HandleFunc("/api/rsshub/validate-route", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleValidateRoute(h, w, r) })
 
 	// Static Files
 	log.Println("Setting up static files...")
