@@ -62,6 +62,10 @@ export function useArticleDetail() {
     () => store.currentArticleId,
     async (newId, oldId) => {
       if (newId && newId !== oldId) {
+        // Close image viewer when switching articles
+        imageViewerSrc.value = null;
+        imageViewerAlt.value = '';
+
         // Reset content when switching articles
         articleContent.value = '';
         currentArticleId.value = null;
@@ -86,6 +90,16 @@ export function useArticleDetail() {
           showContent.value = preferredMode === 'rendered';
         }
       }
+    }
+  );
+
+  // Watch for feed/filter changes and close image viewer
+  watch(
+    () => [store.currentFeedId, store.currentFilter, store.currentCategory],
+    () => {
+      // Close image viewer when switching feeds, filters, or categories
+      imageViewerSrc.value = null;
+      imageViewerAlt.value = '';
     }
   );
 

@@ -264,6 +264,10 @@ watch(articles, () => {
 
 // Watch for feed ID changes and refetch
 watch(feedId, async () => {
+  // Close image viewer when switching feeds
+  showImageViewer.value = false;
+  selectedArticle.value = null;
+
   page.value = 1;
   articles.value = [];
   hasMore.value = true;

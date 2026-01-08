@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the issue where can adding duplicate feeds. (#401)
 - Fixed the issue where article list stucked in some cases. (#422)
 - Fixed the issue where sidebar width would shrink when feed titles are short. (#433)
+- Fixed the issue where image viewer can not be closed automatically after switching articles or feeds. (#431)
 
 **Special Thanks** to @EnterMan123 for carefully testing and reporting many of these issues!
 
