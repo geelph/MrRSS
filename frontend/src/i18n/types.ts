@@ -211,6 +211,8 @@ export interface TranslationMessages {
   errorCheckingUpdates: string;
   errorCleaningDatabase: string;
   errorDiscoveringFeeds: string;
+  duplicateFeedURL: string;
+  duplicateFeedURLDesc: string;
   errorPollingStatus: string;
   errorReorderingFeed: string;
   errorSavingSettings: string;
@@ -599,6 +601,35 @@ export interface TranslationMessages {
   findInPagePlaceholder: string;
   nextMatch: string;
   previousMatch: string;
+  statistics: string;
+  statisticsDescription: string;
+  statisticsResetToDefault: string;
+  statisticsResetConfirm: string;
+  statisticsResetSuccess: string;
+  statisticsResetFailed: string;
+  lastWeek: string;
+  lastMonth: string;
+  lastYear: string;
+  thisWeek: string;
+  thisMonth: string;
+  thisYear: string;
+  allTime: string;
+  customRange: string;
+  startDate: string;
+  endDate: string;
+  apply: string;
+  selectByMonth: string;
+  periodStatistics: string;
+  allTimeStatistics: string;
+  feedRefreshes: string;
+  articlesRead: string;
+  articlesViewed: string;
+  aiChats: string;
+  aiSummaries: string;
+  articlesFavorited: string;
+  articlesReadLater: string;
+  loading: string;
+  error: string;
 }
 
 export type SupportedLocale = 'en-US' | 'zh-CN';

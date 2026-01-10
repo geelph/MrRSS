@@ -42,6 +42,8 @@ async function clearSummaryCache() {
 
     if (response.ok) {
       window.showToast(t('clearSummaryCacheSuccess'), 'success');
+      // Refresh article list to show updated summaries
+      window.dispatchEvent(new CustomEvent('refresh-articles'));
     } else {
       console.error('Server error:', response.status);
       window.showToast(t('clearSummaryCacheFailed'), 'error');

@@ -179,8 +179,57 @@ export function useSidebar() {
     } else if (action === 'edit') {
       window.dispatchEvent(new CustomEvent('show-edit-feed', { detail: feed }));
     } else if (action === 'openWebsite') {
-      const urlToOpen = feed.website_url || feed.url;
-      openInBrowser(urlToOpen);
+      // Handle RSSHub URLs - need to transform rsshub:// to full URL
+      let urlToOpen = feed.website_url || feed.url;
+      if (urlToOpen.startsWith('rsshub://')) {
+        try {
+          const response = await fetch('/api/rsshub/transform-url', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url: urlToOpen }),
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.url && (data.url.startsWith('http://') || data.url.startsWith('https://'))) {
+              urlToOpen = data.url;
+            } else {
+              // Invalid transformed URL
+              window.showToast(
+                t('failedToTransformRSSHubURL') || 'Failed to transform RSSHub URL',
+                'error'
+              );
+              return;
+            }
+          } else {
+            // Transformation failed - try to get error message from response
+            let errorMessage = t('failedToTransformRSSHubURL') || 'Failed to transform RSSHub URL';
+            try {
+              const errorText = await response.text();
+              if (errorText) {
+                errorMessage = errorText;
+              }
+            } catch (e) {
+              // Ignore error reading response
+            }
+            window.showToast(errorMessage, 'error');
+            return;
+          }
+        } catch (error) {
+          window.showToast(
+            t('failedToTransformRSSHubURL') || 'Failed to transform RSSHub URL',
+            'error'
+          );
+          return;
+        }
+      }
+      // Only open if URL is http/https (not rsshub://)
+      if (urlToOpen.startsWith('http://') || urlToOpen.startsWith('https://')) {
+        openInBrowser(urlToOpen);
+      } else {
+        window.showToast(t('invalidURLScheme') || 'Invalid URL scheme', 'error');
+      }
     } else if (action === 'discover') {
       window.dispatchEvent(new CustomEvent('show-discover-blogs', { detail: feed }));
     }
@@ -192,9 +241,9 @@ export function useSidebar() {
 
     // Build menu items dynamically based on whether this is a FreshRSS feed
     const items: Array<{
-      label: string;
-      action: string;
-      icon: string;
+      label?: string;
+      action?: string;
+      icon?: string;
       separator?: boolean;
       danger?: boolean;
     }> = [];

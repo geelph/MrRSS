@@ -17,6 +17,7 @@ export function useFilterFields() {
     { value: 'feed_name', labelKey: 'feedName', multiSelect: true },
     { value: 'feed_category', labelKey: 'feedCategory', multiSelect: true },
     { value: 'article_title', labelKey: 'articleTitle', multiSelect: false },
+    { value: 'feed_type', labelKey: 'feedType', multiSelect: true },
     { value: 'published_after', labelKey: 'publishedAfter', multiSelect: false },
     { value: 'published_before', labelKey: 'publishedBefore', multiSelect: false },
     { value: 'is_read', labelKey: 'readStatus', multiSelect: false, booleanField: true },
@@ -69,6 +70,35 @@ export function useFilterFields() {
   });
 
   /**
+   * Get available feed types (as type codes, not translated text)
+   * Type codes: "regular", "freshrss", "rsshub", "script", "xpath", "email"
+   */
+  const feedTypes: ComputedRef<string[]> = computed(() => {
+    const typeSet = new Set<string>();
+    store.feeds.forEach((f) => {
+      // Determine feed type based on feed properties
+      let typeCode: string;
+      if (f.is_freshrss_source) {
+        typeCode = 'freshrss';
+      } else if (f.url && f.url.startsWith('rsshub://')) {
+        typeCode = 'rsshub';
+      } else if (f.script_path) {
+        typeCode = 'script';
+      } else if (f.type === 'email') {
+        typeCode = 'email';
+      } else if (f.type === 'HTML+XPath' || f.type === 'XML+XPath') {
+        typeCode = 'xpath';
+      } else {
+        // Default: regular RSS/Atom feed
+        typeCode = 'regular';
+      }
+      // Store type code directly, not translated text
+      typeSet.add(typeCode);
+    });
+    return Array.from(typeSet);
+  });
+
+  /**
    * Check if field is a date field
    */
   function isDateField(field: string): boolean {
@@ -79,7 +109,7 @@ export function useFilterFields() {
    * Check if field supports multiple values
    */
   function isMultiSelectField(field: string): boolean {
-    return field === 'feed_name' || field === 'feed_category';
+    return field === 'feed_name' || field === 'feed_category' || field === 'feed_type';
   }
 
   /**
@@ -153,6 +183,7 @@ export function useFilterFields() {
     logicOptions,
     feedNames,
     feedCategories,
+    feedTypes,
     isDateField,
     isMultiSelectField,
     isBooleanField,

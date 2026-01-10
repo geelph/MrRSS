@@ -79,14 +79,44 @@ type UserAgentTransport struct {
 
 // RoundTrip implements http.RoundTripper
 func (t *UserAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// Set User-Agent if not already set
-	if req.Header.Get("User-Agent") == "" {
-		req.Header.Set("User-Agent", t.userAgent)
+	// Force set User-Agent to match browser (overwrite any existing value)
+	req.Header.Set("User-Agent", t.userAgent)
+
+	// Force set Accept header for RSS feeds (overwrite any existing value)
+	req.Header.Set("Accept", "application/rss+xml, application/xml, text/xml, application/atom+xml;q=0.9,*/*;q=0.8")
+
+	// Force set Accept-Language header to mimic browser
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7")
+
+	// Don't manually set Accept-Encoding - let Go's http.Transport handle it automatically
+	// This ensures proper gzip decompression is applied
+	// Removing: req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+
+	// Force set DNT header
+	req.Header.Set("DNT", "1")
+
+	// Note: Don't set Connection header as it's managed by the transport layer
+	// Note: Don't set Upgrade-Insecure-Requests as it's only relevant for navigation
+
+	// Add Sec-Fetch headers to mimic modern browsers
+	if req.Header.Get("Sec-Fetch-Dest") == "" {
+		req.Header.Set("Sec-Fetch-Dest", "document")
 	}
-	// Set Accept header for RSS feeds
-	if req.Header.Get("Accept") == "" {
-		req.Header.Set("Accept", "application/rss+xml, application/xml, text/xml, */*")
+	if req.Header.Get("Sec-Fetch-Mode") == "" {
+		req.Header.Set("Sec-Fetch-Mode", "navigate")
 	}
+	if req.Header.Get("Sec-Fetch-Site") == "" {
+		req.Header.Set("Sec-Fetch-Site", "none")
+	}
+	if req.Header.Get("Sec-Fetch-User") == "" {
+		req.Header.Set("Sec-Fetch-User", "?1")
+	}
+
+	// Cache-Control header
+	if req.Header.Get("Cache-Control") == "" {
+		req.Header.Set("Cache-Control", "max-age=0")
+	}
+
 	return t.Original.RoundTrip(req)
 }
 

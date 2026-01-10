@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useAppStore } from '@/stores/app';
 import { useI18n } from 'vue-i18n';
 import { openInBrowser } from '@/utils/browser';
@@ -27,6 +27,52 @@ export function useArticleDetail() {
   const article = computed<Article | undefined>(() =>
     store.articles.find((a) => a.id === store.currentArticleId)
   );
+
+  // Get current article index in the filtered list
+  const currentArticleIndex = computed(() => {
+    if (!store.currentArticleId) return -1;
+    return store.articles.findIndex((a) => a.id === store.currentArticleId);
+  });
+
+  // Check if there's a previous article
+  const hasPreviousArticle = computed(() => currentArticleIndex.value > 0);
+
+  // Check if there's a next article
+  const hasNextArticle = computed(
+    () => currentArticleIndex.value >= 0 && currentArticleIndex.value < store.articles.length - 1
+  );
+
+  // Navigate to previous article
+  function goToPreviousArticle() {
+    if (hasPreviousArticle.value) {
+      const prevArticle = store.articles[currentArticleIndex.value - 1];
+      store.currentArticleId = prevArticle.id;
+      markAsReadIfNeeded(prevArticle);
+    }
+  }
+
+  // Navigate to next article
+  function goToNextArticle() {
+    if (hasNextArticle.value) {
+      const nextArticle = store.articles[currentArticleIndex.value + 1];
+      store.currentArticleId = nextArticle.id;
+      markAsReadIfNeeded(nextArticle);
+    }
+  }
+
+  // Mark article as read if it's not already read
+  function markAsReadIfNeeded(article: Article) {
+    if (!article.is_read) {
+      article.is_read = true;
+      fetch(`/api/articles/read?id=${article.id}&read=true`, {
+        method: 'POST',
+      });
+    }
+  }
+
+  // Expose articles list and index for UI display
+  const articles = computed(() => store.articles);
+  const currentArticleIndexForDisplay = computed(() => currentArticleIndex.value + 1);
 
   // Get effective view mode based on feed settings and global settings
   function getEffectiveViewMode(): ViewMode {
@@ -62,6 +108,10 @@ export function useArticleDetail() {
     () => store.currentArticleId,
     async (newId, oldId) => {
       if (newId && newId !== oldId) {
+        // Close image viewer when switching articles
+        imageViewerSrc.value = null;
+        imageViewerAlt.value = '';
+
         // Reset content when switching articles
         articleContent.value = '';
         currentArticleId.value = null;
@@ -72,12 +122,11 @@ export function useArticleDetail() {
         // Check if there's a pending render action from context menu
         if (pendingRenderAction.value) {
           // Apply the explicit action instead of default
+          // Don't set userPreferredMode for context menu actions - they're one-time actions
           if (pendingRenderAction.value === 'showContent') {
             showContent.value = true;
-            userPreferredMode.value = 'rendered';
           } else if (pendingRenderAction.value === 'showOriginal') {
             showContent.value = false;
-            userPreferredMode.value = 'original';
           }
           pendingRenderAction.value = null; // Clear the pending action
         } else {
@@ -86,6 +135,16 @@ export function useArticleDetail() {
           showContent.value = preferredMode === 'rendered';
         }
       }
+    }
+  );
+
+  // Watch for feed/filter changes and close image viewer
+  watch(
+    () => [store.currentFeedId, store.currentFilter, store.currentCategory],
+    () => {
+      // Close image viewer when switching feeds, filters, or categories
+      imageViewerSrc.value = null;
+      imageViewerAlt.value = '';
     }
   );
 
@@ -108,7 +167,9 @@ export function useArticleDetail() {
     if (!article.value) return;
     const newState = !article.value.is_read;
     article.value.is_read = newState;
-    fetch(`/api/articles/read?id=${article.value.id}&read=${newState}`, { method: 'POST' });
+    fetch(`/api/articles/read?id=${article.value.id}&read=${newState}`, {
+      method: 'POST',
+    });
   }
 
   function toggleFavorite() {
@@ -157,8 +218,8 @@ export function useArticleDetail() {
   async function fetchArticleContent() {
     if (!article.value) return;
 
-    isLoadingContent.value = true;
     currentArticleId.value = article.value.id; // Track which article we're loading
+
     try {
       const res = await fetch(`/api/articles/content?id=${article.value.id}`);
       if (res.ok) {
@@ -174,16 +235,23 @@ export function useArticleDetail() {
         }
 
         articleContent.value = content;
-        // Don't attach event listeners here - let ArticleContent.vue handle it
-        // after enhanceRendering is complete
+
+        // Only show loading animation for non-cached content
+        if (!data.cached) {
+          // Content was fetched from feed, show loading and trigger watch
+          isLoadingContent.value = true;
+          await nextTick(); // Ensure content is rendered first
+          isLoadingContent.value = false;
+        }
+        // If cached, we don't touch isLoadingContent at all - no animation!
       } else {
         console.error('Failed to fetch article content');
         articleContent.value = '';
+        isLoadingContent.value = false;
       }
     } catch (e) {
       console.error('Error fetching article content:', e);
       articleContent.value = '';
-    } finally {
       isLoadingContent.value = false;
     }
   }
@@ -529,10 +597,10 @@ export function useArticleDetail() {
         await fetchArticleContent();
       }
       showContent.value = true;
-      userPreferredMode.value = 'rendered';
+      // Don't set userPreferredMode for context menu actions
     } else if (action === 'showOriginal') {
       showContent.value = false;
-      userPreferredMode.value = 'original';
+      // Don't set userPreferredMode for context menu actions
     }
   }
 
@@ -586,6 +654,10 @@ export function useArticleDetail() {
     imageViewerSrc,
     imageViewerAlt,
     locale,
+    hasPreviousArticle,
+    hasNextArticle,
+    articles,
+    currentArticleIndex: currentArticleIndexForDisplay,
 
     // Functions
     close,
@@ -599,6 +671,8 @@ export function useArticleDetail() {
     exportToObsidian,
     attachImageEventListeners, // Expose for re-attaching after content modifications
     handleRetryLoadContent,
+    goToPreviousArticle,
+    goToNextArticle,
 
     // Translations
     t,

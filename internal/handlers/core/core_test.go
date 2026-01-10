@@ -16,7 +16,7 @@ func TestNewHandler_ConstructsHandler(t *testing.T) {
 		t.Fatalf("db Init failed: %v", err)
 	}
 
-	f := feed.NewFetcher(db, nil)
+	f := feed.NewFetcher(db)
 	h := NewHandler(db, f, nil)
 
 	if h.DB == nil {

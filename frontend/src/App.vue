@@ -103,7 +103,7 @@ onMounted(async () => {
 
     // Get auto_update setting
     if (data.auto_update !== undefined) {
-      autoUpdate = data.auto_update;
+      autoUpdate = data.auto_update === 'true'; // 这里后端默认返回 'false' 的话都是 true，我这里如果不修改的话每次都会自动下载
     }
 
     // Load saved shortcuts
@@ -324,6 +324,7 @@ function onFeedUpdated(): void {
       :default-value="inputDialog.defaultValue"
       :confirm-text="inputDialog.confirmText"
       :cancel-text="inputDialog.cancelText"
+      :suggestions="inputDialog.suggestions"
       @confirm="inputDialog.onConfirm"
       @cancel="inputDialog.onCancel"
       @close="inputDialog = null"

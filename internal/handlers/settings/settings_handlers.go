@@ -9,6 +9,13 @@ import (
 )
 
 // HandleSettings handles GET and POST requests for application settings.
+// @Summary      Get application settings
+// @Description  Get all application settings (sensitive values like passwords are cleared)
+// @Tags         settings
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  map[string]string  "Application settings (key-value pairs)"
+// @Router       /settings [get]
 // CODE GENERATED - DO NOT EDIT MANUALLY
 // To add new settings, edit internal/config/settings_schema.json and run: go run tools/settings-generator/main.go
 func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
@@ -68,6 +75,9 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		proxyUsername, _ := h.DB.GetEncryptedSetting("proxy_username")
 		refreshMode, _ := h.DB.GetSetting("refresh_mode")
 		retryTimeoutSeconds, _ := h.DB.GetSetting("retry_timeout_seconds")
+		rsshubApiKey, _ := h.DB.GetEncryptedSetting("rsshub_api_key")
+		rsshubEnabled, _ := h.DB.GetSetting("rsshub_enabled")
+		rsshubEndpoint, _ := h.DB.GetSetting("rsshub_endpoint")
 		rules, _ := h.DB.GetSetting("rules")
 		shortcuts, _ := h.DB.GetSetting("shortcuts")
 		shortcutsEnabled, _ := h.DB.GetSetting("shortcuts_enabled")
@@ -143,6 +153,9 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			"proxy_username":              proxyUsername,
 			"refresh_mode":                refreshMode,
 			"retry_timeout_seconds":       retryTimeoutSeconds,
+			"rsshub_api_key":              rsshubApiKey,
+			"rsshub_enabled":              rsshubEnabled,
+			"rsshub_endpoint":             rsshubEndpoint,
 			"rules":                       rules,
 			"shortcuts":                   shortcuts,
 			"shortcuts_enabled":           shortcutsEnabled,
@@ -220,6 +233,9 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			ProxyUsername            string `json:"proxy_username"`
 			RefreshMode              string `json:"refresh_mode"`
 			RetryTimeoutSeconds      string `json:"retry_timeout_seconds"`
+			RsshubAPIKey             string `json:"rsshub_api_key"`
+			RsshubEnabled            string `json:"rsshub_enabled"`
+			RsshubEndpoint           string `json:"rsshub_endpoint"`
 			Rules                    string `json:"rules"`
 			Shortcuts                string `json:"shortcuts"`
 			ShortcutsEnabled         string `json:"shortcuts_enabled"`
@@ -245,10 +261,12 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if err := h.DB.SetEncryptedSetting("ai_api_key", req.AIAPIKey); err != nil {
-			log.Printf("Failed to save ai_api_key: %v", err)
-			http.Error(w, "Failed to save ai_api_key", http.StatusInternalServerError)
-			return
+		if req.AIAPIKey != "" {
+			if err := h.DB.SetEncryptedSetting("ai_api_key", req.AIAPIKey); err != nil {
+				log.Printf("Failed to save ai_api_key: %v", err)
+				http.Error(w, "Failed to save ai_api_key", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		if req.AIChatEnabled != "" {
@@ -299,10 +317,12 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			h.DB.SetSetting("baidu_app_id", req.BaiduAppId)
 		}
 
-		if err := h.DB.SetEncryptedSetting("baidu_secret_key", req.BaiduSecretKey); err != nil {
-			log.Printf("Failed to save baidu_secret_key: %v", err)
-			http.Error(w, "Failed to save baidu_secret_key", http.StatusInternalServerError)
-			return
+		if req.BaiduSecretKey != "" {
+			if err := h.DB.SetEncryptedSetting("baidu_secret_key", req.BaiduSecretKey); err != nil {
+				log.Printf("Failed to save baidu_secret_key: %v", err)
+				http.Error(w, "Failed to save baidu_secret_key", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		if req.CloseToTray != "" {
@@ -313,10 +333,12 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			h.DB.SetSetting("custom_css_file", req.CustomCssFile)
 		}
 
-		if err := h.DB.SetEncryptedSetting("deepl_api_key", req.DeeplAPIKey); err != nil {
-			log.Printf("Failed to save deepl_api_key: %v", err)
-			http.Error(w, "Failed to save deepl_api_key", http.StatusInternalServerError)
-			return
+		if req.DeeplAPIKey != "" {
+			if err := h.DB.SetEncryptedSetting("deepl_api_key", req.DeeplAPIKey); err != nil {
+				log.Printf("Failed to save deepl_api_key: %v", err)
+				http.Error(w, "Failed to save deepl_api_key", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		if req.DeeplEndpoint != "" {
@@ -327,10 +349,12 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			h.DB.SetSetting("default_view_mode", req.DefaultViewMode)
 		}
 
-		if err := h.DB.SetEncryptedSetting("freshrss_api_password", req.FreshRSSAPIPassword); err != nil {
-			log.Printf("Failed to save freshrss_api_password: %v", err)
-			http.Error(w, "Failed to save freshrss_api_password", http.StatusInternalServerError)
-			return
+		if req.FreshRSSAPIPassword != "" {
+			if err := h.DB.SetEncryptedSetting("freshrss_api_password", req.FreshRSSAPIPassword); err != nil {
+				log.Printf("Failed to save freshrss_api_password: %v", err)
+				http.Error(w, "Failed to save freshrss_api_password", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		if req.FreshRSSAutoSyncInterval != "" {
@@ -338,7 +362,24 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		}
 
 		if req.FreshRSSEnabled != "" {
+			// Check if FreshRSS is being disabled
+			oldEnabled, _ := h.DB.GetSetting("freshrss_enabled")
+			wasEnabled := oldEnabled == "true"
+			isEnabled := req.FreshRSSEnabled == "true"
+
+			// Save the new setting first
 			h.DB.SetSetting("freshrss_enabled", req.FreshRSSEnabled)
+
+			// If FreshRSS was enabled and is now being disabled, cleanup all FreshRSS data
+			if wasEnabled && !isEnabled {
+				log.Printf("[Settings] FreshRSS is being disabled, cleaning up all FreshRSS feeds and articles...")
+				if err := h.DB.CleanupFreshRSSData(); err != nil {
+					log.Printf("[Settings] Error cleaning up FreshRSS data: %v", err)
+					// Continue anyway - setting has been saved
+				} else {
+					log.Printf("[Settings] Successfully cleaned up FreshRSS data")
+				}
+			}
 		}
 
 		if req.FreshRSSLastSyncTime != "" {
@@ -445,10 +486,12 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			h.DB.SetSetting("proxy_host", req.ProxyHost)
 		}
 
-		if err := h.DB.SetEncryptedSetting("proxy_password", req.ProxyPassword); err != nil {
-			log.Printf("Failed to save proxy_password: %v", err)
-			http.Error(w, "Failed to save proxy_password", http.StatusInternalServerError)
-			return
+		if req.ProxyPassword != "" {
+			if err := h.DB.SetEncryptedSetting("proxy_password", req.ProxyPassword); err != nil {
+				log.Printf("Failed to save proxy_password: %v", err)
+				http.Error(w, "Failed to save proxy_password", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		if req.ProxyPort != "" {
@@ -459,10 +502,12 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 			h.DB.SetSetting("proxy_type", req.ProxyType)
 		}
 
-		if err := h.DB.SetEncryptedSetting("proxy_username", req.ProxyUsername); err != nil {
-			log.Printf("Failed to save proxy_username: %v", err)
-			http.Error(w, "Failed to save proxy_username", http.StatusInternalServerError)
-			return
+		if req.ProxyUsername != "" {
+			if err := h.DB.SetEncryptedSetting("proxy_username", req.ProxyUsername); err != nil {
+				log.Printf("Failed to save proxy_username: %v", err)
+				http.Error(w, "Failed to save proxy_username", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		if req.RefreshMode != "" {
@@ -471,6 +516,22 @@ func HandleSettings(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 
 		if req.RetryTimeoutSeconds != "" {
 			h.DB.SetSetting("retry_timeout_seconds", req.RetryTimeoutSeconds)
+		}
+
+		if req.RsshubAPIKey != "" {
+			if err := h.DB.SetEncryptedSetting("rsshub_api_key", req.RsshubAPIKey); err != nil {
+				log.Printf("Failed to save rsshub_api_key: %v", err)
+				http.Error(w, "Failed to save rsshub_api_key", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if req.RsshubEnabled != "" {
+			h.DB.SetSetting("rsshub_enabled", req.RsshubEnabled)
+		}
+
+		if req.RsshubEndpoint != "" {
+			h.DB.SetSetting("rsshub_endpoint", req.RsshubEndpoint)
 		}
 
 		if req.Rules != "" {

@@ -166,10 +166,47 @@ export function useFeedManagement() {
   }
 
   /**
+   * Get categories excluding FreshRSS-only categories
+   */
+  function getNonFreshRSSCategories(): string[] {
+    if (!store.feeds) return [];
+
+    const categoryFeedsMap = new Map<string, boolean>();
+
+    // Build a map of category -> whether it has non-FreshRSS feeds
+    store.feeds.forEach((feed) => {
+      if (feed.category && feed.category.trim() !== '') {
+        if (!categoryFeedsMap.has(feed.category)) {
+          categoryFeedsMap.set(feed.category, !feed.is_freshrss_source);
+        } else {
+          // Update if we find a non-FreshRSS feed in this category
+          if (!feed.is_freshrss_source) {
+            categoryFeedsMap.set(feed.category, true);
+          }
+        }
+      }
+    });
+
+    // Filter out categories where all feeds are from FreshRSS
+    // or category name ends with " (FreshRSS)" or matches pattern " (FreshRSS \d+)$"
+    const categories = Array.from(categoryFeedsMap.entries())
+      .filter(([_, hasNonFreshRSS]) => hasNonFreshRSS)
+      .filter(([categoryName]) => {
+        return !categoryName.endsWith(' (FreshRSS)') && !categoryName.match(/ \(FreshRSS \d+\)$/);
+      })
+      .map(([categoryName]) => categoryName)
+      .sort();
+
+    return categories;
+  }
+
+  /**
    * Move multiple feeds to a new category
    */
   async function handleBatchMove(selectedIds: number[]) {
     if (!store.feeds) return;
+
+    const categories = getNonFreshRSSCategories();
 
     const newCategory = await window.showInput({
       title: t('moveFeeds'),
@@ -177,6 +214,7 @@ export function useFeedManagement() {
       placeholder: t('categoryPlaceholder'),
       confirmText: t('move'),
       cancelText: t('cancel'),
+      suggestions: categories,
     });
     if (newCategory === null) return;
 

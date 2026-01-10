@@ -39,7 +39,7 @@ func setupDBForFeedTests(t *testing.T) *database.DB {
 
 func TestGetHTTPClientProxyPrecedence(t *testing.T) {
 	db := setupDBForFeedTests(t)
-	f := NewFetcher(db, nil)
+	f := NewFetcher(db)
 
 	// Helper function to get the underlying http.Transport
 	getTransport := func(client *http.Client) *http.Transport {
@@ -98,18 +98,7 @@ func TestGetHTTPClientProxyPrecedence(t *testing.T) {
 }
 
 func TestSetupTranslatorSelectsNonNil(t *testing.T) {
-	db := setupDBForFeedTests(t)
-	f := NewFetcher(db, nil)
-
-	db.SetSetting("translation_provider", "ai")
-	f.setupTranslator()
-	if f.translator == nil {
-		t.Fatalf("expected translator to be non-nil after setup")
-	}
-
-	db.SetSetting("translation_provider", "baidu")
-	f.setupTranslator()
-	if f.translator == nil {
-		t.Fatalf("expected translator to be non-nil for baidu fallback")
-	}
+	// This test is no longer relevant since translation was removed from feed refresh
+	// Translation is now handled on-demand in the frontend
+	t.Skip("Translation setup removed from Fetcher - now handled on-demand")
 }

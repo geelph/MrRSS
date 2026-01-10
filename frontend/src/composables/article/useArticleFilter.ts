@@ -30,6 +30,7 @@ export function useArticleFilter() {
     isFilterLoading.value = true;
     try {
       const page = append ? filterPage.value : 1;
+
       const res = await fetch('/api/articles/filter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -74,18 +74,21 @@ export function useArticleTranslation() {
     translatingArticles.value.add(article.id);
 
     try {
+      const requestBody = {
+        article_id: article.id,
+        title: article.title,
+        target_language: translationSettings.value.targetLang,
+      };
+
       const res = await fetch('/api/articles/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          article_id: article.id,
-          title: article.title,
-          target_language: translationSettings.value.targetLang,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (res.ok) {
         const data = await res.json();
+
         // Update the article in the store
         article.translated_title = data.translated_title;
 

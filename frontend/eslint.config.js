@@ -56,6 +56,8 @@ export default [
         WheelEvent: 'readonly',
         localStorage: 'readonly',
         File: 'readonly',
+        btoa: 'readonly',
+        atob: 'readonly',
         // Node.js globals (for config files)
         process: 'readonly',
         global: 'readonly',
@@ -110,6 +112,8 @@ export default [
         Element: 'readonly',
         localStorage: 'readonly',
         File: 'readonly',
+        btoa: 'readonly',
+        atob: 'readonly',
         // Node.js globals (for config files)
         process: 'readonly',
         global: 'readonly',

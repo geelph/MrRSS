@@ -70,15 +70,35 @@ export function useFeedForm(feed?: Feed) {
   const availableScripts = ref<Array<{ name: string; path: string; type: string }>>([]);
   const scriptsDir = ref('');
 
-  // Get unique categories from existing feeds
+  // Get unique categories from existing feeds, excluding FreshRSS-only categories
   const existingCategories = computed(() => {
-    const categories = new Set<string>();
+    const categoryFeedsMap = new Map<string, boolean>();
+
+    // Build a map of category -> whether it has non-FreshRSS feeds
     store.feeds.forEach((feed) => {
       if (feed.category && feed.category.trim() !== '') {
-        categories.add(feed.category);
+        if (!categoryFeedsMap.has(feed.category)) {
+          categoryFeedsMap.set(feed.category, !feed.is_freshrss_source);
+        } else {
+          // Update if we find a non-FreshRSS feed in this category
+          if (!feed.is_freshrss_source) {
+            categoryFeedsMap.set(feed.category, true);
+          }
+        }
       }
     });
-    return Array.from(categories).sort();
+
+    // Filter out categories where all feeds are from FreshRSS
+    // or category name ends with " (FreshRSS)" or matches pattern " (FreshRSS \d+)$"
+    const categories = Array.from(categoryFeedsMap.entries())
+      .filter(([_, hasNonFreshRSS]) => hasNonFreshRSS)
+      .filter(([categoryName]) => {
+        return !categoryName.endsWith(' (FreshRSS)') && !categoryName.match(/ \(FreshRSS \d+\)$/);
+      })
+      .map(([categoryName]) => categoryName)
+      .sort();
+
+    return categories;
   });
 
   // Watch for category selection changes

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhNewspaper } from '@phosphor-icons/vue';
+import { PhNewspaper, PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue';
 import { useArticleDetail } from '@/composables/article/useArticleDetail';
 import ArticleToolbar from './ArticleToolbar.vue';
 import ArticleContent from './ArticleContent.vue';
@@ -15,6 +15,8 @@ const {
   isLoadingContent,
   imageViewerSrc,
   imageViewerAlt,
+  hasPreviousArticle,
+  hasNextArticle,
   close,
   toggleRead,
   toggleFavorite,
@@ -25,6 +27,8 @@ const {
   attachImageEventListeners,
   exportToObsidian,
   handleRetryLoadContent,
+  goToPreviousArticle,
+  goToNextArticle,
   t,
 } = useArticleDetail();
 
@@ -55,6 +59,21 @@ function handleKeydown(e: KeyboardEvent) {
   // Close with Escape
   if (e.key === 'Escape' && showFindInPage.value) {
     closeFindInPage();
+  }
+
+  // Navigate with ArrowLeft/ArrowRight or Alt+Left/Alt+Right
+  if (article.value && !showFindInPage.value) {
+    if (e.key === 'ArrowLeft' || (e.altKey && e.key === 'ArrowLeft')) {
+      if (hasPreviousArticle.value) {
+        e.preventDefault();
+        goToPreviousArticle();
+      }
+    } else if (e.key === 'ArrowRight' || (e.altKey && e.key === 'ArrowRight')) {
+      if (hasNextArticle.value) {
+        e.preventDefault();
+        goToNextArticle();
+      }
+    }
   }
 }
 
@@ -98,7 +117,7 @@ onBeforeUnmount(() => {
       />
 
       <!-- Original webpage view -->
-      <div v-if="!showContent" class="flex-1 bg-white w-full">
+      <div v-if="!showContent" class="flex-1 bg-bg-primary w-full">
         <iframe
           :key="article.id"
           :src="`/api/webpage/proxy?url=${encodeURIComponent(article.url)}`"
@@ -118,6 +137,36 @@ onBeforeUnmount(() => {
         :show-content="showContent"
         @retry-load-content="handleRetryLoadContent"
       />
+
+      <!-- Navigation buttons -->
+      <div
+        v-if="hasPreviousArticle || hasNextArticle"
+        class="flex items-center justify-between bg-bg-primary px-3 py-1.5"
+      >
+        <button
+          v-if="hasPreviousArticle"
+          :title="t('previousArticle') || 'Previous article'"
+          class="flex items-center gap-1.5 px-2 py-1 rounded text-text-secondary/70 hover:text-text-primary hover:bg-bg-secondary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="goToPreviousArticle"
+        >
+          <PhCaretLeft :size="16" />
+          <span class="text-xs">{{ t('previousArticle') || 'Previous' }}</span>
+        </button>
+
+        <div v-else class="w-16"></div>
+
+        <button
+          v-if="hasNextArticle"
+          :title="t('nextArticle') || 'Next article'"
+          class="flex items-center gap-1.5 px-2 py-1 rounded text-text-secondary/70 hover:text-text-primary hover:bg-bg-secondary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="goToNextArticle"
+        >
+          <span class="text-xs">{{ t('nextArticle') || 'Next' }}</span>
+          <PhCaretRight :size="16" />
+        </button>
+
+        <div v-else class="w-16"></div>
+      </div>
     </div>
 
     <!-- Find in Page (only shown in content mode) -->

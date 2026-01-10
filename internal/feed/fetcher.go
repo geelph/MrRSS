@@ -3,10 +3,11 @@ package feed
 import (
 	"MrRSS/internal/database"
 	"MrRSS/internal/models"
+	"MrRSS/internal/rsshub"
 	"MrRSS/internal/rules"
-	"MrRSS/internal/translation"
 	"MrRSS/internal/utils"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -26,7 +27,6 @@ type Fetcher struct {
 	db                *database.DB
 	fp                FeedParser
 	highPriorityFp    FeedParser // High priority parser for content fetching
-	translator        translation.Translator
 	scriptExecutor    *ScriptExecutor
 	emailFetcher      *EmailFetcher
 	progress          Progress
@@ -36,7 +36,7 @@ type Fetcher struct {
 	cleanupManager    *CleanupManager
 }
 
-func NewFetcher(db *database.DB, translator translation.Translator) *Fetcher {
+func NewFetcher(db *database.DB) *Fetcher {
 	// Initialize script executor with scripts directory
 	scriptsDir, err := utils.GetScriptsDir()
 	var executor *ScriptExecutor
@@ -69,7 +69,6 @@ func NewFetcher(db *database.DB, translator translation.Translator) *Fetcher {
 		db:                db,
 		fp:                parser,
 		highPriorityFp:    highPriorityParser,
-		translator:        translator,
 		scriptExecutor:    executor,
 		emailFetcher:      NewEmailFetcher(db),
 		refreshCalculator: NewIntelligentRefreshCalculator(db),
@@ -104,6 +103,29 @@ func (f *Fetcher) GetTaskManager() *TaskManager {
 // GetCleanupManager returns the cleanup manager
 func (f *Fetcher) GetCleanupManager() *CleanupManager {
 	return f.cleanupManager
+}
+
+// transformRSSHubURL converts rsshub:// route to full URL
+func (f *Fetcher) transformRSSHubURL(url string) (string, error) {
+	if !rsshub.IsRSSHubURL(url) {
+		return url, nil
+	}
+
+	// Check if RSSHub is enabled
+	enabledStr, _ := f.db.GetSetting("rsshub_enabled")
+	if enabledStr != "true" {
+		return "", fmt.Errorf("RSSHub integration is disabled. Please enable it in settings")
+	}
+
+	endpoint, _ := f.db.GetSetting("rsshub_endpoint")
+	if endpoint == "" {
+		endpoint = "https://rsshub.app"
+	}
+	apiKey, _ := f.db.GetEncryptedSetting("rsshub_api_key")
+
+	route := rsshub.ExtractRoute(url)
+	client := rsshub.NewClient(endpoint, apiKey)
+	return client.BuildURL(route), nil
 }
 
 // getDataDir returns the data directory path
@@ -159,51 +181,13 @@ func (f *Fetcher) getHTTPClient(feed models.Feed) (*http.Client, error) {
 	}
 	// If ProxyEnabled=false, proxyURL remains empty (no proxy)
 
-	// Create HTTP client with or without proxy
-	return CreateHTTPClient(proxyURL)
-}
-
-// setupTranslator configures the translator based on database settings.
-// Now supports global proxy settings for all translation services.
-func (f *Fetcher) setupTranslator() {
-	provider, _ := f.db.GetSetting("translation_provider")
-
-	var t translation.Translator
-	switch provider {
-	case "deepl":
-		apiKey, _ := f.db.GetEncryptedSetting("deepl_api_key")
-		if apiKey != "" {
-			t = translation.NewDeepLTranslatorWithDB(apiKey, f.db)
-		} else {
-			t = translation.NewGoogleFreeTranslatorWithDB(f.db)
-		}
-	case "baidu":
-		appID, _ := f.db.GetSetting("baidu_app_id")
-		secretKey, _ := f.db.GetEncryptedSetting("baidu_secret_key")
-		if appID != "" && secretKey != "" {
-			t = translation.NewBaiduTranslatorWithDB(appID, secretKey, f.db)
-		} else {
-			t = translation.NewGoogleFreeTranslatorWithDB(f.db)
-		}
-	case "ai":
-		apiKey, _ := f.db.GetEncryptedSetting("ai_api_key")
-		endpoint, _ := f.db.GetSetting("ai_endpoint")
-		model, _ := f.db.GetSetting("ai_model")
-		if apiKey != "" {
-			t = translation.NewAITranslatorWithDB(apiKey, endpoint, model, f.db)
-			// Set custom headers if available
-			if aiTranslator, ok := t.(*translation.AITranslator); ok {
-				customHeaders, _ := f.db.GetSetting("ai_custom_headers")
-				aiTranslator.SetCustomHeaders(customHeaders)
-			}
-		} else {
-			t = translation.NewGoogleFreeTranslatorWithDB(f.db)
-		}
-	default:
-		// Default to Google Free Translator with proxy support
-		t = translation.NewGoogleFreeTranslatorWithDB(f.db)
-	}
-	f.translator = t
+	// Create HTTP client with browser-like headers to bypass Cloudflare and anti-bot protections
+	// This is critical for RSSHub feeds and other services with anti-bot protection
+	return utils.CreateHTTPClientWithUserAgent(
+		proxyURL,
+		30*time.Second,
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	)
 }
 
 func (f *Fetcher) FetchAll(ctx context.Context) {
@@ -235,6 +219,19 @@ func (f *Fetcher) FetchAll(ctx context.Context) {
 	// If all feeds are FreshRSS feeds, no standard refresh needed
 	if len(filteredFeeds) == 0 {
 		log.Printf("All %d feeds are FreshRSS sources (refreshed via sync only), skipping standard refresh", freshRSSCount)
+
+		// Update last global refresh time even if no standard feeds
+		newUpdateTime := time.Now().Format(time.RFC3339)
+		log.Printf("Global refresh started (FreshRSS only), updating last_global_refresh to: %s", newUpdateTime)
+		if err := f.db.SetSetting("last_global_refresh", newUpdateTime); err != nil {
+			log.Printf("ERROR: Failed to update last_global_refresh: %v", err)
+		}
+
+		// Track global refresh in statistics even if no standard feeds
+		if err := f.db.IncrementStat("feed_refresh"); err != nil {
+			log.Printf("ERROR: Failed to track feed refresh: %v", err)
+		}
+
 		// Mark progress as completed since there's nothing to do
 		f.taskManager.MarkCompleted()
 		return

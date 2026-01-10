@@ -31,6 +31,11 @@ func (db *DB) MarkArticleReadWithSync(id int64, read bool) (*SyncRequest, error)
 		return nil, err
 	}
 
+	// Track article read statistic if marking as read
+	if read {
+		_ = db.IncrementStat("article_read")
+	}
+
 	// Check if this article belongs to a FreshRSS feed
 	var isFreshRSSFeed bool
 	err = db.QueryRow("SELECT COALESCE(is_freshrss_source, 0) FROM feeds WHERE id = ?", feedID).Scan(&isFreshRSSFeed)
@@ -112,6 +117,11 @@ func (db *DB) ToggleFavoriteWithSync(id int64) (*SyncRequest, error) {
 	err = db.ToggleFavorite(id)
 	if err != nil {
 		return nil, err
+	}
+
+	// Track favorite action (only when adding to favorites, not removing)
+	if !isFav {
+		_ = db.IncrementStat("article_favorite")
 	}
 
 	// Check if this article belongs to a FreshRSS feed

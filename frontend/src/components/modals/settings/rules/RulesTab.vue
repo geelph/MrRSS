@@ -17,6 +17,7 @@ interface Rule {
   enabled: boolean;
   conditions: Condition[];
   actions: string[];
+  position?: number; // Optional for backward compatibility
 }
 
 interface Props {
@@ -31,6 +32,11 @@ const emit = defineEmits<{
 
 // Rules list
 const rules: Ref<Rule[]> = ref([]);
+
+// Drag and drop state
+const draggingRuleId: Ref<number | null> = ref(null);
+const dragOverRuleId: Ref<number | null> = ref(null);
+const dropBeforeTarget: Ref<boolean> = ref(true);
 
 // Modal states
 const showRuleEditor = ref(false);
@@ -49,7 +55,16 @@ function loadRules() {
         typeof props.settings.rules === 'string'
           ? JSON.parse(props.settings.rules)
           : props.settings.rules;
-      rules.value = Array.isArray(parsed) ? parsed : [];
+
+      // Add position field to rules that don't have it (backward compatibility)
+      const loadedRules = Array.isArray(parsed) ? parsed : [];
+      rules.value = loadedRules.map((rule: Rule, index: number) => ({
+        ...rule,
+        position: rule.position ?? index,
+      }));
+
+      // Sort rules by position
+      rules.value.sort((a, b) => (a.position || 0) - (b.position || 0));
     } catch (e) {
       console.error('Error parsing rules:', e);
       rules.value = [];
@@ -69,6 +84,7 @@ watch(
 // Save rules to settings
 async function saveRules() {
   try {
+    // No transformation needed - feed_type values are already codes
     const updatedSettings = { ...props.settings, rules: JSON.stringify(rules.value) };
     emit('update:settings', updatedSettings);
     await fetch('/api/settings', {
@@ -131,6 +147,7 @@ async function handleSaveRule(rule: Rule): Promise<void> {
     // Add new rule
     rule.id = Date.now();
     rule.enabled = true;
+    rule.position = rules.value.length; // Add to the end
     rules.value.push(rule);
   }
 
@@ -149,6 +166,7 @@ async function applyRule(rule: Rule): Promise<void> {
   applyingRuleId.value = rule.id;
 
   try {
+    // No transformation needed - feed_type values are already codes
     const res = await fetch('/api/rules/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -169,6 +187,114 @@ async function applyRule(rule: Rule): Promise<void> {
   } finally {
     applyingRuleId.value = null;
   }
+}
+
+// Drag and drop handlers
+function onDragStart(ruleId: number, event: DragEvent) {
+  draggingRuleId.value = ruleId;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(ruleId));
+
+    // Set a custom drag image if possible (better UX)
+    const target = event.target as HTMLElement;
+    if (target instanceof HTMLElement) {
+      try {
+        event.dataTransfer.setDragImage(target, 0, 0);
+      } catch (e) {
+        // Fallback for browsers that don't support custom drag image
+        console.debug('Could not set custom drag image:', e);
+      }
+    }
+  }
+}
+
+function onDragEnd() {
+  // Add a small delay to allow visual feedback to complete
+  setTimeout(() => {
+    draggingRuleId.value = null;
+    dragOverRuleId.value = null;
+    dropBeforeTarget.value = true;
+  }, 50);
+}
+
+function onDragOver(targetRuleId: number, event: DragEvent) {
+  event.preventDefault();
+  if (!draggingRuleId.value || draggingRuleId.value === targetRuleId) {
+    return;
+  }
+
+  dragOverRuleId.value = targetRuleId;
+
+  // Calculate drop position based on mouse Y position
+  if (event.target instanceof HTMLElement) {
+    const targetElement = event.target.closest('.rule-item');
+    if (targetElement) {
+      const rect = targetElement.getBoundingClientRect();
+      const relativeY = event.clientY - rect.top;
+      const threshold = rect.height / 3; // Use 1/3 threshold for better precision
+      dropBeforeTarget.value = relativeY < threshold;
+    }
+  }
+}
+
+function onDragLeave(event: DragEvent) {
+  // Only clear if we're actually leaving the rule item
+  const target = event.target as HTMLElement;
+  const relatedTarget = event.relatedTarget as HTMLElement;
+
+  if (relatedTarget && target.contains(relatedTarget)) {
+    return;
+  }
+}
+
+async function onDrop(targetRuleId: number, event: DragEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  const draggedId = draggingRuleId.value;
+  if (!draggedId || draggedId === targetRuleId) {
+    onDragEnd();
+    return;
+  }
+
+  // Find the indices BEFORE any modifications
+  const draggedIndex = rules.value.findIndex((r) => r.id === draggedId);
+  const targetIndex = rules.value.findIndex((r) => r.id === targetRuleId);
+
+  if (draggedIndex === -1 || targetIndex === -1) {
+    onDragEnd();
+    return;
+  }
+
+  // Remove the dragged rule from its current position
+  const [draggedRule] = rules.value.splice(draggedIndex, 1);
+
+  // Calculate the correct insertion index
+  // If dragged item was before target, after removing it, target's index shifts down by 1
+  let insertIndex = targetIndex;
+  if (draggedIndex < targetIndex) {
+    insertIndex = targetIndex - 1;
+  }
+
+  // Insert at the calculated position
+  if (dropBeforeTarget.value) {
+    // Insert before target (already adjusted insertIndex points to target)
+    rules.value.splice(insertIndex, 0, draggedRule);
+  } else {
+    // Insert after target
+    rules.value.splice(insertIndex + 1, 0, draggedRule);
+  }
+
+  // Update all positions to match current array order
+  rules.value.forEach((rule, index) => {
+    rule.position = index;
+  });
+
+  // Save the new order
+  await saveRules();
+
+  onDragEnd();
 }
 </script>
 
@@ -205,17 +331,27 @@ async function applyRule(rule: Rule): Promise<void> {
       </div>
 
       <!-- Rules List -->
-      <div v-else class="space-y-2 sm:space-y-3">
-        <RuleItem
-          v-for="rule in rules"
-          :key="rule.id"
-          :rule="rule"
-          :is-applying="applyingRuleId === rule.id"
-          @toggle-enabled="toggleRuleEnabled(rule)"
-          @apply="applyRule(rule)"
-          @edit="editRule(rule)"
-          @delete="deleteRule(rule.id)"
-        />
+      <div v-else class="rules-list">
+        <transition-group name="rule-reorder">
+          <RuleItem
+            v-for="rule in rules"
+            :key="rule.id"
+            :rule="rule"
+            :is-applying="applyingRuleId === rule.id"
+            :is-dragging="draggingRuleId === rule.id"
+            :is-drag-over="dragOverRuleId === rule.id"
+            :is-drop-before="dragOverRuleId === rule.id && dropBeforeTarget"
+            @toggle-enabled="toggleRuleEnabled(rule)"
+            @apply="applyRule(rule)"
+            @edit="editRule(rule)"
+            @delete="deleteRule(rule.id)"
+            @drag-start="onDragStart(rule.id, $event)"
+            @drag-end="onDragEnd"
+            @drag-over="onDragOver(rule.id, $event)"
+            @drag-leave="onDragLeave($event)"
+            @drop="onDrop(rule.id, $event)"
+          />
+        </transition-group>
       </div>
     </div>
 
@@ -243,5 +379,35 @@ async function applyRule(rule: Rule): Promise<void> {
 
 .empty-state {
   @apply text-center py-8 sm:py-12;
+}
+
+/* Rules list container */
+.rules-list {
+  @apply space-y-2 sm:space-y-3;
+  position: relative;
+}
+
+/* Reorder transitions for Vue's transition-group */
+.rule-reorder-move,
+.rule-reorder-enter-active,
+.rule-reorder-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rule-reorder-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.rule-reorder-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* Ensure leaving items are taken out of layout flow */
+.rule-reorder-leave-active {
+  position: absolute;
+  width: 100%;
+  z-index: 0;
 }
 </style>

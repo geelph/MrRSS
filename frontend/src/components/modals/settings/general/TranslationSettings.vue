@@ -44,6 +44,8 @@ async function clearTranslationCache() {
 
     if (response.ok) {
       window.showToast(t('clearTranslationCacheSuccess'), 'success');
+      // Refresh article list to show updated translations
+      window.dispatchEvent(new CustomEvent('refresh-articles'));
     } else {
       console.error('Server error:', response.status);
       window.showToast(t('clearTranslationCacheFailed'), 'error');

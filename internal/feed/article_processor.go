@@ -3,6 +3,7 @@ package feed
 import (
 	"MrRSS/internal/models"
 	"MrRSS/internal/utils"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -52,7 +53,7 @@ func (f *Fetcher) processArticles(feed models.Feed, items []*gofeed.Item) []*Art
 			hasValidPublishedTime = false
 		}
 
-		imageURL := extractImageURL(item)
+		imageURL := extractImageURL(item, feed.URL)
 		audioURL := extractAudioURL(item)
 		videoURL := extractVideoURL(item)
 
@@ -103,22 +104,22 @@ func (f *Fetcher) processArticles(feed models.Feed, items []*gofeed.Item) []*Art
 	return articlesWithContent
 }
 
-// extractImageURL extracts the image URL from a feed item
-func extractImageURL(item *gofeed.Item) string {
+// extractImageURL extracts the image URL from a feed item and resolves relative URLs
+func extractImageURL(item *gofeed.Item, feedURL string) string {
 	// Try item.Image first
 	if item.Image != nil {
-		return item.Image.URL
+		return resolveRelativeURL(item.Image.URL, feedURL)
 	}
 
 	// Try Media RSS thumbnail (YouTube feeds use this)
 	if thumbnailURL := extractMediaThumbnail(item); thumbnailURL != "" {
-		return thumbnailURL
+		return resolveRelativeURL(thumbnailURL, feedURL)
 	}
 
 	// Try enclosures for images (check various image MIME types)
 	for _, enc := range item.Enclosures {
 		if strings.HasPrefix(enc.Type, "image/") {
-			return enc.URL
+			return resolveRelativeURL(enc.URL, feedURL)
 		}
 	}
 
@@ -130,6 +131,58 @@ func extractImageURL(item *gofeed.Item) string {
 
 	re := regexp.MustCompile(`<img[^>]+src="([^">]+)"`)
 	matches := re.FindStringSubmatch(content)
+	if len(matches) > 1 {
+		return resolveRelativeURL(matches[1], feedURL)
+	}
+
+	return ""
+}
+
+// resolveRelativeURL converts a relative URL to an absolute URL based on the feed URL
+// If the URL is already absolute, it returns it as-is
+func resolveRelativeURL(imageURL string, feedURL string) string {
+	if imageURL == "" {
+		return ""
+	}
+
+	// If it's already an absolute URL (http:// or https://), return as-is
+	if strings.HasPrefix(imageURL, "http://") || strings.HasPrefix(imageURL, "https://") {
+		return imageURL
+	}
+
+	// If feed URL is empty, can't resolve relative URLs
+	if feedURL == "" {
+		return imageURL
+	}
+
+	// Parse the feed URL to get the base URL
+	baseURL, err := url.Parse(feedURL)
+	if err != nil {
+		// If we can't parse the feed URL, return the original image URL
+		return imageURL
+	}
+
+	// Parse the image URL (which might be relative)
+	ref, err := url.Parse(imageURL)
+	if err != nil {
+		// If we can't parse the image URL, return the original
+		return imageURL
+	}
+
+	// Resolve the relative URL against the base URL
+	return baseURL.ResolveReference(ref).String()
+}
+
+// ExtractFirstImageURLFromHTML extracts the first image URL from HTML content
+// This is used as a fallback when no image metadata is available in RSS/Atom feeds
+// It's exported so it can be used by FreshRSS sync and other modules
+func ExtractFirstImageURLFromHTML(htmlContent string) string {
+	if htmlContent == "" {
+		return ""
+	}
+
+	re := regexp.MustCompile(`<img[^>]+src="([^">]+)"`)
+	matches := re.FindStringSubmatch(htmlContent)
 	if len(matches) > 1 {
 		return matches[1]
 	}

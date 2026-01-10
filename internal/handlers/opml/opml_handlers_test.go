@@ -35,7 +35,7 @@ func TestHandleOPMLImport_RawBody(t *testing.T) {
 		return db
 	}()
 
-	f := feed.NewFetcher(db, nil)
+	f := feed.NewFetcher(db)
 	h := &corepkg.Handler{DB: db, Fetcher: f}
 
 	req := httptest.NewRequest(http.MethodPost, "/opml/import", strings.NewReader(xmlData))
@@ -78,7 +78,7 @@ func TestHandleOPMLImport_XPathFeed(t *testing.T) {
 		return db
 	}()
 
-	f := feed.NewFetcher(db, nil)
+	f := feed.NewFetcher(db)
 	h := &corepkg.Handler{DB: db, Fetcher: f}
 
 	req := httptest.NewRequest(http.MethodPost, "/opml/import", strings.NewReader(xmlData))

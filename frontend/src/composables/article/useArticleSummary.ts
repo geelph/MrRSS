@@ -109,6 +109,11 @@ export function useArticleSummary() {
           window.showToast(t('aiLimitReached'), 'warning');
         }
 
+        // Show notification if AI failed and fell back to built-in algorithm
+        if (data.used_fallback) {
+          window.showToast(t('aiSummaryFallback'), 'info');
+        }
+
         return data;
       } else {
         // Handle API errors properly

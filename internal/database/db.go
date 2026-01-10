@@ -66,6 +66,11 @@ func (db *DB) Init() error {
 			return
 		}
 
+		// Initialize statistics table
+		if err = InitStatisticsTable(db.DB); err != nil {
+			return
+		}
+
 		// Create settings table if not exists
 		_, _ = db.Exec(`CREATE TABLE IF NOT EXISTS settings (
 			key TEXT PRIMARY KEY,

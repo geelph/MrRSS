@@ -12,6 +12,7 @@ interface Props {
   defaultValue?: string;
   confirmText?: string;
   cancelText?: string;
+  suggestions?: string[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -21,6 +22,7 @@ const props = withDefaults(defineProps<Props>(), {
   defaultValue: '',
   confirmText: undefined,
   cancelText: undefined,
+  suggestions: () => [],
 });
 
 // Use i18n translations if not provided
@@ -88,9 +90,13 @@ function handleKeyDown(e: KeyboardEvent) {
           v-model="inputValue"
           type="text"
           :placeholder="placeholder"
+          :list="suggestions.length > 0 ? 'input-suggestions' : undefined"
           class="input-field w-full text-sm sm:text-base"
           @keydown="handleKeyDown"
         />
+        <datalist v-if="suggestions.length > 0" id="input-suggestions">
+          <option v-for="suggestion in suggestions" :key="suggestion" :value="suggestion" />
+        </datalist>
       </div>
 
       <div

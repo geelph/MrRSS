@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhEyeSlash, PhStar, PhClockCountdown } from '@phosphor-icons/vue';
 import type { Article } from '@/types/models';
@@ -7,6 +7,7 @@ import { formatDate as formatDateUtil } from '@/utils/date';
 import { getProxiedMediaUrl, isMediaCacheEnabled } from '@/utils/mediaProxy';
 import { useShowPreviewImages } from '@/composables/ui/useShowPreviewImages';
 import { useAppStore } from '@/stores/app';
+import { imageCache } from '@/utils/imageCache';
 
 interface Props {
   article: Article;
@@ -26,6 +27,16 @@ const { t, locale } = useI18n();
 const { showPreviewImages } = useShowPreviewImages();
 const store = useAppStore();
 
+// Check if article is from RSSHub feed - O(1) lookup using feedMap
+const isRSSHubArticle = computed(() => {
+  // Early return if no feed_title
+  if (!props.article.feed_title) return false;
+
+  // Use feedMap for O(1) lookup instead of O(n) find/some
+  const feed = store.feedMap.get(props.article.feed_id);
+  return feed?.url.startsWith('rsshub://') || false;
+});
+
 // Translation function wrapper for formatDate
 const formatDateWithI18n = (dateStr: string): string => {
   return formatDateUtil(dateStr, locale.value, t);
@@ -37,19 +48,107 @@ let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const imageUrl = computed(() => {
   if (!props.article.image_url) return '';
-  if (mediaCacheEnabled.value) {
-    return getProxiedMediaUrl(props.article.image_url, props.article.url);
-  }
-  return props.article.image_url;
+
+  const originalUrl = props.article.image_url;
+  const finalUrl = mediaCacheEnabled.value
+    ? getProxiedMediaUrl(props.article.image_url, props.article.url)
+    : originalUrl;
+
+  // Use global cache manager to get the appropriate URL
+  return imageCache.getImageUrl(finalUrl);
 });
 
 const shouldShowImage = computed(() => {
   return showPreviewImages.value && props.article.image_url;
 });
 
+// Track if image has failed to load - use a ref to avoid recomputation
+const imageFailed = ref(false);
+const imageLoading = ref(true);
+// Track if image is in viewport for lazy loading
+const imageInViewport = ref(false);
+const imageContainerRef = ref<HTMLDivElement | null>(null);
+
+// Shared intersection observer for all ArticleItem instances
+let sharedObserver: IntersectionObserver | null = null;
+const observerTargets = new WeakMap<Element, () => void>();
+
+onMounted(() => {
+  // Use IntersectionObserver to load images only when near viewport
+  if ('IntersectionObserver' in window && imageContainerRef.value) {
+    // Create or get shared observer
+    if (!sharedObserver) {
+      sharedObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            const callback = observerTargets.get(entry.target);
+            if (callback && entry.isIntersecting) {
+              callback();
+            }
+          });
+        },
+        {
+          // Start loading when image is 200px away from viewport
+          rootMargin: '200px',
+          // Trigger as soon as any part is visible
+          threshold: 0,
+        }
+      );
+    }
+
+    // Setup callback for this image
+    const callback = () => {
+      imageInViewport.value = true;
+      // Once loaded, stop observing this specific target
+      if (sharedObserver && imageContainerRef.value) {
+        sharedObserver.unobserve(imageContainerRef.value);
+        observerTargets.delete(imageContainerRef.value);
+      }
+    };
+
+    observerTargets.set(imageContainerRef.value, callback);
+    sharedObserver.observe(imageContainerRef.value);
+  } else {
+    // Fallback: always load if IntersectionObserver not available
+    imageInViewport.value = true;
+  }
+
+  // Check media cache setting
+  isMediaCacheEnabled().then((enabled) => {
+    mediaCacheEnabled.value = enabled;
+  });
+});
+
+onBeforeUnmount(() => {
+  if (sharedObserver && imageContainerRef.value) {
+    sharedObserver.unobserve(imageContainerRef.value);
+    observerTargets.delete(imageContainerRef.value);
+  }
+});
+
+function handleImageLoad(event: Event) {
+  const target = event.target as HTMLImageElement;
+  const url = target.src;
+
+  // Mark as loaded in global cache
+  imageCache.markAsLoaded(url);
+  imageLoading.value = false;
+  imageFailed.value = false;
+
+  // Add fade-in animation
+  target.style.opacity = '1';
+}
+
 function handleImageError(event: Event) {
   const target = event.target as HTMLImageElement;
-  target.style.display = 'none';
+  const url = target.src;
+
+  // Mark as failed and stop retrying
+  imageLoading.value = false;
+  imageFailed.value = true;
+
+  // Update cache to mark as permanently failed
+  imageCache.handleLoadError(url);
 }
 
 // Hover mark as read functionality
@@ -129,12 +228,28 @@ onUnmounted(() => {
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
-    <img
-      v-if="shouldShowImage"
-      :src="imageUrl"
-      class="w-16 h-12 sm:w-20 sm:h-[60px] object-cover rounded bg-bg-tertiary shrink-0 border border-border"
-      @error="handleImageError"
-    />
+    <!-- Image placeholder with lazy loading - hidden completely on error -->
+    <div
+      v-if="shouldShowImage && !imageFailed"
+      ref="imageContainerRef"
+      class="article-thumbnail-placeholder"
+    >
+      <img
+        v-if="imageInViewport && imageUrl"
+        :src="imageUrl"
+        :alt="article.title"
+        class="article-thumbnail"
+        :class="{ 'image-loaded': !imageLoading }"
+        decoding="async"
+        @load="handleImageLoad"
+        @error="handleImageError"
+      />
+      <!-- Loading placeholder - only shown while loading -->
+      <div
+        v-if="imageLoading && imageInViewport"
+        class="article-thumbnail article-thumbnail-loading"
+      />
+    </div>
 
     <div class="flex-1 min-w-0">
       <div class="flex items-start gap-1.5 sm:gap-2">
@@ -170,7 +285,7 @@ onUnmounted(() => {
         <span class="font-medium text-accent truncate flex-1 min-w-0 mr-2">
           {{ article.feed_title }}
         </span>
-        <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div class="flex items-center gap-1 sm:gap-2 shrink-0 min-h-[14px] sm:min-h-[18px]">
           <PhClockCountdown
             v-if="article.is_read_later"
             :size="14"
@@ -190,6 +305,14 @@ onUnmounted(() => {
             class="w-3.5 h-3.5 shrink-0 sm:w-4 sm:h-4"
             :title="t('freshRSSSyncedFeed')"
             alt="FreshRSS"
+          />
+          <!-- RSSHub indicator -->
+          <img
+            v-if="isRSSHubArticle"
+            src="/assets/plugin_icons/rsshub.svg"
+            class="w-3.5 h-3.5 shrink-0 sm:w-4 sm:h-4"
+            :title="t('rsshubFeed')"
+            alt="RSSHub"
           />
           <span class="whitespace-nowrap">{{ formatDateWithI18n(article.published_at) }}</span>
         </div>
@@ -244,5 +367,31 @@ onUnmounted(() => {
   -webkit-box-orient: vertical;
   display: -webkit-box;
   overflow: hidden;
+}
+
+.article-thumbnail {
+  @apply w-16 h-12 sm:w-20 sm:h-[60px] object-cover rounded bg-bg-tertiary shrink-0 border border-border;
+  /* Performance optimizations */
+  contain: layout style paint;
+  will-change: auto;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.article-thumbnail.image-loaded {
+  opacity: 1;
+}
+
+.article-thumbnail-placeholder {
+  @apply w-16 h-12 sm:w-20 sm:h-[60px] shrink-0 border border-border rounded overflow-hidden bg-bg-tertiary;
+  /* Prevent layout shift and optimize rendering */
+  contain: layout style;
+  flex-shrink: 0;
+}
+
+.article-thumbnail-loading {
+  @apply w-full h-full bg-bg-tertiary animate-pulse;
+  /* Minimal styling for loading state */
+  contain: layout style;
 }
 </style>

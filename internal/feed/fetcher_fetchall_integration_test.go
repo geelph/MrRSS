@@ -61,7 +61,7 @@ func TestFetchAll_RespectsConcurrency(t *testing.T) {
 		}
 	}
 
-	f := ff.NewFetcher(db, nil)
+	f := ff.NewFetcher(db)
 
 	// Run FetchAll with context
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -108,7 +108,7 @@ func TestFetchAll_RespectsCancellation(t *testing.T) {
 		t.Fatalf("AddFeed: %v", err)
 	}
 
-	f := ff.NewFetcher(db, nil)
+	f := ff.NewFetcher(db)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})

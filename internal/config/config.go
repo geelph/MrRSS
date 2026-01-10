@@ -72,6 +72,9 @@ type Defaults struct {
 	ProxyUsername            string `json:"proxy_username"`
 	RefreshMode              string `json:"refresh_mode"`
 	RetryTimeoutSeconds      int    `json:"retry_timeout_seconds"`
+	RsshubAPIKey             string `json:"rsshub_api_key"`
+	RsshubEnabled            bool   `json:"rsshub_enabled"`
+	RsshubEndpoint           string `json:"rsshub_endpoint"`
 	Rules                    string `json:"rules"`
 	Shortcuts                string `json:"shortcuts"`
 	ShortcutsEnabled         bool   `json:"shortcuts_enabled"`
@@ -218,6 +221,12 @@ func GetString(key string) string {
 		return defaults.RefreshMode
 	case "retry_timeout_seconds":
 		return strconv.Itoa(defaults.RetryTimeoutSeconds)
+	case "rsshub_api_key":
+		return defaults.RsshubAPIKey
+	case "rsshub_enabled":
+		return strconv.FormatBool(defaults.RsshubEnabled)
+	case "rsshub_endpoint":
+		return defaults.RsshubEndpoint
 	case "rules":
 		return defaults.Rules
 	case "shortcuts":

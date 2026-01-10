@@ -29,6 +29,13 @@ export function useSettingsAutoSave(settings: Ref<SettingsData> | (() => Setting
     provider: settingsDefaults.translation_provider,
   });
 
+  // Track previous article display settings to prevent unnecessary refreshes
+  const prevArticleDisplaySettings: Ref<{
+    showHiddenArticles: string;
+  }> = ref({
+    showHiddenArticles: settingsDefaults.show_hidden_articles,
+  });
+
   /**
    * Initialize translation tracking
    */
@@ -38,6 +45,9 @@ export function useSettingsAutoSave(settings: Ref<SettingsData> | (() => Setting
         enabled: settingsRef.value.translation_enabled,
         targetLang: settingsRef.value.target_language,
         provider: settingsRef.value.translation_provider,
+      };
+      prevArticleDisplaySettings.value = {
+        showHiddenArticles: settingsRef.value.show_hidden_articles,
       };
       isInitialLoad = false;
     }, 100);
@@ -112,8 +122,14 @@ export function useSettingsAutoSave(settings: Ref<SettingsData> | (() => Setting
       }
 
       // Refresh articles if show_hidden_articles changed
-      if (settingsRef.value.show_hidden_articles !== undefined) {
+      if (
+        settingsRef.value.show_hidden_articles !==
+        prevArticleDisplaySettings.value.showHiddenArticles
+      ) {
         store.fetchArticles();
+        // Update tracking
+        prevArticleDisplaySettings.value.showHiddenArticles =
+          settingsRef.value.show_hidden_articles;
       }
 
       // Notify about show_article_preview_images change

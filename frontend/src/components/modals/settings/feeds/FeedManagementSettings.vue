@@ -85,11 +85,11 @@ const sortedFeeds = computed(() => {
 
 const isAllSelected = computed(() => {
   if (!store.feeds || store.feeds.length === 0) return false;
-  // Get non-FreshRSS feeds
-  const nonFreshRSSFeeds = store.feeds.filter((f) => !f.is_freshrss_source);
-  if (nonFreshRSSFeeds.length === 0) return false;
-  // Check if all non-FreshRSS feeds are selected
-  return nonFreshRSSFeeds.every((f) => selectedFeeds.value.includes(f.id));
+  // Get non-FreshRSS feeds (RSSHub feeds can be selected)
+  const nonManagedFeeds = store.feeds.filter((f) => !f.is_freshrss_source);
+  if (nonManagedFeeds.length === 0) return false;
+  // Check if all non-managed feeds are selected
+  return nonManagedFeeds.every((f) => selectedFeeds.value.includes(f.id));
 });
 
 function toggleSort(field: SortField) {
@@ -105,7 +105,7 @@ function toggleSelectAll(e: Event) {
   const target = e.target as HTMLInputElement;
   if (!store.feeds) return;
   if (target.checked) {
-    // Select only non-FreshRSS feeds
+    // Select only non-FreshRSS feeds (RSSHub feeds can be selected)
     selectedFeeds.value = store.feeds.filter((f) => !f.is_freshrss_source).map((f) => f.id);
   } else {
     selectedFeeds.value = [];
@@ -158,6 +158,10 @@ function isEmailFeed(feed: Feed): boolean {
 
 function isFreshRSSFeed(feed: Feed): boolean {
   return !!feed.is_freshrss_source;
+}
+
+function isRSSHubFeed(feed: Feed): boolean {
+  return feed.url.startsWith('rsshub://');
 }
 
 async function openScriptsFolder() {
@@ -322,7 +326,9 @@ async function openScriptsFolder() {
             :value="feed.id"
             :disabled="feed.is_freshrss_source"
             class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 rounded border-border text-accent focus:ring-2 focus:ring-accent cursor-pointer"
-            :class="{ 'cursor-not-allowed opacity-50': feed.is_freshrss_source }"
+            :class="{
+              'cursor-not-allowed opacity-50': feed.is_freshrss_source,
+            }"
           />
           <div class="w-4 h-4 flex items-center justify-center shrink-0">
             <img
@@ -347,6 +353,14 @@ async function openScriptsFolder() {
                 class="w-3.5 h-3.5 shrink-0 inline"
                 :title="t('freshRSSSyncedFeed')"
                 alt="FreshRSS"
+              />
+              <!-- RSSHub icon indicator -->
+              <img
+                v-if="isRSSHubFeed(feed)"
+                src="/assets/plugin_icons/rsshub.svg"
+                class="w-3.5 h-3.5 shrink-0 inline"
+                :title="t('rsshubFeed')"
+                alt="RSSHub"
               />
               <PhEyeSlash
                 v-if="feed.hide_from_timeline"
@@ -412,6 +426,13 @@ async function openScriptsFolder() {
                 {{ feed.url }}
               </span>
               <span
+                v-else-if="isRSSHubFeed(feed)"
+                class="inline-flex items-center gap-1 text-info"
+                :title="t('rsshubFeed')"
+              >
+                {{ feed.url }}
+              </span>
+              <span
                 v-else-if="isScriptFeed(feed)"
                 class="inline-flex items-center gap-1"
                 :title="t('customScript')"
@@ -453,7 +474,9 @@ async function openScriptsFolder() {
               class="text-accent hover:bg-bg-tertiary p-1 rounded text-sm"
               :title="feed.is_freshrss_source ? t('freshRSSFeedLocked') : t('edit')"
               :disabled="feed.is_freshrss_source"
-              :class="{ 'cursor-not-allowed opacity-50': feed.is_freshrss_source }"
+              :class="{
+                'cursor-not-allowed opacity-50': feed.is_freshrss_source,
+              }"
               @click="!feed.is_freshrss_source && handleEditFeed(feed)"
             >
               <PhPencil :size="14" class="sm:w-4 sm:h-4" />
@@ -462,7 +485,9 @@ async function openScriptsFolder() {
               class="text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded text-sm"
               :title="feed.is_freshrss_source ? t('freshRSSFeedLocked') : t('delete')"
               :disabled="feed.is_freshrss_source"
-              :class="{ 'cursor-not-allowed opacity-50': feed.is_freshrss_source }"
+              :class="{
+                'cursor-not-allowed opacity-50': feed.is_freshrss_source,
+              }"
               @click="!feed.is_freshrss_source && handleDeleteFeed(feed.id)"
             >
               <PhTrash :size="14" class="sm:w-4 sm:h-4" />

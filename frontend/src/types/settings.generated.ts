@@ -59,6 +59,9 @@ export interface SettingsData {
   proxy_username: string;
   refresh_mode: string;
   retry_timeout_seconds: number;
+  rsshub_api_key: string;
+  rsshub_enabled: boolean;
+  rsshub_endpoint: string;
   rules: string;
   shortcuts: string;
   shortcuts_enabled: boolean;

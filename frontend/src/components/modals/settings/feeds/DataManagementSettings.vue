@@ -36,13 +36,13 @@ function handleCleanupDatabase() {
         class="btn-secondary flex-1 justify-center text-sm sm:text-base"
         @click="handleImportOPML"
       >
-        <PhUpload :size="18" class="sm:w-5 sm:h-5" /> {{ t('importOPML') }}
+        <PhDownload :size="18" class="sm:w-5 sm:h-5" /> {{ t('importOPML') }}
       </button>
       <button
         class="btn-secondary flex-1 justify-center text-sm sm:text-base"
         @click="handleExportOPML"
       >
-        <PhDownload :size="18" class="sm:w-5 sm:h-5" /> {{ t('exportOPML') }}
+        <PhUpload :size="18" class="sm:w-5 sm:h-5" /> {{ t('exportOPML') }}
       </button>
     </div>
     <div class="flex mb-2 sm:mb-3">

@@ -15,6 +15,7 @@ export interface InputDialogOptions {
   defaultValue?: string;
   confirmText?: string;
   cancelText?: string;
+  suggestions?: string[];
 }
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';

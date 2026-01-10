@@ -93,7 +93,9 @@ export function useArticleActions(
       const newState = !article.is_read;
       article.is_read = newState;
       try {
-        await fetch(`/api/articles/read?id=${article.id}&read=${newState}`, { method: 'POST' });
+        await fetch(`/api/articles/read?id=${article.id}&read=${newState}`, {
+          method: 'POST',
+        });
         // Update unread counts after toggling read status
         if (onReadStatusChange) {
           onReadStatusChange();
@@ -161,7 +163,9 @@ export function useArticleActions(
       if (!article.is_read) {
         article.is_read = true;
         try {
-          await fetch(`/api/articles/read?id=${article.id}&read=true`, { method: 'POST' });
+          await fetch(`/api/articles/read?id=${article.id}&read=true`, {
+            method: 'POST',
+          });
           if (onReadStatusChange) {
             onReadStatusChange();
           }

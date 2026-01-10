@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"time"
 
@@ -658,6 +659,28 @@ func (s *BidirectionalSyncService) saveArticlesFromServer(ctx context.Context, a
 				}
 			}
 
+			// Extract and update thumbnail if article doesn't have one but has content
+			if article.Content != "" {
+				// Check if article already has an image URL
+				var existingImageURL string
+				err := s.db.QueryRow("SELECT image_url FROM articles WHERE id = ?", existingArticle.ID).Scan(&existingImageURL)
+				hasImage := err == nil && existingImageURL != ""
+
+				if !hasImage {
+					imageURL := extractImageURLFromHTML(article.Content)
+					if imageURL != "" {
+						// Update the article with the extracted image URL
+						_, err := s.db.Exec("UPDATE articles SET image_url = ? WHERE id = ?", imageURL, existingArticle.ID)
+						if err != nil {
+							log.Printf("Warning: Failed to update image URL for article %s: %v", article.URL, err)
+						} else {
+							log.Printf("Updated image URL for article %s: %s (from FreshRSS)", article.URL, imageURL)
+							updated = true
+						}
+					}
+				}
+			}
+
 			// If the existing article is NOT from FreshRSS but we just updated it,
 			// we should mark it as coming from FreshRSS if it's in a FreshRSS feed
 			if existingArticle.FreshRSSItemID == "" && article.ID != "" {
@@ -671,11 +694,15 @@ func (s *BidirectionalSyncService) saveArticlesFromServer(ctx context.Context, a
 			continue
 		}
 
+		// Extract thumbnail from article content before creating the article
+		imageURL := extractImageURLFromHTML(article.Content)
+
 		// Create new article
 		mrssArticle := &models.Article{
 			FeedID:         feedID,
 			Title:          article.Title,
 			URL:            article.URL,
+			ImageURL:       imageURL,
 			Summary:        "",
 			PublishedAt:    article.Published,
 			IsRead:         isRead,
@@ -990,6 +1017,22 @@ func (s *BidirectionalSyncService) pushPendingItems(ctx context.Context, pending
 // GetPendingCount returns the number of pending sync changes
 func (s *BidirectionalSyncService) GetPendingCount() (int, error) {
 	return s.db.GetPendingSyncCount()
+}
+
+// extractImageURLFromHTML extracts the first image URL from HTML content
+// This is used as a fallback for FreshRSS articles that don't have image metadata
+func extractImageURLFromHTML(htmlContent string) string {
+	if htmlContent == "" {
+		return ""
+	}
+
+	re := regexp.MustCompile(`<img[^>]+src="([^">]+)"`)
+	matches := re.FindStringSubmatch(htmlContent)
+	if len(matches) > 1 {
+		return matches[1]
+	}
+
+	return ""
 }
 
 // GetFailedItems returns items that failed to sync

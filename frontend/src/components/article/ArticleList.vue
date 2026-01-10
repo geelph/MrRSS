@@ -34,6 +34,8 @@ const savedScrollTop = ref(0);
 const showRefreshTooltip = ref(false);
 // Track articles that should be temporarily kept in list even if read
 const temporarilyKeepArticles = ref<Set<number>>(new Set());
+// Flag to control when scroll position should be restored
+const shouldRestoreScroll = ref(false);
 
 interface Props {
   isSidebarOpen?: boolean;
@@ -68,19 +70,29 @@ const { showArticleContextMenu } = useArticleActions(t, defaultViewMode, () =>
   store.fetchUnreadCounts()
 );
 
-// Computed filtered articles
+// Computed filtered articles - optimized to avoid excessive recomputation
 const filteredArticles = computed(() => {
   let articles = activeFilters.value.length > 0 ? filteredArticlesFromServer.value : store.articles;
 
-  // If show only unread is enabled, filter out read articles
-  // but keep articles that are temporarily marked (currently being viewed)
-  if (store.showOnlyUnread) {
+  // Only apply filter if showOnlyUnread is enabled
+  // Using a simpler filter that avoids Set.has() calls when possible
+  if (store.showOnlyUnread && temporarilyKeepArticles.value.size > 0) {
     articles = articles.filter(
       (article) => !article.is_read || temporarilyKeepArticles.value.has(article.id)
     );
+  } else if (store.showOnlyUnread) {
+    // Fast path when no temporarily kept articles
+    articles = articles.filter((article) => !article.is_read);
   }
 
   return articles;
+});
+
+// Virtual rendering: only render visible articles + buffer
+const visibleArticles = computed(() => {
+  // For now, render all articles but could be optimized for virtual scrolling
+  // Keeping it simple to avoid complexity
+  return filteredArticles.value;
 });
 
 // Initialize show preview images setting
@@ -122,28 +134,31 @@ onMounted(async () => {
   window.addEventListener('toggle-filter', onToggleFilter);
 });
 
-// Watch for articles changes to maintain scroll position and re-observe new articles
+// Watch for articles array length changes (list content changes)
 watch(
-  () => store.articles,
+  () => store.articles.length,
   async () => {
-    if (isRefreshing.value && listRef.value) {
-      // Restore scroll position during refresh
-      listRef.value.scrollTop = savedScrollTop.value;
-    } else if (!isRefreshing.value && listRef.value) {
-      // For non-refresh changes (like clicking article to load content),
-      // save and restore scroll position to prevent jumping to top
+    // Only restore scroll position when explicitly needed (e.g., during refresh)
+    if (shouldRestoreScroll.value && listRef.value) {
       const currentScroll = listRef.value.scrollTop;
       await nextTick();
       listRef.value.scrollTop = currentScroll;
+      shouldRestoreScroll.value = false;
     }
+  }
+);
 
+// Watch for articles array changes to re-observe new articles for translation
+// Use shallow watch to avoid triggering on property changes (like is_read)
+watch(
+  () => store.articles,
+  async () => {
     // Re-setup observer to observe newly added articles
     if (translationSettings.value.enabled && listRef.value) {
       await nextTick();
       setupIntersectionObserver(listRef.value, store.articles);
     }
-  },
-  { deep: true }
+  }
 );
 
 // Watch for refresh completion to scroll to top
@@ -153,6 +168,7 @@ watch(
     if (!isRunning && isRefreshing.value) {
       // Refresh completed, scroll to top and reset state
       isRefreshing.value = false;
+      shouldRestoreScroll.value = false; // Disable scroll restoration after refresh
       if (listRef.value) {
         listRef.value.scrollTop = 0;
       }
@@ -160,21 +176,26 @@ watch(
   }
 );
 
-// Watch for filtered articles changes to re-observe new articles
+// Watch for filtered articles length changes to re-observe new articles
+// Changed from deep watch to length watch for better performance
 watch(
-  () => filteredArticlesFromServer.value,
+  () => filteredArticlesFromServer.value.length,
   async () => {
     // Re-setup observer to observe newly added filtered articles
     if (translationSettings.value.enabled && listRef.value) {
       await nextTick();
       setupIntersectionObserver(listRef.value, filteredArticlesFromServer.value);
     }
-  },
-  { deep: true }
+  }
 );
 
 onBeforeUnmount(() => {
   cleanupTranslation();
+  // Clear scroll throttle timer
+  if (scrollThrottleTimer) {
+    clearTimeout(scrollThrottleTimer);
+    scrollThrottleTimer = null;
+  }
   window.removeEventListener(
     'translation-settings-changed',
     onTranslationSettingsChanged as EventListener
@@ -244,14 +265,6 @@ function onRefreshTooltipHide(): void {
 
 // Article selection and interaction
 function selectArticle(article: Article): void {
-  // If clicking the same article, close the detail view
-  if (store.currentArticleId === article.id) {
-    store.currentArticleId = null;
-    // Remove from temporarily keep list when closing
-    temporarilyKeepArticles.value.delete(article.id);
-    return;
-  }
-
   // Reset user preference when selecting article via normal click
   window.dispatchEvent(new CustomEvent('reset-user-view-preference'));
 
@@ -275,17 +288,30 @@ function selectArticle(article: Article): void {
   }
 }
 
-// Scrolling handler
+// Scrolling handler with throttling to improve performance
+let scrollThrottleTimer: ReturnType<typeof setTimeout> | null = null;
+const SCROLL_THROTTLE_DELAY = 200; // 200ms throttle
+const SCROLL_THRESHOLD = 400; // Increased from 200 to 400 for better UX
+
 function handleScroll(e: Event): void {
-  const target = e.target as HTMLElement;
-  const { scrollTop, clientHeight, scrollHeight } = target;
-  if (scrollTop + clientHeight >= scrollHeight - 200) {
-    if (activeFilters.value.length > 0) {
-      loadMoreFilteredArticles();
-    } else {
-      store.loadMore();
+  // Throttle scroll events to improve performance
+  if (scrollThrottleTimer) return;
+
+  scrollThrottleTimer = setTimeout(() => {
+    scrollThrottleTimer = null;
+
+    const target = e.target as HTMLElement;
+    const { scrollTop, clientHeight, scrollHeight } = target;
+
+    // Load more when user is within threshold distance from bottom
+    if (scrollTop + clientHeight >= scrollHeight - SCROLL_THRESHOLD) {
+      if (activeFilters.value.length > 0) {
+        loadMoreFilteredArticles();
+      } else {
+        store.loadMore();
+      }
     }
-  }
+  }, SCROLL_THROTTLE_DELAY);
 }
 
 // Filter handlers
@@ -294,8 +320,10 @@ async function handleApplyFilters(filters: typeof activeFilters.value): Promise<
   if (filters.length === 0) {
     resetFilterState();
     store.page = 1;
+    shouldRestoreScroll.value = false; // Don't restore scroll when clearing filters
     await store.fetchArticles(false);
   } else {
+    shouldRestoreScroll.value = false; // Don't restore scroll when applying filters
     await fetchFilteredArticles(filters, false);
   }
 }
@@ -307,6 +335,7 @@ async function refreshArticles(): Promise<void> {
     savedScrollTop.value = listRef.value.scrollTop;
   }
   isRefreshing.value = true;
+  shouldRestoreScroll.value = true; // Enable scroll restoration during refresh
 
   await store.refreshFeeds();
   // Note: Scrolling to top is now handled by the watch on refreshProgress.isRunning
@@ -561,7 +590,7 @@ function handleHoverMarkAsRead(articleId: number): void {
       </div>
     </div>
 
-    <div ref="listRef" class="flex-1 overflow-y-scroll" @scroll="handleScroll">
+    <div ref="listRef" class="flex-1 overflow-y-scroll article-list-scroll" @scroll="handleScroll">
       <div
         v-if="filteredArticles.length === 0 && !store.isLoading && !isFilterLoading"
         class="p-4 sm:p-5 text-center text-text-secondary text-sm sm:text-base"
@@ -569,16 +598,19 @@ function handleHoverMarkAsRead(articleId: number): void {
         {{ t('noArticles') }}
       </div>
 
-      <ArticleItem
-        v-for="article in filteredArticles"
-        :key="article.id"
-        :article="article"
-        :is-active="store.currentArticleId === article.id"
-        @click="selectArticle(article)"
-        @contextmenu="(e) => showArticleContextMenu(e, article)"
-        @observe-element="observeArticle"
-        @hover-mark-as-read="handleHoverMarkAsRead"
-      />
+      <!-- Article list with content-visibility for performance -->
+      <div class="article-list-container">
+        <ArticleItem
+          v-for="article in visibleArticles"
+          :key="article.id"
+          :article="article"
+          :is-active="store.currentArticleId === article.id"
+          @click="selectArticle(article)"
+          @contextmenu="(e) => showArticleContextMenu(e, article)"
+          @observe-element="observeArticle"
+          @hover-mark-as-read="handleHoverMarkAsRead"
+        />
+      </div>
 
       <div
         v-if="store.isLoading || isFilterLoading"
@@ -623,5 +655,44 @@ function handleHoverMarkAsRead(articleId: number): void {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Performance optimization: content-visibility for article list */
+.article-list-container {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 200px;
+}
+
+/* Optimize scrolling performance */
+.article-list-scroll {
+  /* Enable GPU acceleration for smooth scrolling */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  /* Optimize scroll performance */
+  overflow-anchor: none;
+  /* Smooth scrolling behavior */
+  scroll-behavior: auto;
+}
+
+.article-list {
+  /* Enable GPU acceleration for smooth scrolling */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Optimize article card rendering */
+.article-card {
+  /* Only use will-change when actually animating */
+  will-change: auto;
+  /* Isolate compositing layers for better performance */
+  contain: layout style paint;
+  /* Smooth hover transitions */
+  transition: background-color 0.15s ease;
+}
+
+.article-card:hover {
+  /* Enable GPU acceleration during hover */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 </style>

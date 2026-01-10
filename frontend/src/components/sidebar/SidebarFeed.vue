@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import {
   PhWarningCircle,
   PhEyeSlash,
@@ -28,12 +29,55 @@ const emit = defineEmits<{
   dragend: [];
 }>();
 
+const showErrorTooltip = ref(false);
+
+function getFriendlyErrorMessage(error: string): string {
+  if (!error) return '';
+
+  // Network related errors
+  if (error.includes('timeout') || error.includes('Timeout')) {
+    return t('feedErrorTimeout');
+  }
+  if (error.includes('connection') || error.includes('Connection')) {
+    return t('feedErrorConnection');
+  }
+  if (error.includes('dns') || error.includes('DNS')) {
+    return t('feedErrorDNS');
+  }
+  if (error.includes('certificate') || error.includes('SSL') || error.includes('TLS')) {
+    return t('feedErrorCertificate');
+  }
+
+  // HTTP errors
+  if (error.includes('404')) {
+    return t('feedErrorNotFound');
+  }
+  if (error.includes('401') || error.includes('403')) {
+    return t('feedErrorUnauthorized');
+  }
+  if (error.includes('500') || error.includes('502') || error.includes('503')) {
+    return t('feedErrorServer');
+  }
+
+  // Feed format errors
+  if (error.includes('XML') || error.includes('parse') || error.includes('invalid')) {
+    return t('feedErrorInvalidFormat');
+  }
+
+  // Return original error if no specific message found
+  return error;
+}
+
 function getFavicon(url: string): string {
   try {
     return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}`;
   } catch {
     return '';
   }
+}
+
+function isRSSHubFeed(feed: Feed): boolean {
+  return feed.url.startsWith('rsshub://');
 }
 
 function handleDragStart(event: Event) {
@@ -82,6 +126,15 @@ function handleDragEnd() {
       />
     </div>
     <span class="truncate flex-1">{{ feed.title }}</span>
+
+    <!-- RSSHub indicator -->
+    <img
+      v-if="isRSSHubFeed(feed)"
+      src="/assets/plugin_icons/rsshub.svg"
+      class="w-3.5 h-3.5 shrink-0"
+      :title="t('rsshubFeed')"
+      alt="RSSHub"
+    />
     <PhImage
       v-if="feed.is_image_mode"
       :size="16"
@@ -94,12 +147,46 @@ function handleDragEnd() {
       class="text-text-secondary shrink-0"
       :title="t('hideFromTimeline')"
     />
-    <PhWarningCircle
+
+    <!-- Warning icon with tooltip -->
+    <div
       v-if="feed.last_error"
-      :size="16"
-      class="text-yellow-500 shrink-0"
-      :title="feed.last_error"
-    />
+      class="relative shrink-0"
+      @mouseenter="showErrorTooltip = true"
+      @mouseleave="showErrorTooltip = false"
+    >
+      <PhWarningCircle :size="16" class="text-yellow-500 shrink-0" />
+
+      <!-- Error tooltip -->
+      <Transition
+        enter-active-class="transition ease-out duration-200"
+        enter-from-class="opacity-0 scale-95"
+        enter-to-class="opacity-100 scale-100"
+        leave-active-class="transition ease-in duration-150"
+        leave-from-class="opacity-100 scale-100"
+        leave-to-class="opacity-0 scale-95"
+      >
+        <div
+          v-if="showErrorTooltip"
+          class="absolute right-0 top-full mt-2 z-50 w-max max-w-[180px] bg-bg-secondary rounded-lg shadow-xl"
+        >
+          <div class="px-2.5 py-2">
+            <div class="flex items-start gap-2">
+              <PhWarningCircle :size="14" class="text-yellow-500 shrink-0 mt-0.5" />
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-semibold text-text-primary mb-1">
+                  {{ t('updateFailed') }}
+                </div>
+                <div class="text-xs text-text-secondary break-words leading-relaxed">
+                  {{ getFriendlyErrorMessage(feed.last_error) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </div>
+
     <span v-if="unreadCount > 0" class="unread-badge">{{ unreadCount }}</span>
   </div>
 </template>

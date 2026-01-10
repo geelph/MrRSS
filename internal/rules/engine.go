@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"regexp"
@@ -8,8 +9,42 @@ import (
 	"time"
 
 	"MrRSS/internal/database"
+	"MrRSS/internal/freshrss"
 	"MrRSS/internal/models"
+	"MrRSS/internal/rsshub"
 )
+
+// getFeedType returns the type code of a feed
+// Possible values: "regular", "freshrss", "rsshub", "script", "xpath", "email"
+func getFeedType(feed *models.Feed) string {
+	// Check FreshRSS
+	if feed.IsFreshRSSSource {
+		return "freshrss"
+	}
+
+	// Check RSSHub
+	if rsshub.IsRSSHubURL(feed.URL) {
+		return "rsshub"
+	}
+
+	// Check custom script
+	if feed.ScriptPath != "" {
+		return "script"
+	}
+
+	// Check email
+	if feed.Type == "email" {
+		return "email"
+	}
+
+	// Check XPath
+	if feed.Type == "HTML+XPath" || feed.Type == "XML+XPath" {
+		return "xpath"
+	}
+
+	// Default: regular RSS/Atom feed
+	return "regular"
+}
 
 // Condition represents a condition in a rule
 type Condition struct {
@@ -28,7 +63,8 @@ type Rule struct {
 	Name       string      `json:"name"`
 	Enabled    bool        `json:"enabled"`
 	Conditions []Condition `json:"conditions"`
-	Actions    []string    `json:"actions"` // "favorite", "unfavorite", "hide", "unhide", "mark_read", "mark_unread"
+	Actions    []string    `json:"actions"`  // "favorite", "unfavorite", "hide", "unhide", "mark_read", "mark_unread"
+	Position   int         `json:"position"` // Execution order (0 = first)
 }
 
 // Engine handles rule application
@@ -57,6 +93,10 @@ func (e *Engine) ApplyRulesToArticles(articles []models.Article) (int, error) {
 		return 0, err
 	}
 
+	// Sort rules by position (ascending) to ensure execution order
+	// Rules without a position field (backward compatibility) are treated as position 0
+	sortRulesByPosition(rules)
+
 	// Get feeds for category and title lookup
 	feeds, err := e.db.GetFeeds()
 	if err != nil {
@@ -73,7 +113,7 @@ func (e *Engine) ApplyRulesToArticles(articles []models.Article) (int, error) {
 	for _, feed := range feeds {
 		feedCategories[feed.ID] = feed.Category
 		feedTitles[feed.ID] = feed.Title
-		feedTypes[feed.ID] = feed.Type
+		feedTypes[feed.ID] = getFeedType(&feed)
 		feedIsImageMode[feed.ID] = feed.IsImageMode
 		feedIsFreshRSS[feed.ID] = feed.IsFreshRSSSource
 	}
@@ -129,7 +169,7 @@ func (e *Engine) ApplyRule(rule Rule) (int, error) {
 	for _, feed := range feeds {
 		feedCategories[feed.ID] = feed.Category
 		feedTitles[feed.ID] = feed.Title
-		feedTypes[feed.ID] = feed.Type
+		feedTypes[feed.ID] = getFeedType(&feed)
 		feedIsImageMode[feed.ID] = feed.IsImageMode
 		feedIsFreshRSS[feed.ID] = feed.IsFreshRSSSource
 	}
@@ -316,27 +356,88 @@ func matchMultiSelect(fieldValue string, values []string, singleValue string) bo
 	return true
 }
 
-// applyAction applies an action to an article
+// applyAction applies an action to an article with FreshRSS sync if enabled
 func (e *Engine) applyAction(articleID int64, action string) error {
+	var syncReq *database.SyncRequest
+	var err error
+
+	// Apply the action and get sync request if applicable
 	switch action {
 	case "favorite":
-		return e.db.SetArticleFavorite(articleID, true)
+		syncReq, err = e.db.SetArticleFavoriteWithSync(articleID, true)
 	case "unfavorite":
-		return e.db.SetArticleFavorite(articleID, false)
+		syncReq, err = e.db.SetArticleFavoriteWithSync(articleID, false)
 	case "hide":
-		return e.db.SetArticleHidden(articleID, true)
+		err = e.db.SetArticleHidden(articleID, true)
 	case "unhide":
-		return e.db.SetArticleHidden(articleID, false)
+		err = e.db.SetArticleHidden(articleID, false)
 	case "mark_read":
-		return e.db.MarkArticleRead(articleID, true)
+		syncReq, err = e.db.MarkArticleReadWithSync(articleID, true)
 	case "mark_unread":
-		return e.db.MarkArticleRead(articleID, false)
+		syncReq, err = e.db.MarkArticleReadWithSync(articleID, false)
 	case "read_later":
-		return e.db.SetArticleReadLater(articleID, true)
+		err = e.db.SetArticleReadLater(articleID, true)
 	case "remove_read_later":
-		return e.db.SetArticleReadLater(articleID, false)
+		err = e.db.SetArticleReadLater(articleID, false)
 	default:
 		log.Printf("Unknown action: %s", action)
 		return nil
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Perform immediate sync to FreshRSS if needed
+	if syncReq != nil {
+		go e.performImmediateSync(syncReq)
+	}
+
+	return nil
+}
+
+// performImmediateSync performs an immediate sync to FreshRSS in a background goroutine
+func (e *Engine) performImmediateSync(syncReq *database.SyncRequest) {
+	// Check if FreshRSS is enabled and configured
+	enabled, _ := e.db.GetSetting("freshrss_enabled")
+	if enabled != "true" {
+		return
+	}
+
+	serverURL, username, password, err := e.db.GetFreshRSSConfig()
+	if err != nil || serverURL == "" || username == "" || password == "" {
+		log.Printf("[Rule Sync] FreshRSS not configured, skipping sync")
+		return
+	}
+
+	// Create sync service
+	syncService := freshrss.NewBidirectionalSyncService(serverURL, username, password, e.db)
+
+	// Perform immediate sync
+	ctx := context.Background()
+	err = syncService.SyncArticleStatus(ctx, syncReq.ArticleID, syncReq.ArticleURL, syncReq.Action)
+	if err != nil {
+		log.Printf("[Rule Sync] Failed for article %d: %v", syncReq.ArticleID, err)
+		// Enqueue for retry during next global sync
+		_ = e.db.EnqueueSyncChange(syncReq.ArticleID, syncReq.ArticleURL, syncReq.Action)
+		log.Printf("[Rule Sync] Enqueued article %d for retry", syncReq.ArticleID)
+	} else {
+		log.Printf("[Rule Sync] Success for article %d: %s", syncReq.ArticleID, syncReq.Action)
+	}
+}
+
+// sortRulesByPosition sorts rules by their position field in ascending order
+func sortRulesByPosition(rules []Rule) {
+	// Use the built-in sort package with a custom comparator
+	for i := 0; i < len(rules); i++ {
+		for j := i + 1; j < len(rules); j++ {
+			// Compare positions, defaulting to 0 for backward compatibility
+			posI := rules[i].Position
+			posJ := rules[j].Position
+			if posI > posJ {
+				// Swap
+				rules[i], rules[j] = rules[j], rules[i]
+			}
+		}
 	}
 }

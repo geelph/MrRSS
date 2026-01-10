@@ -78,7 +78,7 @@ func TestHandleSummarizeArticle_Success(t *testing.T) {
 	}
 
 	// Create a fetcher and replace its parser with a mock that returns the article content
-	f := feed.NewFetcher(db, nil)
+	f := feed.NewFetcher(db)
 	// fp is unexported; inject via reflection+unsafe for testing
 	mock := &mockParser{items: []*gofeed.Item{{Link: art.URL, Content: "This is a test content. It has multiple sentences. Useful for summarization."}}}
 	rv := reflect.ValueOf(f).Elem()

@@ -306,6 +306,40 @@ func TestExtractImageURLWithMediaRSS(t *testing.T) {
 			expected: "https://example.com/html-image.jpg",
 		},
 		{
+			name: "Relative URL in item.Image",
+			item: &gofeed.Item{
+				Image: &gofeed.Image{
+					URL: "/assets/post/images/test.svg",
+				},
+			},
+			expected: "https://example.com/assets/post/images/test.svg",
+		},
+		{
+			name: "Relative URL in description",
+			item: &gofeed.Item{
+				Description: `<p>Some text</p><img src="/images/relative.jpg" alt="test">`,
+			},
+			expected: "https://example.com/images/relative.jpg",
+		},
+		{
+			name: "Relative URL with path in item.Image",
+			item: &gofeed.Item{
+				Image: &gofeed.Image{
+					URL: "images/test.png",
+				},
+			},
+			expected: "https://example.com/images/test.png",
+		},
+		{
+			name: "Absolute URL remains unchanged",
+			item: &gofeed.Item{
+				Image: &gofeed.Image{
+					URL: "https://cdn.example.com/image.jpg",
+				},
+			},
+			expected: "https://cdn.example.com/image.jpg",
+		},
+		{
 			name:     "No image available",
 			item:     &gofeed.Item{},
 			expected: "",
@@ -314,7 +348,7 @@ func TestExtractImageURLWithMediaRSS(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := extractImageURL(tt.item)
+			result := extractImageURL(tt.item, "https://example.com/feed.xml")
 			if result != tt.expected {
 				t.Errorf("extractImageURL() = %v, want %v", result, tt.expected)
 			}

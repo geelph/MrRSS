@@ -538,16 +538,3 @@ func (db *DB) GetArticleIDByUniqueID(title string, feedID int64, publishedAt tim
 	}
 	return id, nil
 }
-
-// GetArticleIDByURL retrieves an article's ID by its URL.
-// Note: This is deprecated in favor of GetArticleIDByUniqueID for new code,
-// but kept for backward compatibility.
-func (db *DB) GetArticleIDByURL(url string) (int64, error) {
-	db.WaitForReady()
-	var id int64
-	err := db.QueryRow("SELECT id FROM articles WHERE url = ?", url).Scan(&id)
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
-}

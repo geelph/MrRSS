@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"MrRSS/internal/ai"
 )
 
 type rtFunc func(*http.Request) (*http.Response, error)
@@ -67,11 +69,19 @@ func TestAITranslate_SuccessAndEmpty(t *testing.T) {
 		t.Fatalf("expected empty translate for empty input, got %q err=%v", out, err)
 	}
 
-	// Mock AI response
-	t1.client = &http.Client{Transport: rtFunc(func(req *http.Request) (*http.Response, error) {
+	// Mock AI response with custom HTTP client
+	testHTTPClient := &http.Client{Transport: rtFunc(func(req *http.Request) (*http.Response, error) {
 		body := `{"choices":[{"message":{"content":"Bonjour"}}]}`
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: http.Header{"Content-Type": {"application/json"}}}, nil
 	}), Timeout: 5 * time.Second}
+
+	// Re-create AI client with custom HTTP client
+	t1.client = ai.NewClientWithHTTPClient(ai.ClientConfig{
+		APIKey:   "apikey",
+		Endpoint: "https://api.test",
+		Model:    "m1",
+		Timeout:  5 * time.Second,
+	}, testHTTPClient)
 
 	out2, err := t1.Translate("Hello", "fr")
 	if err != nil {
@@ -87,7 +97,7 @@ func TestAITranslate_AutoDetectOllama(t *testing.T) {
 
 	// Mock Ollama response (first try OpenAI format, which should fail, then try Ollama format)
 	callCount := 0
-	t1.client = &http.Client{Transport: rtFunc(func(req *http.Request) (*http.Response, error) {
+	testHTTPClient := &http.Client{Transport: rtFunc(func(req *http.Request) (*http.Response, error) {
 		callCount++
 		if callCount == 1 {
 			// First call - OpenAI format fails
@@ -97,6 +107,14 @@ func TestAITranslate_AutoDetectOllama(t *testing.T) {
 		body := `{"response":"Bonjour","done":true}`
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(body)), Header: http.Header{"Content-Type": {"application/json"}}}, nil
 	}), Timeout: 5 * time.Second}
+
+	// Re-create AI client with custom HTTP client
+	t1.client = ai.NewClientWithHTTPClient(ai.ClientConfig{
+		APIKey:   "",
+		Endpoint: "http://localhost:11434/api/generate",
+		Model:    "llama3.2:1b",
+		Timeout:  5 * time.Second,
+	}, testHTTPClient)
 
 	out, err := t1.Translate("Hello", "fr")
 	if err != nil {

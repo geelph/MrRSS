@@ -168,49 +168,35 @@ async function loadSettings() {
 // Translate text using the API
 async function translateText(text: string): Promise<{ text: string; html: string }> {
   if (!text || !translationEnabled.value) {
-    console.log('[translateText] Skipping translation:', {
-      hasText: !!text,
-      enabled: translationEnabled.value,
-    });
     return { text: '', html: '' };
   }
 
-  console.log('[translateText] Starting translation:', {
-    textLength: text.length,
-    targetLanguage: targetLanguage.value,
-  });
+  const requestBody = {
+    text: text,
+    target_language: targetLanguage.value,
+  };
 
   try {
     const res = await fetch('/api/articles/translate-text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: text,
-        target_language: targetLanguage.value,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (res.ok) {
       const data = await res.json();
-      console.log('[translateText] Translation successful:', {
-        translatedLength: data.translated_text?.length || 0,
-        htmlLength: data.html?.length || 0,
-      });
       return {
         text: data.translated_text || '',
         html: data.html || '',
       };
     } else {
-      console.error('[translateText] API error:', res.status);
-      const errorText = await res.text();
-      console.error('[translateText] Error response:', errorText);
+      console.error('Translation API error:', res.status);
       window.showToast(t('errorTranslatingContent'), 'error');
     }
   } catch (e) {
-    console.error('[translateText] Network error:', e);
+    console.error('Translation network error:', e);
     window.showToast(t('errorTranslating'), 'error');
   }
-  console.log('[translateText] Translation failed, returning empty strings');
   return { text: '', html: '' };
 }
 
@@ -314,7 +300,9 @@ async function translateTitle(article: Article) {
 
 // Translate content paragraphs while preserving inline elements (formulas, code, images)
 async function translateContentParagraphs(content: string) {
-  if (!translationEnabled.value || !content) return;
+  if (!translationEnabled.value || !content) {
+    return;
+  }
 
   // Prevent duplicate translations for the same article
   if (lastTranslatedArticleId.value === props.article?.id) {
@@ -595,13 +583,42 @@ watch(
   }
 );
 
-// Watch for content loading completion only
+// Watch for article content changes to trigger translation
+// This handles both cases:
+// 1. Content is loaded from cache (isLoadingContent never changes)
+// 2. Content is fetched and becomes available
 watch(
-  () => props.isLoadingContent,
-  async (isLoading, wasLoading) => {
-    if (wasLoading && !isLoading && props.article) {
-      // Enhance rendering first (math formulas, etc.)
+  () => [props.article?.id, props.articleContent, translationEnabled.value] as const,
+  async (newValue, oldValue) => {
+    const [newArticleId, newContent, newTranslationEnabled] = newValue || [
+      undefined,
+      undefined,
+      false,
+    ];
+    const [oldArticleId, oldContent, oldTranslationEnabled] = oldValue || [
+      undefined,
+      undefined,
+      false,
+    ];
+
+    // Trigger when:
+    // 1. Article changes AND content is present
+    // 2. Same article but content changes (from empty to loaded) AND translation is enabled
+    // 3. Translation setting changes from false to true AND content is present
+    const articleChanged = newArticleId !== oldArticleId;
+    const contentJustLoaded =
+      newArticleId && oldContent === '' && newContent && newContent !== oldContent;
+    const translationJustEnabled =
+      oldTranslationEnabled === false && newTranslationEnabled === true;
+
+    const shouldTrigger =
+      newContent && newArticleId && (articleChanged || contentJustLoaded || translationJustEnabled);
+
+    if (shouldTrigger) {
+      // Wait for DOM to update with the new content
       await nextTick();
+
+      // Enhance rendering first (math formulas, etc.)
       enhanceRendering('.prose-content');
 
       // Re-attach image event listeners after rendering enhancements
@@ -612,38 +629,24 @@ watch(
         setTimeout(() => fetchFullArticle(), 200);
       }
 
-      // Delay summary generation to prioritize content display
+      // Generate summary if needed
       if (shouldAutoGenerateSummary()) {
         setTimeout(() => generateSummary(props.article), 100);
       }
-      if (translationEnabled.value && lastTranslatedArticleId.value !== props.article.id) {
+
+      // Translate content if enabled
+      if (newTranslationEnabled && lastTranslatedArticleId.value !== newArticleId) {
         await nextTick();
-        translateContentParagraphs(props.articleContent);
+        translateContentParagraphs(newContent);
       }
     }
-  }
+  },
+  { immediate: true } // Run immediately on component mount
 );
 
 onMounted(async () => {
   await loadSettings();
   if (props.article) {
-    // Enhance rendering if content is already loaded
-    if (props.articleContent && !props.isLoadingContent) {
-      await nextTick();
-      enhanceRendering('.prose-content');
-      // Re-attach image event listeners after rendering
-      await reattachImageInteractions();
-
-      // Auto-fetch full article if setting is enabled and content is already loaded
-      if (
-        shouldAutoExpandContent.value &&
-        !fullArticleContent.value &&
-        !isFetchingFullArticle.value
-      ) {
-        setTimeout(() => fetchFullArticle(), 200);
-      }
-    }
-
     // Check for cached summary first
     if (props.article.summary && props.article.summary.trim() !== '') {
       // Load the cached summary by calling API to get HTML
@@ -658,11 +661,26 @@ onMounted(async () => {
       setTimeout(() => generateSummary(props.article), 100);
     }
 
+    // Translate title
     if (translationEnabled.value) {
       translateTitle(props.article);
-      if (props.articleContent && !props.isLoadingContent) {
-        await nextTick();
-        translateContentParagraphs(props.articleContent);
+    }
+    // Content translation is handled by the watch on [article.id, articleContent]
+
+    // Enhance rendering if content is already loaded
+    if (props.articleContent && !props.isLoadingContent) {
+      await nextTick();
+      enhanceRendering('.prose-content');
+      // Re-attach image event listeners after rendering
+      await reattachImageInteractions();
+
+      // Auto-fetch full article if setting is enabled and content is already loaded
+      if (
+        shouldAutoExpandContent.value &&
+        !fullArticleContent.value &&
+        !isFetchingFullArticle.value
+      ) {
+        setTimeout(() => fetchFullArticle(), 200);
       }
     }
   }
@@ -680,6 +698,17 @@ watch(
   },
   { immediate: true }
 );
+
+// Watch for full article content changes and reattach event listeners
+// This is necessary because displayContent uses fullArticleContent when available,
+// but the watch above only monitors props.articleContent
+watch(fullArticleContent, async (content) => {
+  if (content) {
+    // Wait for v-html to update the DOM before attaching event listeners
+    await nextTick();
+    await reattachImageInteractions();
+  }
+});
 
 // Clean up event listeners
 onBeforeUnmount(() => {

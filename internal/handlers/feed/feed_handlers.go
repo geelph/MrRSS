@@ -7,9 +7,18 @@ import (
 	"strconv"
 
 	"MrRSS/internal/handlers/core"
+	"MrRSS/internal/rsshub"
 )
 
 // HandleFeeds returns all feeds.
+// @Summary      Get all feeds
+// @Description  Retrieve all RSS feed subscriptions (passwords are cleared)
+// @Tags         feeds
+// @Accept       json
+// @Produce      json
+// @Success      200  {array}   models.Feed  "List of feeds"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Router       /feeds [get]
 func HandleFeeds(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 	feeds, err := h.DB.GetFeeds()
 	if err != nil {
@@ -26,6 +35,17 @@ func HandleFeeds(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleAddFeed adds a new feed subscription and immediately fetches its articles.
+// @Summary      Add a new feed
+// @Description  Add a new RSS/Atom/Email/Script/XPath feed subscription
+// @Tags         feeds
+// @Accept       json
+// @Produce      json
+// @Param        request  body      object  true  "Feed details"
+// @Success      200  {string}  string  "Feed added successfully"
+// @Failure      400  {object}  map[string]string  "Bad request"
+// @Failure      409  {object}  map[string]string  "Feed URL already exists"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Router       /feeds/add [post]
 func HandleAddFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		URL              string `json:"url"`
@@ -64,8 +84,25 @@ func HandleAddFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Determine the feed URL to check for duplicates
+	feedURL := req.URL
+	if req.ScriptPath != "" {
+		feedURL = "script://" + req.ScriptPath
+	} else if req.Type == "email" {
+		feedURL = "email://" + req.EmailAddress
+	}
+
+	// Check if feed with this URL already exists (excluding FreshRSS feeds)
+	var existingID int64
+	var existingIsFreshRSS bool
+	err := h.DB.QueryRow("SELECT id, is_freshrss_source FROM feeds WHERE url = ?", feedURL).Scan(&existingID, &existingIsFreshRSS)
+	if err == nil && !existingIsFreshRSS {
+		// Feed exists and is not a FreshRSS feed - return conflict error
+		http.Error(w, "feed with this URL already exists", http.StatusConflict)
+		return
+	}
+
 	var feedID int64
-	var err error
 	if req.ScriptPath != "" {
 		// Add feed using custom script
 		feedID, err = h.Fetcher.AddScriptSubscription(req.ScriptPath, req.Category, req.Title)
@@ -112,6 +149,15 @@ func HandleAddFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleDeleteFeed deletes a feed subscription.
+// @Summary      Delete a feed
+// @Description  Delete a feed subscription by ID
+// @Tags         feeds
+// @Accept       json
+// @Produce      json
+// @Param        id   query      int64  true  "Feed ID"
+// @Success      200  {string}  string  "Feed deleted successfully"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Router       /feeds/delete [post]
 func HandleDeleteFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	id, _ := strconv.ParseInt(idStr, 10, 64)
@@ -123,6 +169,17 @@ func HandleDeleteFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleUpdateFeed updates a feed's properties.
+// @Summary      Update a feed
+// @Description  Update properties of an existing feed subscription
+// @Tags         feeds
+// @Accept       json
+// @Produce      json
+// @Param        request  body      object  true  "Feed update details"
+// @Success      200  {string}  string  "Feed updated successfully"
+// @Failure      400  {object}  map[string]string  "Bad request"
+// @Failure      409  {object}  map[string]string  "Feed URL already exists"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Router       /feeds/update [post]
 func HandleUpdateFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ID               int64  `json:"id"`
@@ -162,6 +219,50 @@ func HandleUpdateFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate RSSHub URL if provided
+	if req.URL != "" && rsshub.IsRSSHubURL(req.URL) {
+		// Check if RSSHub is enabled
+		enabledStr, _ := h.DB.GetSetting("rsshub_enabled")
+		if enabledStr != "true" {
+			http.Error(w, "RSSHub integration is disabled. Please enable it in settings", http.StatusBadRequest)
+			return
+		}
+
+		endpoint, _ := h.DB.GetSetting("rsshub_endpoint")
+		if endpoint == "" {
+			endpoint = "https://rsshub.app"
+		}
+		apiKey, _ := h.DB.GetEncryptedSetting("rsshub_api_key")
+
+		// Skip validation if API key is empty (public rsshub.app instance with Cloudflare protection)
+		if apiKey != "" {
+			route := rsshub.ExtractRoute(req.URL)
+			client := rsshub.NewClient(endpoint, apiKey)
+			if err := client.ValidateRoute(route); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
+	// Determine the feed URL to check for duplicates
+	feedURL := req.URL
+	if req.ScriptPath != "" {
+		feedURL = "script://" + req.ScriptPath
+	} else if req.Type == "email" {
+		feedURL = "email://" + req.EmailAddress
+	}
+
+	// Check if another feed with this URL already exists (excluding FreshRSS feeds and current feed)
+	var existingID int64
+	var existingIsFreshRSS bool
+	err := h.DB.QueryRow("SELECT id, is_freshrss_source FROM feeds WHERE url = ? AND id != ?", feedURL, req.ID).Scan(&existingID, &existingIsFreshRSS)
+	if err == nil && !existingIsFreshRSS {
+		// Another feed exists with this URL and is not a FreshRSS feed - return conflict error
+		http.Error(w, "feed with this URL already exists", http.StatusConflict)
+		return
+	}
+
 	if err := h.DB.UpdateFeed(req.ID, req.Title, req.URL, req.Category, req.ScriptPath, req.HideFromTimeline, req.ProxyURL, req.ProxyEnabled, req.RefreshInterval, req.IsImageMode, req.Type, req.XPathItem, req.XPathItemTitle, req.XPathItemContent, req.XPathItemUri, req.XPathItemAuthor, req.XPathItemTimestamp, req.XPathItemTimeFormat, req.XPathItemThumbnail, req.XPathItemCategories, req.XPathItemUid, req.ArticleViewMode, req.AutoExpandContent, req.EmailAddress, req.EmailIMAPServer, req.EmailUsername, req.EmailPassword, req.EmailFolder, req.EmailIMAPPort); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -170,6 +271,16 @@ func HandleUpdateFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleRefreshFeed refreshes a single feed by ID with progress tracking.
+// @Summary      Refresh a single feed
+// @Description  Trigger a refresh for a specific feed (runs in background with progress tracking)
+// @Tags         feeds
+// @Accept       json
+// @Produce      json
+// @Param        id   query     int64   true  "Feed ID"
+// @Success      200  {string}  string  "Feed refresh started successfully"
+// @Failure      400  {object}  map[string]string  "Bad request (invalid feed ID)"
+// @Failure      404  {object}  map[string]string  "Feed not found"
+// @Router       /feeds/refresh [post]
 func HandleRefreshFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -192,10 +303,23 @@ func HandleRefreshFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) 
 	// Refresh the feed in background with progress tracking (manual = queue head)
 	go h.Fetcher.FetchSingleFeed(context.Background(), *feed, true)
 
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "refreshing"})
 }
 
 // HandleReorderFeed reorders a feed within or across categories.
+// @Summary      Reorder a feed
+// @Description  Change the position and optionally the category of a feed
+// @Tags         feeds
+// @Accept       json
+// @Produce      json
+// @Param        request  body      object  true  "Reorder details (feed_id, category, position)"
+// @Success      200  {object}  map[string]string  "Reorder status"
+// @Failure      400  {object}  map[string]string  "Bad request"
+// @Failure      500  {object}  map[string]string  "Internal server error"
+// @Router       /feeds/reorder [post]
 func HandleReorderFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

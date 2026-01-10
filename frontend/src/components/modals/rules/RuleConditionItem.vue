@@ -11,6 +11,19 @@ import {
 
 const { t } = useI18n();
 
+// Helper function to translate feed type code to display text
+function getFeedTypeLabel(typeCode: string): string {
+  const mapping: Record<string, string> = {
+    regular: t('feedTypeRegular'),
+    freshrss: t('feedTypeFreshRSS'),
+    rsshub: t('feedTypeRSSHub'),
+    script: t('feedTypeCustomScript'),
+    xpath: t('feedTypeXPath'),
+    email: t('feedTypeEmail'),
+  };
+  return mapping[typeCode] || typeCode;
+}
+
 const { fieldOptions, textOperatorOptions, booleanOptions, feedNames, feedCategories, feedTypes } =
   useRuleOptions();
 
@@ -58,6 +71,14 @@ function handleToggleMultiSelectValue(value: string): void {
 function getMultiSelectDisplayText(): string {
   const values = props.condition.values || [];
   if (values.length === 0) return t('selectItems');
+
+  // For feed_type, translate the type codes to display text
+  if (props.condition.field === 'feed_type') {
+    if (values.length === 1) return getFeedTypeLabel(values[0]);
+    return t('itemsSelected', { count: values.length });
+  }
+
+  // For other fields, use the values directly
   if (values.length === 1) return values[0];
   return t('itemsSelected', { count: values.length });
 }
@@ -235,7 +256,7 @@ function getMultiSelectDisplayText(): string {
                 class="checkbox-input"
                 tabindex="-1"
               />
-              <span class="truncate">{{ type || t('rssFeed') }}</span>
+              <span class="truncate">{{ getFeedTypeLabel(type as string) }}</span>
             </div>
             <div v-if="feedTypes.length === 0" class="text-text-secondary text-xs sm:text-sm p-2">
               {{ t('noArticles') }}

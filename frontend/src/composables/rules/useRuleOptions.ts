@@ -33,12 +33,6 @@ export function useRuleOptions() {
     { value: 'article_title', labelKey: 'articleTitle', multiSelect: false },
     { value: 'feed_type', labelKey: 'feedType', multiSelect: true },
     {
-      value: 'is_freshrss_feed',
-      labelKey: 'isFreshRSSFeed',
-      multiSelect: false,
-      booleanField: true,
-    },
-    {
       value: 'is_image_mode_feed',
       labelKey: 'isImageModeFeed',
       multiSelect: false,
@@ -93,19 +87,31 @@ export function useRuleOptions() {
     return Array.from(categories);
   });
 
-  // Feed types for multi-select
+  // Feed types for multi-select (as type codes, not translated text)
+  // Type codes: "regular", "freshrss", "rsshub", "script", "xpath", "email"
   const feedTypes: ComputedRef<string[]> = computed(() => {
-    const types = new Set<string>();
+    const typeSet = new Set<string>();
     store.feeds.forEach((f) => {
-      // Map frontend type to backend type
-      if (f.type) {
-        types.add(f.type);
+      // Determine feed type based on feed properties
+      let typeCode: string;
+      if (f.is_freshrss_source) {
+        typeCode = 'freshrss';
+      } else if (f.url && f.url.startsWith('rsshub://')) {
+        typeCode = 'rsshub';
+      } else if (f.script_path) {
+        typeCode = 'script';
+      } else if (f.type === 'email') {
+        typeCode = 'email';
+      } else if (f.type === 'HTML+XPath' || f.type === 'XML+XPath') {
+        typeCode = 'xpath';
       } else {
-        // Empty type means regular RSS/Atom feed
-        types.add('');
+        // Default: regular RSS/Atom feed
+        typeCode = 'regular';
       }
+      // Store type code directly, not translated text
+      typeSet.add(typeCode);
     });
-    return Array.from(types);
+    return Array.from(typeSet);
   });
 
   return {
@@ -134,7 +140,6 @@ export function isBooleanField(field: string): boolean {
     field === 'is_favorite' ||
     field === 'is_hidden' ||
     field === 'is_read_later' ||
-    field === 'is_freshrss_feed' ||
     field === 'is_image_mode_feed'
   );
 }

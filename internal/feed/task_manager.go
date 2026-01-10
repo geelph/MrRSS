@@ -356,6 +356,11 @@ func (tm *TaskManager) AddGlobalRefresh(ctx context.Context, feeds []models.Feed
 		log.Printf("ERROR: Failed to update last_global_refresh: %v", err)
 	}
 
+	// Track global refresh in statistics
+	if err := tm.fetcher.db.IncrementStat("feed_refresh"); err != nil {
+		log.Printf("ERROR: Failed to track feed refresh: %v", err)
+	}
+
 	// Clear all feed error marks in database
 	if err := tm.fetcher.db.ClearAllFeedErrors(); err != nil {
 		log.Printf("Failed to clear all feed errors: %v", err)
@@ -466,9 +471,6 @@ func (tm *TaskManager) ExecuteImmediately(ctx context.Context, feed models.Feed)
 			// Check if all tasks completed
 			tm.checkCompletion()
 		}()
-
-		// Setup translator
-		tm.fetcher.setupTranslator()
 
 		// Execute with timeout and retry
 		var err error
@@ -615,9 +617,6 @@ func (tm *TaskManager) processTask(ctx context.Context, task *RefreshTask) {
 	}()
 
 	log.Printf("Processing feed: %s (reason: %d)", task.Feed.Title, task.Reason)
-
-	// Setup translator
-	tm.fetcher.setupTranslator()
 
 	// Try fetching with timeout and retry
 	var err error

@@ -34,9 +34,11 @@ import (
 	media "MrRSS/internal/handlers/media"
 	networkhandlers "MrRSS/internal/handlers/network"
 	opml "MrRSS/internal/handlers/opml"
+	rsshubHandler "MrRSS/internal/handlers/rsshub"
 	rules "MrRSS/internal/handlers/rules"
 	script "MrRSS/internal/handlers/script"
 	settings "MrRSS/internal/handlers/settings"
+	stathandlers "MrRSS/internal/handlers/statistics"
 	summary "MrRSS/internal/handlers/summary"
 	translationhandlers "MrRSS/internal/handlers/translation"
 	update "MrRSS/internal/handlers/update"
@@ -167,7 +169,7 @@ func main() {
 	log.Println("Database initialized successfully")
 
 	translator := translation.NewDynamicTranslatorWithCache(db, db)
-	fetcher := feed.NewFetcher(db, translator)
+	fetcher := feed.NewFetcher(db)
 	h := handlers.NewHandler(db, fetcher, translator)
 
 	var quitRequested atomic.Bool
@@ -254,6 +256,7 @@ func main() {
 	apiMux.HandleFunc("/api/media/cleanup", func(w http.ResponseWriter, r *http.Request) { media.HandleMediaCacheCleanup(h, w, r) })
 	apiMux.HandleFunc("/api/media/info", func(w http.ResponseWriter, r *http.Request) { media.HandleMediaCacheInfo(h, w, r) })
 	apiMux.HandleFunc("/api/webpage/proxy", func(w http.ResponseWriter, r *http.Request) { media.HandleWebpageProxy(h, w, r) })
+	apiMux.HandleFunc("/api/webpage/resource", func(w http.ResponseWriter, r *http.Request) { media.HandleWebpageResource(h, w, r) })
 	apiMux.HandleFunc("/api/window/state", func(w http.ResponseWriter, r *http.Request) { window.HandleGetWindowState(h, w, r) })
 	apiMux.HandleFunc("/api/window/save", func(w http.ResponseWriter, r *http.Request) { window.HandleSaveWindowState(h, w, r) })
 	apiMux.HandleFunc("/api/network/detect", func(w http.ResponseWriter, r *http.Request) { networkhandlers.HandleDetectNetwork(h, w, r) })
@@ -266,6 +269,21 @@ func main() {
 	apiMux.HandleFunc("/api/freshrss/sync", func(w http.ResponseWriter, r *http.Request) { freshrssHandler.HandleSync(h, w, r) })
 	apiMux.HandleFunc("/api/freshrss/sync-feed", func(w http.ResponseWriter, r *http.Request) { freshrssHandler.HandleSyncFeed(h, w, r) })
 	apiMux.HandleFunc("/api/freshrss/status", func(w http.ResponseWriter, r *http.Request) { freshrssHandler.HandleSyncStatus(h, w, r) })
+	// RSSHub routes
+	apiMux.HandleFunc("/api/rsshub/add", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleAddFeed(h, w, r) })
+	apiMux.HandleFunc("/api/rsshub/test-connection", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleTestConnection(h, w, r) })
+	apiMux.HandleFunc("/api/rsshub/validate-route", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleValidateRoute(h, w, r) })
+	apiMux.HandleFunc("/api/rsshub/transform-url", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleTransformURL(h, w, r) })
+	// Statistics routes
+	apiMux.HandleFunc("/api/statistics", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			stathandlers.HandleResetStatistics(h, w, r)
+		} else {
+			stathandlers.HandleGetStatistics(h, w, r)
+		}
+	})
+	apiMux.HandleFunc("/api/statistics/all-time", func(w http.ResponseWriter, r *http.Request) { stathandlers.HandleGetAllTimeStatistics(h, w, r) })
+	apiMux.HandleFunc("/api/statistics/available-months", func(w http.ResponseWriter, r *http.Request) { stathandlers.HandleGetAvailableMonths(h, w, r) })
 
 	// Static Files
 	log.Println("Setting up static files...")

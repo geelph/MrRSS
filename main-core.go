@@ -32,9 +32,11 @@ import (
 	media "MrRSS/internal/handlers/media"
 	networkhandlers "MrRSS/internal/handlers/network"
 	opml "MrRSS/internal/handlers/opml"
+	rsshubHandler "MrRSS/internal/handlers/rsshub"
 	rules "MrRSS/internal/handlers/rules"
 	script "MrRSS/internal/handlers/script"
 	settings "MrRSS/internal/handlers/settings"
+	stathandlers "MrRSS/internal/handlers/statistics"
 	summary "MrRSS/internal/handlers/summary"
 	translationhandlers "MrRSS/internal/handlers/translation"
 	update "MrRSS/internal/handlers/update"
@@ -42,7 +44,28 @@ import (
 	"MrRSS/internal/network"
 	"MrRSS/internal/translation"
 	"MrRSS/internal/utils"
+
+	httpSwagger "github.com/swaggo/http-swagger"
 )
+
+// @title           MrRSS API
+// @version         1.3.14
+// @description     MrRSS is a modern, cross-platform desktop RSS reader with auto-translation, smart feed discovery, and AI-powered summarization.
+
+// @contact.name   API Support
+// @contact.url    https://github.com/WCY-dt/MrRSS
+// @contact.email  mail@ch3nyang.top
+
+// @license.name  GPL-3.0
+// @license.url   https://www.gnu.org/licenses/gpl-3.0.en.html
+
+// @host      localhost:1234
+// @BasePath  /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 var debugLogging = os.Getenv("MRRSS_DEBUG") != ""
 
@@ -138,7 +161,7 @@ func main() {
 	log.Println("Database initialized successfully")
 
 	translator := translation.NewDynamicTranslatorWithCache(db, db)
-	fetcher := feed.NewFetcher(db, translator)
+	fetcher := feed.NewFetcher(db)
 	h := handlers.NewHandler(db, fetcher, translator)
 
 	// API Routes
@@ -222,6 +245,7 @@ func main() {
 	apiMux.HandleFunc("/api/media/cleanup", func(w http.ResponseWriter, r *http.Request) { media.HandleMediaCacheCleanup(h, w, r) })
 	apiMux.HandleFunc("/api/media/info", func(w http.ResponseWriter, r *http.Request) { media.HandleMediaCacheInfo(h, w, r) })
 	apiMux.HandleFunc("/api/webpage/proxy", func(w http.ResponseWriter, r *http.Request) { media.HandleWebpageProxy(h, w, r) })
+	apiMux.HandleFunc("/api/webpage/resource", func(w http.ResponseWriter, r *http.Request) { media.HandleWebpageResource(h, w, r) })
 	apiMux.HandleFunc("/api/window/state", func(w http.ResponseWriter, r *http.Request) { window.HandleGetWindowState(h, w, r) })
 	apiMux.HandleFunc("/api/window/save", func(w http.ResponseWriter, r *http.Request) { window.HandleSaveWindowState(h, w, r) })
 	apiMux.HandleFunc("/api/network/detect", func(w http.ResponseWriter, r *http.Request) { networkhandlers.HandleDetectNetwork(h, w, r) })
@@ -234,6 +258,30 @@ func main() {
 	apiMux.HandleFunc("/api/freshrss/sync", func(w http.ResponseWriter, r *http.Request) { freshrssHandler.HandleSync(h, w, r) })
 	apiMux.HandleFunc("/api/freshrss/sync-feed", func(w http.ResponseWriter, r *http.Request) { freshrssHandler.HandleSyncFeed(h, w, r) })
 	apiMux.HandleFunc("/api/freshrss/status", func(w http.ResponseWriter, r *http.Request) { freshrssHandler.HandleSyncStatus(h, w, r) })
+	// RSSHub routes
+	apiMux.HandleFunc("/api/rsshub/add", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleAddFeed(h, w, r) })
+	apiMux.HandleFunc("/api/rsshub/test-connection", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleTestConnection(h, w, r) })
+	apiMux.HandleFunc("/api/rsshub/validate-route", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleValidateRoute(h, w, r) })
+	apiMux.HandleFunc("/api/rsshub/transform-url", func(w http.ResponseWriter, r *http.Request) { rsshubHandler.HandleTransformURL(h, w, r) })
+	// Statistics routes
+	apiMux.HandleFunc("/api/statistics", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			stathandlers.HandleResetStatistics(h, w, r)
+		} else {
+			stathandlers.HandleGetStatistics(h, w, r)
+		}
+	})
+	apiMux.HandleFunc("/api/statistics/all-time", func(w http.ResponseWriter, r *http.Request) { stathandlers.HandleGetAllTimeStatistics(h, w, r) })
+	apiMux.HandleFunc("/api/statistics/available-months", func(w http.ResponseWriter, r *http.Request) { stathandlers.HandleGetAvailableMonths(h, w, r) })
+
+	// Swagger Documentation - Serve swagger.json file
+	apiMux.HandleFunc("/docs/SERVER_MODE/swagger.json", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "docs/SERVER_MODE/swagger.json")
+	})
+
+	apiMux.HandleFunc("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("/docs/SERVER_MODE/swagger.json"),
+	))
 
 	// Static Files
 	log.Println("Setting up static files...")

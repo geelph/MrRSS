@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
-import { ref, type Ref } from 'vue';
+import { ref, computed, type Ref } from 'vue';
 import type { Article, Feed, UnreadCounts, RefreshProgress } from '@/types/models';
+import { useSettings } from '@/composables/core/useSettings';
 
 export type Filter = 'all' | 'unread' | 'favorites' | 'readLater' | 'imageGallery' | '';
 export type ThemePreference = 'light' | 'dark' | 'auto';
@@ -46,9 +47,18 @@ export interface AppActions {
 }
 
 export const useAppStore = defineStore('app', () => {
+  // Get settings composable once at store initialization
+  const { settings: settingsRef } = useSettings();
+
   // State
   const articles = ref<Article[]>([]);
   const feeds = ref<Feed[]>([]);
+  // Feed map for O(1) lookups - computed from feeds array
+  const feedMap = computed(() => {
+    const map = new Map<number, Feed>();
+    feeds.value.forEach((feed) => map.set(feed.id, feed));
+    return map;
+  });
   const unreadCounts = ref<UnreadCounts>({
     total: 0,
     feedCounts: {},
@@ -76,9 +86,7 @@ export const useAppStore = defineStore('app', () => {
     currentFilter.value = filter;
     currentFeedId.value = null;
     currentCategory.value = null;
-    page.value = 1;
-    articles.value = [];
-    hasMore.value = true;
+    // Clear and reset will be handled by fetchArticles
     fetchArticles();
   }
 
@@ -90,16 +98,11 @@ export const useAppStore = defineStore('app', () => {
       currentFilter.value = 'imageGallery';
       currentFeedId.value = feedId;
       currentCategory.value = null;
-      page.value = 1;
-      articles.value = [];
-      hasMore.value = true;
+      // Clear and reset will be handled by fetchArticles
     } else {
       currentFilter.value = '';
       currentFeedId.value = feedId;
       currentCategory.value = null;
-      page.value = 1;
-      articles.value = [];
-      hasMore.value = true;
       fetchArticles();
     }
   }
@@ -108,15 +111,18 @@ export const useAppStore = defineStore('app', () => {
     currentFilter.value = '';
     currentFeedId.value = null;
     currentCategory.value = category;
-    page.value = 1;
-    articles.value = [];
-    hasMore.value = true;
     fetchArticles();
   }
 
   async function fetchArticles(append: boolean = false): Promise<void> {
     if (isLoading.value) return;
-    if (!append && !hasMore.value) hasMore.value = true;
+
+    // If not appending, reset to page 1 and clear articles
+    if (!append) {
+      page.value = 1;
+      articles.value = [];
+      hasMore.value = true;
+    }
 
     isLoading.value = true;
     const limit = 50;
@@ -155,12 +161,9 @@ export const useAppStore = defineStore('app', () => {
 
   async function fetchFeeds(): Promise<void> {
     try {
-      console.log('[App Store] Fetching feeds...');
       const res = await fetch('/api/feeds');
-      console.log('[App Store] Response status:', res.status);
 
       const text = await res.text();
-      console.log('[App Store] Response length:', text.length);
 
       let data;
       try {
@@ -172,7 +175,6 @@ export const useAppStore = defineStore('app', () => {
       }
 
       feeds.value = data;
-      console.log('[App Store] Feeds loaded successfully, count:', data.length);
 
       // Fetch unread counts after fetching feeds
       await fetchUnreadCounts();
@@ -283,14 +285,26 @@ export const useAppStore = defineStore('app', () => {
     refreshProgress.value.isRunning = true;
     try {
       // First, trigger standard refresh
-      await fetch('/api/refresh', { method: 'POST' });
+      const refreshRes = await fetch('/api/refresh', { method: 'POST' });
+      if (!refreshRes.ok) {
+        throw new Error(`Refresh API returned ${refreshRes.status}: ${refreshRes.statusText}`);
+      }
+      // Verify the response is valid JSON by consuming it
+      try {
+        await refreshRes.json();
+      } catch (e) {
+        console.error('Invalid JSON response from /api/refresh:', e);
+        throw new Error(`Invalid JSON response from refresh API: ${e}`);
+      }
 
       // Also trigger FreshRSS sync if enabled
-      try {
-        await fetch('/api/freshrss/sync', { method: 'POST' });
-      } catch (e) {
-        // If FreshRSS sync fails, it's okay - just log it
-        console.log('FreshRSS sync triggered (may not be enabled)');
+      if (settingsRef.value.freshrss_enabled === 'true') {
+        try {
+          await fetch('/api/freshrss/sync', { method: 'POST' });
+        } catch (e) {
+          // If FreshRSS sync fails, it's okay - just log it
+          console.log('FreshRSS sync failed:', e);
+        }
       }
 
       // Wait a moment to check if refresh is actually running
@@ -298,11 +312,13 @@ export const useAppStore = defineStore('app', () => {
 
       // Check progress to see if there are actually any tasks
       const progressRes = await fetch('/api/progress');
+      if (!progressRes.ok) {
+        throw new Error(`Progress API returned ${progressRes.status}: ${progressRes.statusText}`);
+      }
       const progressData = await progressRes.json();
 
       // If no tasks are running, mark as completed immediately
       if (!progressData.is_running) {
-        console.log('No feeds to refresh (all feeds are FreshRSS or no feeds exist)');
         refreshProgress.value.isRunning = false;
 
         // Still refresh feeds and articles to get any updates from FreshRSS sync
@@ -330,6 +346,9 @@ export const useAppStore = defineStore('app', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       const res = await fetch('/api/progress');
+      if (!res.ok) {
+        throw new Error(`Progress API returned ${res.status}: ${res.statusText}`);
+      }
       const data = await res.json();
       console.log('Initial progress update:', data);
       refreshProgress.value = {
@@ -354,6 +373,9 @@ export const useAppStore = defineStore('app', () => {
     const interval = setInterval(async () => {
       try {
         const res = await fetch('/api/progress');
+        if (!res.ok) {
+          throw new Error(`Progress API returned ${res.status}: ${res.statusText}`);
+        }
         const data = await res.json();
         refreshProgress.value = {
           ...refreshProgress.value, // Preserve existing pool_tasks and queue_tasks
@@ -399,6 +421,7 @@ export const useAppStore = defineStore('app', () => {
           // Users can see error status in the feed list sidebar
 
           // Check for app updates after initial refresh completes
+
           checkForAppUpdates();
         }
       } catch {
@@ -482,13 +505,21 @@ export const useAppStore = defineStore('app', () => {
 
         // Only proceed if there's an update available and a download URL
         if (data.has_update && data.download_url) {
-          // Show notification to user
-          if (window.showToast) {
-            window.showToast(`Update available: v${data.latest_version}`, 'info', 5000);
-          }
+          // Check if auto-update is enabled before downloading
+          const { settings } = useSettings();
 
-          // Auto download and install in background
-          autoDownloadAndInstall(data.download_url, data.asset_name);
+          console.log('[DEBUG] Update found, auto_update =', settings.value.auto_update);
+          if (settings.value.auto_update) {
+            console.log('[DEBUG] Auto-downloading update...');
+            // Auto download and install in background
+            autoDownloadAndInstall(data.download_url, data.asset_name);
+          } else {
+            console.log('[DEBUG] Auto-update disabled, showing notification only');
+            // Just show notification that update is available
+            if (window.showToast) {
+              window.showToast(`Update available: v${data.latest_version}`, 'info', 5000);
+            }
+          }
         }
       }
     } catch {
@@ -584,6 +615,7 @@ export const useAppStore = defineStore('app', () => {
     // State
     articles,
     feeds,
+    feedMap,
     unreadCounts,
     currentFilter,
     currentFeedId,

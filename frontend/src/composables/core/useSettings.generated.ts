@@ -67,6 +67,9 @@ export function generateInitialSettings(): SettingsData {
     proxy_username: settingsDefaults.proxy_username,
     refresh_mode: settingsDefaults.refresh_mode,
     retry_timeout_seconds: settingsDefaults.retry_timeout_seconds,
+    rsshub_api_key: settingsDefaults.rsshub_api_key,
+    rsshub_enabled: settingsDefaults.rsshub_enabled,
+    rsshub_endpoint: settingsDefaults.rsshub_endpoint,
     rules: settingsDefaults.rules,
     shortcuts: settingsDefaults.shortcuts,
     shortcuts_enabled: settingsDefaults.shortcuts_enabled,
@@ -158,6 +161,9 @@ export function parseSettingsData(data: Record<string, string>): SettingsData {
     refresh_mode: data.refresh_mode || settingsDefaults.refresh_mode,
     retry_timeout_seconds:
       parseInt(data.retry_timeout_seconds) || settingsDefaults.retry_timeout_seconds,
+    rsshub_api_key: data.rsshub_api_key || settingsDefaults.rsshub_api_key,
+    rsshub_enabled: data.rsshub_enabled === 'true',
+    rsshub_endpoint: data.rsshub_endpoint || settingsDefaults.rsshub_endpoint,
     rules: data.rules || settingsDefaults.rules,
     shortcuts: data.shortcuts || settingsDefaults.shortcuts,
     shortcuts_enabled: data.shortcuts_enabled === 'true',
@@ -282,6 +288,11 @@ export function buildAutoSavePayload(settingsRef: Ref<SettingsData>): Record<str
     retry_timeout_seconds: (
       settingsRef.value.retry_timeout_seconds ?? settingsDefaults.retry_timeout_seconds
     ).toString(),
+    rsshub_api_key: settingsRef.value.rsshub_api_key ?? settingsDefaults.rsshub_api_key,
+    rsshub_enabled: (
+      settingsRef.value.rsshub_enabled ?? settingsDefaults.rsshub_enabled
+    ).toString(),
+    rsshub_endpoint: settingsRef.value.rsshub_endpoint ?? settingsDefaults.rsshub_endpoint,
     rules: settingsRef.value.rules ?? settingsDefaults.rules,
     shortcuts: settingsRef.value.shortcuts ?? settingsDefaults.shortcuts,
     shortcuts_enabled: (

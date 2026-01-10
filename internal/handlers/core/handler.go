@@ -17,6 +17,7 @@ import (
 	"MrRSS/internal/discovery"
 	"MrRSS/internal/feed"
 	"MrRSS/internal/models"
+	"MrRSS/internal/statistics"
 	"MrRSS/internal/translation"
 	"MrRSS/internal/utils"
 
@@ -51,6 +52,7 @@ type Handler struct {
 	DiscoveryService *discovery.Service
 	App              interface{}         // Wails app instance for browser integration (interface{} to avoid import in server mode)
 	ContentCache     *cache.ContentCache // Cache for article content
+	Stats            *statistics.Service // Statistics tracking service
 
 	// Discovery state tracking for polling-based progress
 	DiscoveryMu          sync.RWMutex
@@ -67,6 +69,7 @@ func NewHandler(db *database.DB, fetcher *feed.Fetcher, translator translation.T
 		AITracker:        aiusage.NewTracker(db),
 		DiscoveryService: discovery.NewService(),
 		ContentCache:     cache.NewContentCache(100, 30*time.Minute), // Cache up to 100 articles for 30 minutes
+		Stats:            statistics.NewService(db),
 	}
 
 	return h
@@ -91,35 +94,41 @@ func (h *Handler) SetApp(app interface{}) {
 	h.App = app
 }
 
+// Statistics returns the statistics service
+func (h *Handler) Statistics() *statistics.Service {
+	return h.Stats
+}
+
 // GetArticleContent fetches article content with caching
-func (h *Handler) GetArticleContent(articleID int64) (string, error) {
+// Returns (content, wasCached, error)
+func (h *Handler) GetArticleContent(articleID int64) (string, bool, error) {
 	// First, check database cache (persistent cache)
 	content, found, err := h.DB.GetArticleContent(articleID)
 	if err == nil && found {
 		// Also populate memory cache for faster subsequent access
 		h.ContentCache.Set(articleID, content)
-		return content, nil
+		return content, true, nil
 	}
 
 	// Check memory cache (in-memory cache, might be stale but fast)
 	if content, found := h.ContentCache.Get(articleID); found {
-		return content, nil
+		return content, true, nil
 	}
 
 	// Get the article from database
 	article, err := h.DB.GetArticleByID(articleID)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	// Get the feed
 	targetFeed, err := h.DB.GetFeedByID(article.FeedID)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	if targetFeed == nil {
-		return "", nil
+		return "", false, nil
 	}
 
 	// Trigger immediate feed refresh using the new task manager
@@ -133,7 +142,7 @@ func (h *Handler) GetArticleContent(articleID int64) (string, error) {
 	// Parse the feed to get fresh content
 	parsedFeed, err := h.Fetcher.ParseFeedWithFeed(ctx, targetFeed, true) // High priority for content fetching
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	// Cache the feed for future use
@@ -151,10 +160,10 @@ func (h *Handler) GetArticleContent(articleID int64) (string, error) {
 			log.Printf("Error caching content to database: %v", err)
 		}
 
-		return cleanContent, nil
+		return cleanContent, false, nil
 	}
 
-	return "", nil
+	return "", false, nil
 }
 
 // FetchFullArticleContent fetches the full article content from the original URL using readability.

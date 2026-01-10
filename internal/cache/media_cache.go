@@ -132,9 +132,9 @@ func (mc *MediaCache) download(url, referer string) ([]byte, string, error) {
 	}
 
 	// Add additional headers to bypass restrictions
+	// Note: Don't set Accept-Encoding - let Go's http.Transport handle it automatically
 	req.Header.Set("Accept", "image/webp,image/apng,image/*,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	req.Header.Set("DNT", "1")
 	req.Header.Set("Connection", "keep-alive")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
