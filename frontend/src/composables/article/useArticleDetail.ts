@@ -48,6 +48,7 @@ export function useArticleDetail() {
       const prevArticle = store.articles[currentArticleIndex.value - 1];
       store.currentArticleId = prevArticle.id;
       markAsReadIfNeeded(prevArticle);
+      scrollArticleIntoView(prevArticle.id);
     }
   }
 
@@ -57,7 +58,18 @@ export function useArticleDetail() {
       const nextArticle = store.articles[currentArticleIndex.value + 1];
       store.currentArticleId = nextArticle.id;
       markAsReadIfNeeded(nextArticle);
+      scrollArticleIntoView(nextArticle.id);
     }
+  }
+
+  // Scroll article into view in the article list
+  function scrollArticleIntoView(articleId: number) {
+    setTimeout(() => {
+      const articleEl = document.querySelector(`[data-article-id="${articleId}"]`);
+      if (articleEl) {
+        articleEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 50);
   }
 
   // Mark article as read if it's not already read

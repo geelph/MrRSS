@@ -5,6 +5,8 @@ import { openInBrowser } from '@/utils/browser';
 export interface KeyboardShortcuts {
   nextArticle: string;
   previousArticle: string;
+  nextArticleArrow: string;
+  previousArticleArrow: string;
   openArticle: string;
   closeArticle: string;
   toggleReadStatus: string;
@@ -37,6 +39,8 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
   const shortcuts = ref<KeyboardShortcuts>({
     nextArticle: 'j',
     previousArticle: 'k',
+    nextArticleArrow: 'ArrowRight',
+    previousArticleArrow: 'ArrowLeft',
     openArticle: 'Enter',
     closeArticle: 'Escape',
     toggleReadStatus: 'r',
@@ -236,6 +240,12 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
         navigateArticle(1);
         break;
       case 'previousArticle':
+        navigateArticle(-1);
+        break;
+      case 'nextArticleArrow':
+        navigateArticle(1);
+        break;
+      case 'previousArticleArrow':
         navigateArticle(-1);
         break;
       case 'openArticle':

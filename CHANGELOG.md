@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - All the documents will now be opened in the default browser, and multi-language support has been added. (#458)
 
+### Fixed
+
+- Fixed an issue where left arrow and right arrow keyboard shortcuts will conflict with input fields. (#454)
+- Fixed an issue where article list will not scroll automatically when switching articles. (#451)
+
 ## [1.3.15] - 2026-01-11
 
 ### Changed
