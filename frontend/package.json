@@ -46,7 +46,7 @@
     "@vue/test-utils": "^2.4.6",
     "@wailsio/runtime": "^3.0.0-alpha.77",
     "autoprefixer": "^10.4.23",
-    "cypress": "^15.8.1",
+    "cypress": "^15.8.2",
     "eslint": "^9.39.2",
     "eslint-plugin-vue": "^10.6.2",
     "husky": "^9.1.7",
