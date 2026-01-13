@@ -779,12 +779,12 @@ onBeforeUnmount(() => {
       <div v-if="showFullTextButton" class="flex justify-center mt-4 mb-4">
         <button
           :disabled="isFetchingFullArticle"
-          class="btn-secondary-compact flex items-center gap-1.5"
+          class="btn-secondary-compact flex items-center gap-2"
           @click="fetchFullArticle"
         >
-          <PhSpinnerGap v-if="isFetchingFullArticle" :size="12" class="animate-spin" />
-          <PhArticleNyTimes v-else :size="12" />
-          <span class="text-xs">{{
+          <PhSpinnerGap v-if="isFetchingFullArticle" :size="14" class="animate-spin" />
+          <PhArticleNyTimes v-else :size="14" />
+          <span>{{
             isFetchingFullArticle ? t('fetchingFullArticle') : t('fetchFullArticle')
           }}</span>
         </button>
@@ -813,6 +813,14 @@ onBeforeUnmount(() => {
 }
 
 .btn-secondary-compact {
-  @apply bg-bg-tertiary border border-border text-text-primary px-2 py-1 rounded cursor-pointer flex items-center gap-1.5 text-xs hover:bg-bg-secondary transition-colors opacity-70 hover:opacity-100;
+  @apply border border-border px-3 py-1.5 rounded-md cursor-pointer flex items-center gap-2 text-sm font-normal transition-all duration-200;
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.btn-secondary-compact:hover {
+  opacity: 1;
+  color: var(--text-primary);
 }
 </style>

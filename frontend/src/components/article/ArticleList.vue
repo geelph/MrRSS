@@ -99,6 +99,12 @@ const visibleArticles = computed(() => {
   return filteredArticles.value;
 });
 
+// Helper to truncate text to max length
+function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength - 1) + '…';
+}
+
 // Dynamic title based on current filter and temporary selection
 const articleListTitle = computed(() => {
   // If there's a temporary selection from feed drawer, show feed/category name with filter
@@ -106,13 +112,23 @@ const articleListTitle = computed(() => {
     const feed = store.feeds?.find((f) => f.id === store.tempSelection.feedId);
     const feedName = feed?.title || '';
     const filterText = getFilterText();
-    return filterText ? `${feedName} - ${filterText}` : feedName;
+
+    // Truncate feed name if it's too long (leave room for " - filterText")
+    const maxFeedNameLength = filterText ? 40 : 50;
+    const truncatedFeedName = truncateText(feedName, maxFeedNameLength);
+
+    return filterText ? `${truncatedFeedName} - ${filterText}` : truncatedFeedName;
   }
 
   if (store.tempSelection.category) {
     const categoryName = store.tempSelection.category;
     const filterText = getFilterText();
-    return filterText ? `${categoryName} - ${filterText}` : categoryName;
+
+    // Truncate category name if it's too long
+    const maxCategoryLength = filterText ? 40 : 50;
+    const truncatedCategory = truncateText(categoryName, maxCategoryLength);
+
+    return filterText ? `${truncatedCategory} - ${filterText}` : truncatedCategory;
   }
 
   // No temporary selection, show filter only
@@ -484,7 +500,12 @@ function handleHoverMarkAsRead(articleId: number): void {
   >
     <div class="p-2 sm:p-4 border-b border-border bg-bg-primary">
       <div class="flex items-center justify-between">
-        <h3 class="m-0 text-base sm:text-lg font-semibold">{{ articleListTitle }}</h3>
+        <h3
+          class="m-0 text-base sm:text-lg font-semibold truncate flex-1"
+          :title="articleListTitle"
+        >
+          {{ articleListTitle }}
+        </h3>
         <div class="flex items-center gap-1 sm:gap-2">
           <!-- Clear Read Later button - only shown when viewing Read Later list -->
           <button
