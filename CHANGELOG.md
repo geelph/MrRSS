@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Supported compact mode for article list to reduce visual clutter. (#403)
 - Enhanced image gallery with support for multi-image articles and better navigation. (#457)
+- Supported Anthoropic and DeepSeek AI services.
 
 ### Changed
 
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed an issue where the future publish time of some articles can not be displayed correctly.
 - Fixed an issue where the summary can not be generated according to the language setting. (#480)
 - Fixed an issue where the Gemini API can not work correctly. (#459)
+- Fixed an issue where the application will update automatically without user confirmation. (#479)
 
 ### Refactored
 

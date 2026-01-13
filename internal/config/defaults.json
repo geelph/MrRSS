@@ -10,7 +10,6 @@
   "ai_usage_tokens": "0",
   "auto_cleanup_enabled": true,
   "auto_show_all_content": false,
-  "auto_update": false,
   "baidu_app_id": "",
   "baidu_secret_key": "",
   "close_to_tray": true,

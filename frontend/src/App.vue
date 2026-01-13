@@ -85,7 +85,6 @@ onMounted(async () => {
   // Load remaining settings (theme and other settings are already loaded in main.ts)
   let updateInterval = 10;
   let lastGlobalRefresh = '';
-  let autoUpdate = false;
 
   try {
     const res = await fetch('/api/settings');
@@ -115,11 +114,6 @@ onMounted(async () => {
       lastGlobalRefresh = data.last_global_refresh;
     }
 
-    // Get auto_update setting
-    if (data.auto_update !== undefined) {
-      autoUpdate = data.auto_update === 'true'; // 这里后端默认返回 'false' 的话都是 true，我这里如果不修改的话每次都会自动下载
-    }
-
     // Load saved shortcuts
     if (data.shortcuts) {
       try {
@@ -138,12 +132,9 @@ onMounted(async () => {
     try {
       await checkForUpdates(true);
 
-      // If update is available and auto-update is disabled, show dialog
-      if (updateInfo.value && updateInfo.value.has_update && !autoUpdate) {
+      // If update is available, show dialog for user to manually confirm
+      if (updateInfo.value && updateInfo.value.has_update) {
         showUpdateDialog.value = true;
-      } else if (updateInfo.value && updateInfo.value.has_update && autoUpdate) {
-        // If auto-update is enabled, automatically download and install
-        await downloadAndInstallUpdate();
       }
     } catch (e) {
       console.error('Error checking for updates:', e);
