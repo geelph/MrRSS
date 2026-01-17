@@ -186,7 +186,7 @@ input[type='checkbox']:not(.toggle):checked {
 }
 
 input[type='checkbox']:not(.toggle):checked::after {
-  content: '*';
+  content: '✓';
   position: absolute;
   top: 50%;
   left: 50%;

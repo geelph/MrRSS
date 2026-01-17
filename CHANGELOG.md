@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supported small thumbnail images in image gallery view for better navigation. (#495)
 - Supported displaying image filtered by category in image gallery view. (#487, #490)
 
+### Changed
+
+- Change checkbox checked indicator from asterisk to checkmark. (#507)
+
 ### Fixed
 
 - Fixed minor styling issues. (#492)
