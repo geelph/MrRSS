@@ -6,6 +6,7 @@ import {
   PhMagnifyingGlassMinus,
   PhMagnifyingGlassPlus,
   PhDownloadSimple,
+  PhCopy,
 } from '@phosphor-icons/vue';
 
 const { t } = useI18n();
@@ -227,6 +228,60 @@ async function downloadImage() {
   }
 }
 
+// Copy image (convert to PNG)
+async function copyImage() {
+  try {
+    const response = await fetch(currentSrc.value);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const blob = await response.blob();
+
+    // Convert to PNG for maximum clipboard compatibility
+    const pngBlob = await new Promise<Blob>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob((convertedBlob) => {
+            if (convertedBlob) {
+              resolve(convertedBlob);
+            } else {
+              reject(new Error('Failed to convert image to PNG'));
+            }
+          }, 'image/png');
+        } else {
+          reject(new Error('Failed to get canvas context'));
+        }
+      };
+
+      img.onerror = () => {
+        reject(new Error('Failed to load image for conversion'));
+      };
+
+      img.src = URL.createObjectURL(blob);
+    });
+
+    // Copy to clipboard using only PNG format (widely supported)
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'image/png': pngBlob,
+      }),
+    ]);
+
+    window.showToast(t('copiedToClipboard'), 'success');
+  } catch (error) {
+    console.error('Failed to copy image:', error);
+    window.showToast(t('failedToCopy'), 'error');
+  }
+}
+
 const imageStyle = computed<CSSProperties>(() => ({
   transform: `translate(${position.value.x}px, ${position.value.y}px) scale(${scale.value})`,
 }));
@@ -268,6 +323,9 @@ const imageStyle = computed<CSSProperties>(() => ({
         @click="zoomIn"
       >
         <PhMagnifyingGlassPlus :size="20" />
+      </button>
+      <button class="control-btn" :title="t('copyImage')" @click="copyImage">
+        <PhCopy :size="20" />
       </button>
       <button class="control-btn" :title="t('downloadImage')" @click="downloadImage">
         <PhDownloadSimple :size="20" />

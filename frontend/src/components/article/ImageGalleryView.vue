@@ -7,11 +7,14 @@ import {
   PhImage,
   PhHeart,
   PhList,
-  PhFloppyDisk,
+  PhCopy,
+  PhDownloadSimple,
   PhGlobe,
   PhX,
   PhTextT,
   PhTextTSlash,
+  PhMagnifyingGlassPlus,
+  PhMagnifyingGlassMinus,
 } from '@phosphor-icons/vue';
 import { openInBrowser } from '@/utils/browser';
 
@@ -31,6 +34,9 @@ const emit = defineEmits<{
 // Constants
 const ITEMS_PER_PAGE = 30;
 const SCROLL_THRESHOLD_PX = 500; // Start loading more items when user is 500px from bottom
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 5;
+const SCALE_STEP = 0.25;
 
 const articles = ref<Article[]>([]);
 const isLoading = ref(false);
@@ -56,6 +62,13 @@ const imageCountCache = ref<Map<number, number>>(new Map());
 const showTextOverlay = ref(true);
 const thumbnailStripRef = ref<HTMLElement | null>(null);
 
+// Image viewer zoom and pan
+const scale = ref(1);
+const position = ref<{ x: number; y: number }>({ x: 0, y: 0 });
+const isDragging = ref(false);
+const dragStart = ref<{ x: number; y: number }>({ x: 0, y: 0 });
+const imageContainerRef = ref<HTMLElement | null>(null);
+
 // Load showTextOverlay preference from localStorage
 const savedShowTextOverlay = localStorage.getItem('imageGalleryShowTextOverlay');
 if (savedShowTextOverlay !== null) {
@@ -72,6 +85,42 @@ const feedId = computed(() => store.currentFeedId);
 
 // Compute which category to fetch (if viewing a specific category)
 const category = computed(() => store.currentCategory);
+
+// Get current image URL
+const currentImageUrl = computed(() => {
+  if (allImages.value.length > 0 && currentImageIndex.value < allImages.value.length) {
+    return allImages.value[currentImageIndex.value];
+  }
+  return selectedArticle.value?.image_url || '';
+});
+
+// Image style for zoom and pan
+const imageStyle = computed(() => ({
+  transform: `translate(${position.value.x}px, ${position.value.y}px) scale(${scale.value})`,
+}));
+
+// Find current article index in articles array
+const currentArticleIndex = computed(() => {
+  if (!selectedArticle.value) return -1;
+  return articles.value.findIndex((a) => a.id === selectedArticle.value!.id);
+});
+
+// Check if we can navigate to previous image/article
+const canNavigatePrevious = computed(() => {
+  // Can navigate if not at first image of first article
+  if (currentImageIndex.value > 0) return true;
+  if (currentArticleIndex.value > 0) return true;
+  return false;
+});
+
+// Check if we can navigate to next image/article
+const canNavigateNext = computed(() => {
+  // Can navigate if not at last image of last article
+  if (currentImageIndex.value < allImages.value.length - 1) return true;
+  if (currentArticleIndex.value >= 0 && currentArticleIndex.value < articles.value.length - 1)
+    return true;
+  return false;
+});
 
 // Fetch image gallery articles
 async function fetchImages(loadMore = false) {
@@ -205,14 +254,19 @@ function handleScroll() {
 }
 
 // Toggle favorite
-async function toggleFavorite(article: Article, event: Event) {
-  event.stopPropagation();
+async function toggleFavorite(article: Article, event?: Event) {
+  if (event) {
+    event.stopPropagation();
+  }
   try {
     const res = await fetch(`/api/articles/favorite?id=${article.id}`, {
       method: 'POST',
     });
     if (res.ok) {
       article.is_favorite = !article.is_favorite;
+      if (selectedArticle.value && selectedArticle.value.id === article.id) {
+        selectedArticle.value.is_favorite = article.is_favorite;
+      }
     }
   } catch (e) {
     console.error('Failed to toggle favorite:', e);
@@ -224,6 +278,9 @@ async function openImage(article: Article) {
   selectedArticle.value = article;
   showImageViewer.value = true;
   currentImageLoading.value = true;
+  // Reset zoom and position
+  scale.value = 1;
+  position.value = { x: 0, y: 0 };
 
   // Fetch all images from the article
   await fetchArticleImages(article);
@@ -265,28 +322,79 @@ async function fetchArticleImages(article: Article) {
   }
 }
 
-// Navigate to previous image
-function previousImage() {
+// Navigate to previous image (with cross-article support)
+async function previousImage() {
+  // Check if we can navigate backward
+  if (!canNavigatePrevious.value) return;
+
+  // Reset zoom and position when navigating
+  resetView();
+
   if (currentImageIndex.value > 0) {
     currentImageIndex.value--;
+    // Reset loading state
+    currentImageLoading.value = true;
   } else {
-    // Wrap to last image
+    // At first image of current article, go to previous article
+    const prevArticle = articles.value[currentArticleIndex.value - 1];
+    // Update selected article without closing viewer
+    const wasFavorite = selectedArticle.value?.is_favorite;
+    selectedArticle.value = prevArticle;
+    if (wasFavorite !== undefined) {
+      selectedArticle.value.is_favorite = wasFavorite;
+    }
+    currentImageLoading.value = true;
+
+    await fetchArticleImages(prevArticle);
+    // Move to last image
     currentImageIndex.value = allImages.value.length - 1;
+
+    if (!prevArticle.is_read) {
+      markAsRead(prevArticle);
+    }
   }
-  // Reset loading state
-  currentImageLoading.value = true;
 }
 
-// Navigate to next image
-function nextImage() {
+// Navigate to next image (with cross-article support)
+async function nextImage() {
+  // Check if we can navigate forward
+  if (!canNavigateNext.value) {
+    // Try to load more articles if available
+    if (hasMore.value) {
+      await fetchImages(true);
+      // Check again after loading
+      if (!canNavigateNext.value) return;
+    } else {
+      return;
+    }
+  }
+
+  // Reset zoom and position when navigating
+  resetView();
+
   if (currentImageIndex.value < allImages.value.length - 1) {
     currentImageIndex.value++;
+    // Reset loading state
+    currentImageLoading.value = true;
   } else {
-    // Wrap to first image
+    // At last image of current article, go to next article
+    const nextArticle = articles.value[currentArticleIndex.value + 1];
+    // Update selected article without closing viewer
+    const wasFavorite = selectedArticle.value?.is_favorite;
+    selectedArticle.value = nextArticle;
+    if (wasFavorite !== undefined) {
+      selectedArticle.value.is_favorite = wasFavorite;
+    }
+    currentImageLoading.value = true;
+
+    await fetchArticleImages(nextArticle);
+    // Start at first image
     currentImageIndex.value = 0;
+
+    if (!nextArticle.is_read) {
+      markAsRead(nextArticle);
+    }
   }
-  // Reset loading state
-  currentImageLoading.value = true;
 }
 
 // Handle image load
@@ -319,6 +427,8 @@ function closeImageViewer() {
   selectedArticle.value = null;
   allImages.value = [];
   currentImageIndex.value = 0;
+  scale.value = 1;
+  position.value = { x: 0, y: 0 };
 }
 
 // Format date
@@ -359,14 +469,38 @@ function closeContextMenu() {
 }
 
 // Download image
-async function downloadImage(article: Article) {
+async function downloadImage(src: string) {
   try {
-    const response = await fetch(article.image_url || '');
+    const response = await fetch(src);
     const blob = await response.blob();
+
+    // Extract and sanitize filename from URL
+    let filename = 'image';
+    try {
+      const url = new URL(src);
+      const pathname = url.pathname;
+      const pathSegments = pathname.split('/').filter((segment) => segment.length > 0);
+      if (pathSegments.length > 0) {
+        const lastSegment = pathSegments[pathSegments.length - 1];
+        // Remove query params and sanitize filename
+        filename = lastSegment.split('?')[0].replace(/[^a-zA-Z0-9._-]/g, '_') || 'image';
+      }
+    } catch {
+      // If URL parsing fails, use default filename
+      filename = 'image';
+    }
+
+    // Ensure it has a valid extension based on MIME type
+    if (!filename.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i)) {
+      const mimeType = blob.type;
+      const ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
+      filename = `${filename}.${ext}`;
+    }
+
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${article.title}.jpg`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -375,13 +509,124 @@ async function downloadImage(article: Article) {
     console.error('Failed to download image:', e);
     window.showToast(t('downloadFailed'), 'error');
   }
-  closeContextMenu();
+}
+
+// Copy image (convert to PNG)
+async function copyImage(src: string) {
+  try {
+    const response = await fetch(src);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const blob = await response.blob();
+
+    // Convert to PNG for maximum clipboard compatibility
+    const pngBlob = await new Promise<Blob>((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob((convertedBlob) => {
+            if (convertedBlob) {
+              resolve(convertedBlob);
+            } else {
+              reject(new Error('Failed to convert image to PNG'));
+            }
+          }, 'image/png');
+        } else {
+          reject(new Error('Failed to get canvas context'));
+        }
+      };
+
+      img.onerror = () => {
+        reject(new Error('Failed to load image for conversion'));
+      };
+
+      img.src = URL.createObjectURL(blob);
+    });
+
+    // Copy to clipboard using only PNG format (widely supported)
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'image/png': pngBlob,
+      }),
+    ]);
+
+    window.showToast(t('copiedToClipboard'), 'success');
+  } catch (error) {
+    console.error('Failed to copy image:', error);
+    window.showToast(t('failedToCopy'), 'error');
+  }
 }
 
 // Open original article
 function openOriginal(article: Article) {
   openInBrowser(article.url);
   closeContextMenu();
+}
+
+// Open article in detail view
+function openArticleDetail() {
+  if (!selectedArticle.value) return;
+
+  // Set the current article ID in the store
+  store.currentArticleId = selectedArticle.value.id;
+
+  // Switch to 'all' filter to exit image gallery mode and show article detail
+  store.setFilter('all');
+
+  // Close the image viewer
+  closeImageViewer();
+}
+
+// Zoom functions
+function zoomIn() {
+  if (scale.value < MAX_SCALE) {
+    scale.value = Math.min(scale.value + SCALE_STEP, MAX_SCALE);
+  }
+}
+
+function zoomOut() {
+  if (scale.value > MIN_SCALE) {
+    scale.value = Math.max(scale.value - SCALE_STEP, MIN_SCALE);
+    // Reset position if zooming out to 1 or less
+    if (scale.value <= 1) {
+      position.value = { x: 0, y: 0 };
+    }
+  }
+}
+
+function resetView() {
+  scale.value = 1;
+  position.value = { x: 0, y: 0 };
+}
+
+// Drag functions
+function startDrag(e: MouseEvent) {
+  isDragging.value = true;
+  dragStart.value = {
+    x: e.clientX - position.value.x,
+    y: e.clientY - position.value.y,
+  };
+}
+
+function onDrag(e: MouseEvent) {
+  if (isDragging.value) {
+    position.value = {
+      x: e.clientX - dragStart.value.x,
+      y: e.clientY - dragStart.value.y,
+    };
+  }
+}
+
+function stopDrag() {
+  isDragging.value = false;
 }
 
 // Handle keyboard shortcuts
@@ -397,6 +642,12 @@ function handleKeyDown(e: KeyboardEvent) {
   } else if (e.key === 'ArrowRight') {
     e.preventDefault();
     nextImage();
+  } else if (e.key === '+' || e.key === '=') {
+    e.preventDefault();
+    zoomIn();
+  } else if (e.key === '-' || e.key === '_') {
+    e.preventDefault();
+    zoomOut();
   }
 }
 
@@ -416,15 +667,24 @@ function handleThumbnailWheel(e: WheelEvent) {
 
 // Handle mouse wheel on main image area for navigation
 function handleImageWheel(e: WheelEvent) {
-  if (allImages.value.length <= 1) return;
+  // For single image articles, allow navigation across articles
+  // For multiple image articles, navigate within the article
 
-  // Prevent default scrolling
+  // Determine direction
+  const isNavigatingForward = e.deltaY > 0 || e.deltaX > 0;
+  const isNavigatingBackward = e.deltaY < 0 || e.deltaX < 0;
+
+  // Check if navigation is possible
+  if (isNavigatingForward && !canNavigateNext.value) return;
+  if (isNavigatingBackward && !canNavigatePrevious.value) return;
+
+  // Prevent default scrolling only if we can navigate
   e.preventDefault();
 
-  // Determine direction and navigate
-  if (e.deltaY > 0 || e.deltaX > 0) {
+  // Navigate
+  if (isNavigatingForward) {
     nextImage();
-  } else if (e.deltaY < 0 || e.deltaX < 0) {
+  } else if (isNavigatingBackward) {
     previousImage();
   }
 }
@@ -439,10 +699,7 @@ watch(articles, () => {
 // Watch for feed ID changes and refetch
 watch(feedId, async () => {
   // Close image viewer when switching feeds
-  showImageViewer.value = false;
-  selectedArticle.value = null;
-  allImages.value = [];
-  currentImageIndex.value = 0;
+  closeImageViewer();
 
   page.value = 1;
   articles.value = [];
@@ -456,10 +713,7 @@ watch(feedId, async () => {
 // Watch for category changes and refetch
 watch(category, async () => {
   // Close image viewer when switching categories
-  showImageViewer.value = false;
-  selectedArticle.value = null;
-  allImages.value = [];
-  currentImageIndex.value = 0;
+  closeImageViewer();
 
   page.value = 1;
   articles.value = [];
@@ -628,29 +882,81 @@ onUnmounted(() => {
       data-image-viewer="true"
       @click="closeImageViewer"
     >
-      <button
-        class="absolute top-4 right-4 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full text-white flex items-center justify-center transition-colors duration-200 z-10 shrink-0"
-        @click="closeImageViewer"
-      >
-        <PhX :size="20" />
-      </button>
+      <!-- Top bar: Close button, Image counter, Zoom controls, Action buttons -->
+      <div class="flex items-center justify-between shrink-0 mb-2" @click.stop>
+        <div class="flex items-center gap-2">
+          <!-- Image counter -->
+          <div
+            v-if="allImages.length > 1"
+            class="px-2 py-1 rounded bg-black/50 text-white text-sm font-medium min-w-[60px] text-center backdrop-blur-sm"
+          >
+            {{ currentImageIndex + 1 }} / {{ allImages.length }}
+          </div>
+        </div>
 
-      <!-- Image counter (when multiple images) -->
-      <div
-        v-if="allImages.length > 1"
-        class="absolute top-4 left-4 px-2 py-1 rounded text-white text-sm font-medium min-w-[60px] text-center"
-        style="
-          z-index: 11;
-          text-shadow:
-            0 1px 3px rgba(0, 0, 0, 0.8),
-            0 1px 2px rgba(0, 0, 0, 0.6);
-        "
-      >
-        {{ currentImageIndex + 1 }} / {{ allImages.length }}
+        <div class="flex items-center gap-2">
+          <!-- Zoom controls -->
+          <button
+            class="px-2 py-1.5 rounded bg-black/50 hover:bg-black/70 text-white transition-colors"
+            :disabled="scale <= MIN_SCALE"
+            :title="t('zoomOut')"
+            @click="zoomOut"
+          >
+            <PhMagnifyingGlassMinus :size="20" />
+          </button>
+          <span
+            class="px-2 py-1.5 rounded bg-black/50 text-white text-sm font-medium min-w-[60px] text-center"
+          >
+            {{ Math.round(scale * 100) }}%
+          </span>
+          <button
+            class="px-2 py-1.5 rounded bg-black/50 hover:bg-black/70 text-white transition-colors"
+            :disabled="scale >= MAX_SCALE"
+            :title="t('zoomIn')"
+            @click="zoomIn"
+          >
+            <PhMagnifyingGlassPlus :size="20" />
+          </button>
+
+          <!-- Action buttons -->
+          <button
+            class="px-2 py-1.5 rounded bg-black/50 hover:bg-black/70 text-white transition-colors"
+            :title="t('copyImage')"
+            @click="copyImage(currentImageUrl)"
+          >
+            <PhCopy :size="20" />
+          </button>
+          <button
+            class="px-2 py-1.5 rounded bg-black/50 hover:bg-black/70 text-white transition-colors"
+            :title="t('downloadImage')"
+            @click="downloadImage(currentImageUrl)"
+          >
+            <PhDownloadSimple :size="20" />
+          </button>
+          <button
+            class="px-2 py-1.5 rounded bg-black/50 hover:bg-black/70 text-white transition-colors"
+            :title="selectedArticle.is_favorite ? t('actionUnfavorite') : t('actionFavorite')"
+            @click="toggleFavorite(selectedArticle)"
+          >
+            <PhHeart
+              :size="20"
+              :weight="selectedArticle.is_favorite ? 'fill' : 'regular'"
+              :class="selectedArticle.is_favorite ? 'text-red-500' : 'text-white'"
+            />
+          </button>
+        </div>
+
+        <!-- Close button -->
+        <button
+          class="w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full text-white flex items-center justify-center transition-colors"
+          @click="closeImageViewer"
+        >
+          <PhX :size="20" />
+        </button>
       </div>
 
-      <!-- Navigation buttons (when multiple images) - positioned relative to image container -->
-      <template v-if="allImages.length > 1">
+      <!-- Navigation buttons -->
+      <template v-if="canNavigatePrevious">
         <button
           class="absolute top-[calc(50%-64px-8px)] left-4 -translate-y-1/2 w-12 h-12 rounded text-white text-4xl flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 z-10"
           style="
@@ -662,6 +968,8 @@ onUnmounted(() => {
         >
           ‹
         </button>
+      </template>
+      <template v-if="canNavigateNext">
         <button
           class="absolute top-[calc(50%-64px-8px)] right-4 -translate-y-1/2 w-12 h-12 rounded text-white text-4xl flex items-center justify-center transition-all duration-200 hover:scale-110 active:scale-95 z-10"
           style="
@@ -677,8 +985,17 @@ onUnmounted(() => {
 
       <div class="flex-1 flex flex-col items-center justify-center min-h-0 relative" @click.stop>
         <div
-          class="flex-1 flex items-center justify-center w-full min-h-0"
+          ref="imageContainerRef"
+          class="flex-1 flex items-center justify-center w-full min-h-0 overflow-hidden"
+          :class="{
+            'cursor-grab': !isDragging,
+            'cursor-grabbing': isDragging,
+          }"
           @wheel="handleImageWheel"
+          @mousedown="startDrag"
+          @mousemove="onDrag"
+          @mouseup="stopDrag"
+          @mouseleave="stopDrag"
         >
           <!-- Loading placeholder -->
           <div
@@ -691,12 +1008,17 @@ onUnmounted(() => {
           </div>
 
           <img
-            :src="allImages[currentImageIndex] || selectedArticle.image_url"
+            :src="currentImageUrl"
             :alt="selectedArticle.title"
-            class="h-full w-full object-contain"
-            :class="{ 'opacity-0': currentImageLoading, 'transition-opacity duration-200': true }"
+            class="max-w-full max-h-full object-contain select-none"
+            :class="[
+              isDragging ? '' : 'transition-transform duration-150',
+              { 'opacity-0': currentImageLoading },
+            ]"
+            :style="imageStyle"
             @load="handleImageLoad"
             @error="handleImageError"
+            @dragstart.prevent
           />
         </div>
 
@@ -719,6 +1041,7 @@ onUnmounted(() => {
               @click="
                 currentImageIndex = index;
                 currentImageLoading = true;
+                resetView();
               "
             >
               <img
@@ -737,21 +1060,32 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div class="bg-bg-primary px-3 py-3 rounded-md shrink-0" @click.stop>
+      <!-- Info bar with expandable content -->
+      <div class="mt-2 px-3 py-3 rounded-lg bg-black/60 backdrop-blur-sm shrink-0" @click.stop>
+        <!-- Basic info -->
         <div class="flex items-center justify-between gap-4 mb-2">
-          <h2 class="text-base font-bold text-text-primary flex-1 line-clamp-2">
+          <h2 class="text-base font-bold text-white flex-1 line-clamp-2">
             {{ selectedArticle.title }}
           </h2>
-          <a
-            :href="selectedArticle.url"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-md text-sm whitespace-nowrap transition-colors duration-200"
-          >
-            {{ t('viewOriginal') }}
-          </a>
+          <div class="flex items-center gap-2 shrink-0">
+            <a
+              :href="selectedArticle.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-md text-sm whitespace-nowrap transition-colors duration-200"
+            >
+              {{ t('viewOriginal') }}
+            </a>
+            <button
+              class="px-3 py-1.5 bg-black/50 hover:bg-black/70 text-white rounded-md text-sm whitespace-nowrap transition-colors duration-200"
+              :title="t('viewArticle')"
+              @click="openArticleDetail"
+            >
+              {{ t('viewArticle') }}
+            </button>
+          </div>
         </div>
-        <div class="flex items-center gap-4 text-sm text-text-secondary">
+        <div class="flex items-center gap-4 text-sm text-white/80">
           <span class="truncate flex-1">{{ selectedArticle.feed_title }}</span>
           <span class="shrink-0">{{ formatDate(selectedArticle.published_at) }}</span>
         </div>
@@ -767,9 +1101,12 @@ onUnmounted(() => {
     >
       <button
         class="w-full px-4 py-2 flex items-center gap-3 text-sm text-text-primary hover:bg-bg-tertiary active:bg-bg-secondary transition-colors cursor-pointer"
-        @click="downloadImage(contextMenu.article)"
+        @click="
+          downloadImage(contextMenu.article.image_url || '');
+          closeContextMenu();
+        "
       >
-        <PhFloppyDisk :size="16" />
+        <PhDownloadSimple :size="16" />
         <span>{{ t('downloadImage') }}</span>
       </button>
       <button
@@ -802,5 +1139,28 @@ onUnmounted(() => {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
+}
+
+/* Prose content styling */
+.prose-content {
+  line-height: 1.6;
+}
+
+.prose-content :deep(img) {
+  max-width: 100%;
+  height: auto;
+}
+
+.prose-content :deep(p) {
+  margin-bottom: 0.75rem;
+}
+
+.prose-content :deep(a) {
+  color: #4daafc;
+  text-decoration: underline;
+}
+
+.dark-mode .prose-content :deep(a) {
+  color: #4daafc;
 }
 </style>

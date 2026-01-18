@@ -56,6 +56,9 @@ export default [
         WheelEvent: 'readonly',
         localStorage: 'readonly',
         File: 'readonly',
+        Blob: 'readonly',
+        Image: 'readonly',
+        ClipboardItem: 'readonly',
         btoa: 'readonly',
         atob: 'readonly',
         // Node.js globals (for config files)
@@ -112,6 +115,9 @@ export default [
         Element: 'readonly',
         localStorage: 'readonly',
         File: 'readonly',
+        Blob: 'readonly',
+        Image: 'readonly',
+        ClipboardItem: 'readonly',
         btoa: 'readonly',
         atob: 'readonly',
         // Node.js globals (for config files)

@@ -575,7 +575,6 @@ export function useArticleDetail() {
     imageViewerInitialIndex.value = 0;
   }
 
-  /* eslint-disable no-undef */
   // Copy image to clipboard
   async function copyImage(src: string) {
     try {
@@ -629,7 +628,6 @@ export function useArticleDetail() {
       window.showToast(t('failedToCopy'), 'error');
     }
   }
-  /* eslint-enable no-undef */
 
   // Download image from URL
   async function downloadImage(src: string) {

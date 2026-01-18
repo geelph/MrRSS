@@ -587,6 +587,7 @@ export interface TranslationMessages {
   viewModeRendered: string;
   viewOnGitHub: string;
   viewOriginal: string;
+  viewArticle: string;
   xmlXpath: string;
   xpath: string;
   xpathDescription: string;
@@ -608,6 +609,8 @@ export interface TranslationMessages {
   youtubeVideo: string;
   zoomIn: string;
   zoomOut: string;
+  expandContent: string;
+  collapseContent: string;
   findInPagePlaceholder: string;
   nextMatch: string;
   previousMatch: string;

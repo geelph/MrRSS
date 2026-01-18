@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Supported displaying image filtered by category in image gallery view. (#487, #490)
 - Supported translating from traditional Chinese to simplified Chinese and vice versa. (#511)
 - Supported copying images to clipboard. (#515)
+- Improved image gallery mode styling and user experience. (#520)
 
 ### Changed
 
