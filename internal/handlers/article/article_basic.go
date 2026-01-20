@@ -26,9 +26,20 @@ import (
 func HandleArticles(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 	filter := r.URL.Query().Get("filter")
 	feedIDStr := r.URL.Query().Get("feed_id")
-	category := r.URL.Query().Get("category")
 	pageStr := r.URL.Query().Get("page")
 	limitStr := r.URL.Query().Get("limit")
+
+	// Check if category parameter exists (even if empty string)
+	// We need to distinguish between "no category parameter" and "category='' for uncategorized"
+	// Use a special value "\x00" to represent explicit uncategorized filtering
+	var category string
+	if _, exists := r.URL.Query()["category"]; exists {
+		category = r.URL.Query().Get("category")
+		// If category is empty string, convert to special value for database layer
+		if category == "" {
+			category = "\x00" // Special value for uncategorized
+		}
+	}
 
 	var feedID int64
 	if feedIDStr != "" {
@@ -134,6 +145,7 @@ func HandleToggleReadLater(h *core.Handler, w http.ResponseWriter, r *http.Reque
 // @Accept       json
 // @Produce      json
 // @Param        feed_id  query     int64   false  "Filter by feed ID"
+// @Param        category query     string  false  "Filter by category name"
 // @Param        page     query     int     false  "Page number (default: 1)"  minimum(1)
 // @Param        limit    query     int     false  "Items per page (default: 50)"  minimum(1)
 // @Success      200  {array}   models.Article  "List of image gallery articles"
@@ -143,6 +155,18 @@ func HandleImageGalleryArticles(h *core.Handler, w http.ResponseWriter, r *http.
 	pageStr := r.URL.Query().Get("page")
 	limitStr := r.URL.Query().Get("limit")
 	feedIDStr := r.URL.Query().Get("feed_id")
+
+	// Check if category parameter exists (even if empty string)
+	// We need to distinguish between "no category parameter" and "category='' for uncategorized"
+	// Use a special value "\x00" to represent explicit uncategorized filtering
+	var category string
+	if _, exists := r.URL.Query()["category"]; exists {
+		category = r.URL.Query().Get("category")
+		// If category is empty string, convert to special value for database layer
+		if category == "" {
+			category = "\x00" // Special value for uncategorized
+		}
+	}
 
 	var feedID int64
 	if feedIDStr != "" {
@@ -165,7 +189,7 @@ func HandleImageGalleryArticles(h *core.Handler, w http.ResponseWriter, r *http.
 	showHiddenStr, _ := h.DB.GetSetting("show_hidden_articles")
 	showHidden := showHiddenStr == "true"
 
-	articles, err := h.DB.GetImageGalleryArticles(feedID, showHidden, limit, offset)
+	articles, err := h.DB.GetImageGalleryArticles(feedID, category, showHidden, limit, offset)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

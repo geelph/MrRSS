@@ -46,8 +46,14 @@ export function useArticleTranslation() {
             const articleId = parseInt((entry.target as HTMLElement).dataset.articleId || '0');
             const article = articles.find((a) => a.id === articleId);
 
-            // Only translate if article exists, has no translation, and is not already being translated
-            if (article && !article.translated_title && !translatingArticles.value.has(articleId)) {
+            // Check if translation is needed:
+            // - No translation exists, OR
+            // - Translation equals original title (indicates failed/skipped translation)
+            const needsTranslation =
+              article && (!article.translated_title || article.translated_title === article.title);
+
+            // Only translate if article exists, needs translation, and is not already being translated
+            if (needsTranslation && !translatingArticles.value.has(articleId)) {
               translateArticle(article);
             }
           }
@@ -93,6 +99,7 @@ export function useArticleTranslation() {
         const data = await res.json();
 
         // Update the article in the store
+        // Backend returns translated_title even when skipped (returns original title)
         article.translated_title = data.translated_title;
 
         // Show notification if AI limit was reached
@@ -100,11 +107,9 @@ export function useArticleTranslation() {
           window.showToast(t('aiLimitReached'), 'warning');
         }
       } else {
-        console.error('Error translating article:', res.status);
         window.showToast(t('errorTranslatingTitle'), 'error');
       }
-    } catch (e) {
-      console.error('Error translating article:', e);
+    } catch {
       window.showToast(t('errorTranslating'), 'error');
     } finally {
       translatingArticles.value.delete(article.id);
@@ -120,7 +125,11 @@ export function useArticleTranslation() {
 
   // Update translation settings from event
   function handleTranslationSettingsChange(enabled: boolean, targetLang: string): void {
-    translationSettings.value = { enabled, targetLang };
+    translationSettings.value = {
+      enabled,
+      targetLang,
+      translationOnlyMode: translationSettings.value.translationOnlyMode,
+    };
 
     // Disconnect observer if translation is disabled
     if (!enabled && observer) {

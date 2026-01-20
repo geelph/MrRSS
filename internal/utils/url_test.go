@@ -2,6 +2,84 @@ package utils
 
 import "testing"
 
+func TestNormalizeFeedURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "URL with https://",
+			input:    "https://example.com/feed.xml",
+			expected: "https://example.com/feed.xml",
+		},
+		{
+			name:     "URL with http://",
+			input:    "http://example.com/feed.xml",
+			expected: "http://example.com/feed.xml",
+		},
+		{
+			name:     "URL with rsshub://",
+			input:    "rsshub://nytimes/sections",
+			expected: "rsshub://nytimes/sections",
+		},
+		{
+			name:     "URL with script://",
+			input:    "script://custom_feed.js",
+			expected: "script://custom_feed.js",
+		},
+		{
+			name:     "URL with email://",
+			input:    "email://user@example.com",
+			expected: "email://user@example.com",
+		},
+		{
+			name:     "URL without protocol",
+			input:    "example.com/feed.xml",
+			expected: "https://example.com/feed.xml",
+		},
+		{
+			name:     "URL without protocol - with path",
+			input:    "example.com/rss/feed",
+			expected: "https://example.com/rss/feed",
+		},
+		{
+			name:     "URL with extra spaces",
+			input:    "  example.com/feed.xml  ",
+			expected: "https://example.com/feed.xml",
+		},
+		{
+			name:     "URL with uppercase protocol",
+			input:    "HTTP://example.com/feed.xml",
+			expected: "HTTP://example.com/feed.xml",
+		},
+		{
+			name:     "Empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "feed:// protocol",
+			input:    "feed://example.com/rss",
+			expected: "feed://example.com/rss",
+		},
+		{
+			name:     "ftp:// protocol",
+			input:    "ftp://example.com/file.xml",
+			expected: "ftp://example.com/file.xml",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NormalizeFeedURL(tt.input)
+			if result != tt.expected {
+				t.Errorf("NormalizeFeedURL(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestNormalizeURLForComparison(t *testing.T) {
 	tests := []struct {
 		name     string

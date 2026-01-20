@@ -115,11 +115,16 @@ func (db *DB) GetArticles(filter string, feedID int64, category string, showHidd
 		args = append(args, feedID)
 	}
 
-	if category != "" {
+	if category == "\x00" {
+		// Special value "\x00" means explicit uncategorized filtering
+		whereClauses = append(whereClauses, "(f.category IS NULL OR f.category = '')")
+	} else if category != "" {
 		// Simple prefix match for category hierarchy
 		whereClauses = append(whereClauses, "(f.category = ? OR f.category LIKE ?)")
 		args = append(args, category, category+"/%")
 	}
+	// Note: When category is empty string, it means no category filter was provided,
+	// so we should not filter by category at all (show all articles from all categories).
 
 	query := baseQuery
 	if len(whereClauses) > 0 {
@@ -501,6 +506,60 @@ func (db *DB) GetImageModeCountsForAllFeeds() (map[int64]int, error) {
 	return counts, rows.Err()
 }
 
+// GetFavoriteUnreadCountsForAllFeeds returns a map of feed_id to favorite AND unread article count.
+func (db *DB) GetFavoriteUnreadCountsForAllFeeds() (map[int64]int, error) {
+	db.WaitForReady()
+	rows, err := db.Query(`
+		SELECT feed_id, COUNT(*)
+		FROM articles
+		WHERE is_favorite = 1 AND is_read = 0 AND is_hidden = 0
+		GROUP BY feed_id
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[int64]int)
+	for rows.Next() {
+		var feedID int64
+		var count int
+		if err := rows.Scan(&feedID, &count); err != nil {
+			log.Println("Error scanning favorite unread count:", err)
+			continue
+		}
+		counts[feedID] = count
+	}
+	return counts, rows.Err()
+}
+
+// GetReadLaterUnreadCountsForAllFeeds returns a map of feed_id to read_later AND unread article count.
+func (db *DB) GetReadLaterUnreadCountsForAllFeeds() (map[int64]int, error) {
+	db.WaitForReady()
+	rows, err := db.Query(`
+		SELECT feed_id, COUNT(*)
+		FROM articles
+		WHERE is_read_later = 1 AND is_read = 0 AND is_hidden = 0
+		GROUP BY feed_id
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[int64]int)
+	for rows.Next() {
+		var feedID int64
+		var count int
+		if err := rows.Scan(&feedID, &count); err != nil {
+			log.Println("Error scanning read_later unread count:", err)
+			continue
+		}
+		counts[feedID] = count
+	}
+	return counts, rows.Err()
+}
+
 // MarkAllAsReadForFeed marks all articles in a feed as read.
 func (db *DB) MarkAllAsReadForFeed(feedID int64) error {
 	db.WaitForReady()
@@ -542,8 +601,9 @@ func (db *DB) ClearReadLater() error {
 
 // GetImageGalleryArticles retrieves articles from image mode feeds with pagination.
 // If feedID is provided, it gets articles only from that feed (assuming it's an image mode feed).
+// If category is provided, it gets articles from all image mode feeds in that category.
 // Otherwise, it gets articles from all image mode feeds.
-func (db *DB) GetImageGalleryArticles(feedID int64, showHidden bool, limit, offset int) ([]models.Article, error) {
+func (db *DB) GetImageGalleryArticles(feedID int64, category string, showHidden bool, limit, offset int) ([]models.Article, error) {
 	db.WaitForReady()
 	baseQuery := `
 		SELECT a.id, a.feed_id, a.title, a.url, a.image_url, a.audio_url, a.video_url, a.published_at, a.is_read, a.is_favorite, a.is_hidden, a.is_read_later, a.translated_title, a.summary, f.title
@@ -564,7 +624,16 @@ func (db *DB) GetImageGalleryArticles(feedID int64, showHidden bool, limit, offs
 	if feedID > 0 {
 		baseQuery += " AND a.feed_id = ?"
 		args = append(args, feedID)
+	} else if category == "\x00" {
+		// Special value "\x00" means explicit uncategorized filtering
+		baseQuery += " AND (f.category IS NULL OR f.category = '')"
+	} else if category != "" {
+		// For categories, use prefix match to support nested categories
+		baseQuery += " AND (f.category = ? OR f.category LIKE ?)"
+		args = append(args, category, category+"/%")
 	}
+	// Note: When category is empty string, it means no category filter was provided,
+	// so we should not filter by category at all (show all image mode articles from all categories).
 
 	baseQuery += " ORDER BY a.published_at DESC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)

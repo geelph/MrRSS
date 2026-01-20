@@ -9,6 +9,39 @@ import (
 	"time"
 )
 
+// NormalizeFeedURL ensures the feed URL has a protocol prefix.
+// If the URL doesn't start with http://, https://, rsshub://, or other protocols,
+// it will automatically prepend https://
+func NormalizeFeedURL(feedURL string) string {
+	if feedURL == "" {
+		return feedURL
+	}
+
+	// Trim whitespace
+	feedURL = strings.TrimSpace(feedURL)
+
+	// Check if URL already has a protocol
+	protocols := []string{
+		"http://",
+		"https://",
+		"rsshub://",
+		"script://",
+		"email://",
+		"feed://",
+		"ftp://",
+		"file://",
+	}
+
+	for _, protocol := range protocols {
+		if strings.HasPrefix(strings.ToLower(feedURL), protocol) {
+			return feedURL
+		}
+	}
+
+	// If no protocol found, prepend https://
+	return "https://" + feedURL
+}
+
 // NormalizeURLForComparison returns a normalized URL for comparison purposes.
 // It strips query parameters that often change between feed fetches (like tracking params).
 // This helps match articles even when feeds use dynamic URL parameters.

@@ -73,12 +73,17 @@ export function useArticleDetail() {
   }
 
   // Mark article as read if it's not already read
-  function markAsReadIfNeeded(article: Article) {
+  async function markAsReadIfNeeded(article: Article) {
     if (!article.is_read) {
       article.is_read = true;
-      fetch(`/api/articles/read?id=${article.id}&read=true`, {
-        method: 'POST',
-      });
+      try {
+        await fetch(`/api/articles/read?id=${article.id}&read=true`, {
+          method: 'POST',
+        });
+        store.fetchUnreadCounts();
+      } catch (e) {
+        console.error('Error marking as read:', e);
+      }
     }
   }
 
@@ -442,6 +447,11 @@ export function useArticleDetail() {
                     y: e.clientY,
                     items: [
                       {
+                        label: t('copyImage'),
+                        action: 'copy',
+                        icon: 'PhCopy',
+                      },
+                      {
                         label: t('viewImage'),
                         action: 'view',
                         icon: 'PhMagnifyingGlassPlus',
@@ -454,7 +464,9 @@ export function useArticleDetail() {
                     ],
                     data: { src: newImg.src },
                     callback: (action: string, data: { src: string }) => {
-                      if (action === 'view') {
+                      if (action === 'copy') {
+                        copyImage(data.src);
+                      } else if (action === 'view') {
                         imageViewerSrc.value = data.src;
                         imageViewerAlt.value = '';
                       } else if (action === 'download') {
@@ -561,6 +573,60 @@ export function useArticleDetail() {
     imageViewerAlt.value = '';
     imageViewerImages.value = [];
     imageViewerInitialIndex.value = 0;
+  }
+
+  // Copy image to clipboard
+  async function copyImage(src: string) {
+    try {
+      const response = await fetch(src);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const blob = await response.blob();
+
+      // Convert to PNG for maximum clipboard compatibility
+      const pngBlob = await new Promise<Blob>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob((convertedBlob) => {
+              if (convertedBlob) {
+                resolve(convertedBlob);
+              } else {
+                reject(new Error('Failed to convert image to PNG'));
+              }
+            }, 'image/png');
+          } else {
+            reject(new Error('Failed to get canvas context'));
+          }
+        };
+
+        img.onerror = () => {
+          reject(new Error('Failed to load image for conversion'));
+        };
+
+        img.src = URL.createObjectURL(blob);
+      });
+
+      // Copy to clipboard using only PNG format (widely supported)
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': pngBlob,
+        }),
+      ]);
+
+      window.showToast(t('copiedToClipboard'), 'success');
+    } catch (error) {
+      console.error('Failed to copy image:', error);
+      window.showToast(t('failedToCopy'), 'error');
+    }
   }
 
   // Download image from URL
@@ -754,6 +820,7 @@ export function useArticleDetail() {
     openOriginal,
     toggleContentView,
     closeImageViewer,
+    copyImage,
     downloadImage,
     exportToObsidian,
     attachImageEventListeners, // Expose for re-attaching after content modifications

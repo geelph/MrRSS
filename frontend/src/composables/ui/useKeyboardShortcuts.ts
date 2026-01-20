@@ -177,6 +177,52 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
     }
   }
 
+  // Check if an article detail panel is open and scrollable
+  function isArticleDetailOpen(): boolean {
+    // Check if there's a current article selected
+    if (!store.currentArticleId) return false;
+
+    // Check if the article detail panel is visible
+    const articleDetail = document.querySelector('main[class*="flex-1 bg-bg-primary"]');
+    if (!articleDetail) return false;
+
+    // Check if the article detail has scrollable content
+    const scrollableContent = articleDetail.querySelector('.overflow-y-auto');
+    if (!scrollableContent) return false;
+
+    return true;
+  }
+
+  // Check if currently viewing original webpage (iframe mode)
+  function isWebpageViewMode(): boolean {
+    const iframe = document.querySelector('iframe[src*="/api/webpage/proxy"]');
+    return iframe !== null;
+  }
+
+  // Scroll the article detail panel
+  function scrollArticleDetail(direction: 'up' | 'down' | 'pageDown' | 'pageUp'): void {
+    const articleDetail = document.querySelector('main[class*="flex-1 bg-bg-primary"]');
+    if (!articleDetail) return;
+
+    const scrollableContent = articleDetail.querySelector('.overflow-y-auto') as HTMLElement;
+    if (!scrollableContent) return;
+
+    const scrollAmount =
+      direction === 'pageDown' || direction === 'pageUp'
+        ? scrollableContent.clientHeight * 0.9
+        : 100; // For arrow keys
+
+    const newScrollTop =
+      direction === 'down' || direction === 'pageDown'
+        ? scrollableContent.scrollTop + scrollAmount
+        : scrollableContent.scrollTop - scrollAmount;
+
+    scrollableContent.scrollTo({
+      top: newScrollTop,
+      behavior: 'smooth',
+    });
+  }
+
   // Keyboard event handler
   function handleKeyboardShortcut(e: KeyboardEvent): void {
     // Skip if shortcuts are disabled
@@ -220,8 +266,57 @@ export function useKeyboardShortcuts(callbacks: KeyboardShortcutCallbacks) {
 
     const key = buildKeyCombo(e);
 
+    // Handle article detail scrolling when article is open
+    // Only in RSS content view mode, not in webpage (iframe) view mode
+    if (isArticleDetailOpen() && !isWebpageViewMode()) {
+      // Space key - scroll page down
+      if (key === 'Space') {
+        // Prevent default only if not in input field
+        if (!isInput && !isEditable) {
+          e.preventDefault();
+          scrollArticleDetail('pageDown');
+          return;
+        }
+      }
+
+      // ArrowDown - scroll down
+      if (key === 'ArrowDown') {
+        if (!isInput && !isEditable) {
+          e.preventDefault();
+          scrollArticleDetail('down');
+          return;
+        }
+      }
+
+      // ArrowUp - scroll up
+      if (key === 'ArrowUp') {
+        if (!isInput && !isEditable) {
+          e.preventDefault();
+          scrollArticleDetail('up');
+          return;
+        }
+      }
+
+      // Shift+Space - scroll page up
+      if (key === 'Shift+Space') {
+        if (!isInput && !isEditable) {
+          e.preventDefault();
+          scrollArticleDetail('pageUp');
+          return;
+        }
+      }
+    }
+
     // Check for escape key to close modals first (always allow, even when shortcuts disabled)
     if (key === shortcuts.value.closeArticle) {
+      // Check if the find in page search input is focused
+      const findInputFocused = document.activeElement?.classList.contains('find-input');
+
+      // If find input is focused, don't handle ESC here - let FindInPage component handle it
+      if (findInputFocused) {
+        return;
+      }
+
       // Check if there are any open modals
       const hasOpenModal = document.querySelector('[data-modal-open="true"]') !== null;
 

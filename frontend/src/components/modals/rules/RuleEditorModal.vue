@@ -16,8 +16,8 @@ import { useModalClose } from '@/composables/ui/useModalClose';
 
 const { t } = useI18n();
 
-// Modal close handling
-useModalClose(() => handleClose());
+// Modal close handling - z-index 70 for nested modals
+useModalClose(() => handleClose(true), 70);
 
 // Use composables
 const { actionOptions } = useRuleOptions();
@@ -66,6 +66,37 @@ const ruleName = ref('');
 const conditions: Ref<Condition[]> = ref([]);
 const actions: Ref<string[]> = ref([]);
 
+// Store initial state for unsaved changes detection
+const initialState = ref<{
+  ruleName: string;
+  conditions: Condition[];
+  actions: string[];
+}>({
+  ruleName: '',
+  conditions: [],
+  actions: [],
+});
+
+// Check if there are unsaved changes
+const hasUnsavedChanges = computed(() => {
+  // If it's a new rule and has any content, consider it unsaved
+  if (!props.rule) {
+    return ruleName.value !== '' || conditions.value.length > 0 || actions.value.length > 0;
+  }
+
+  // For existing rules, compare with initial state
+  const currentConditions = JSON.stringify(conditions.value);
+  const initialConditions = JSON.stringify(initialState.value.conditions);
+  const currentActions = JSON.stringify(actions.value);
+  const initialActions = JSON.stringify(initialState.value.actions);
+
+  return (
+    ruleName.value !== initialState.value.ruleName ||
+    currentConditions !== initialConditions ||
+    currentActions !== initialActions
+  );
+});
+
 // Initialize form when rule changes
 watch(
   () => props.rule,
@@ -79,6 +110,13 @@ watch(
       conditions.value = [];
       actions.value = [];
     }
+
+    // Store initial state for unsaved changes detection
+    initialState.value = {
+      ruleName: ruleName.value,
+      conditions: JSON.parse(JSON.stringify(conditions.value)),
+      actions: [...actions.value],
+    };
   },
   { immediate: true }
 );
@@ -141,7 +179,22 @@ function handleSave(): void {
   emit('save', rule);
 }
 
-function handleClose(): void {
+async function handleClose(checkUnsaved = false): Promise<void> {
+  // Check for unsaved changes if requested
+  if (checkUnsaved && hasUnsavedChanges.value) {
+    const confirmed = await window.showConfirm({
+      title: t('unsavedChangesTitle'),
+      message: t('unsavedChangesMessage'),
+      confirmText: t('discard'),
+      cancelText: t('cancel'),
+      isDanger: true,
+    });
+
+    if (!confirmed) {
+      return;
+    }
+  }
+
   openDropdownIndex.value = null;
   emit('close');
 }
@@ -159,13 +212,13 @@ function handleClose(): void {
     >
       <!-- Header -->
       <div class="p-4 sm:p-5 border-b border-border flex justify-between items-center shrink-0">
-        <h3 class="text-lg font-semibold m-0 flex items-center gap-2">
+        <h3 class="text-lg font-semibold m-0 flex items-center gap-2 text-text-primary">
           <PhLightning :size="20" />
           {{ rule ? t('editRule') : t('addRule') }}
         </h3>
         <span
           class="text-2xl cursor-pointer text-text-secondary hover:text-text-primary"
-          @click="handleClose"
+          @click="handleClose(true)"
           >&times;</span
         >
       </div>
@@ -288,7 +341,7 @@ function handleClose(): void {
       <div
         class="p-4 sm:p-5 border-t border-border bg-bg-secondary flex justify-end gap-3 shrink-0"
       >
-        <button class="btn-secondary" @click="handleClose">
+        <button class="btn-secondary" @click="handleClose(true)">
           {{ t('cancel') }}
         </button>
         <button class="btn-primary" :disabled="!isValid" @click="handleSave">

@@ -2,9 +2,11 @@
 import { computed } from 'vue';
 import type { SettingsData } from '@/types/settings';
 import { useSettingsAutoSave } from '@/composables/core/useSettingsAutoSave';
-import ApplicationSettings from './ApplicationSettings.vue';
-import UpdateSettings from './UpdateSettings.vue';
-import DataManagementSettings from './DataManagementSettings.vue';
+import ArticleDisplaySettings from './ArticleDisplaySettings.vue';
+import TypographySettings from './TypographySettings.vue';
+import ContentSettings from './ContentSettings.vue';
+import InteractionSettings from './InteractionSettings.vue';
+import CustomizationSettings from './CustomizationSettings.vue';
 
 interface Props {
   settings: SettingsData;
@@ -17,7 +19,6 @@ const emit = defineEmits<{
 }>();
 
 // Create a computed ref that returns the settings object
-// This ensures reactivity while allowing modifications
 const settingsRef = computed(() => props.settings);
 
 // Use composable for auto-save with reactivity
@@ -32,11 +33,15 @@ function handleUpdateSettings(updatedSettings: SettingsData) {
 
 <template>
   <div class="space-y-4 sm:space-y-6">
-    <ApplicationSettings :settings="settings" @update:settings="handleUpdateSettings" />
+    <ArticleDisplaySettings :settings="settings" @update:settings="handleUpdateSettings" />
 
-    <UpdateSettings :settings="settings" @update:settings="handleUpdateSettings" />
+    <TypographySettings :settings="settings" @update:settings="handleUpdateSettings" />
 
-    <DataManagementSettings :settings="settings" @update:settings="handleUpdateSettings" />
+    <ContentSettings :settings="settings" @update:settings="handleUpdateSettings" />
+
+    <InteractionSettings :settings="settings" @update:settings="handleUpdateSettings" />
+
+    <CustomizationSettings :settings="settings" @update:settings="handleUpdateSettings" />
   </div>
 </template>
 
@@ -58,12 +63,5 @@ function handleUpdateSettings(updatedSettings: SettingsData) {
 }
 .setting-item {
   @apply flex items-center sm:items-start justify-between gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg bg-bg-secondary border border-border;
-}
-.info-display {
-  @apply px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-border;
-  background-color: rgba(233, 236, 239, 0.3);
-}
-.dark-mode .info-display {
-  background-color: rgba(45, 45, 45, 0.3);
 }
 </style>

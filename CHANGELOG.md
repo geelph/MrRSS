@@ -5,6 +5,30 @@ All notable changes to MrRSS will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Supported small thumbnail images in image gallery view for better navigation. (#495)
+- Supported displaying image filtered by category in image gallery view. (#487, #490)
+- Supported translating from traditional Chinese to simplified Chinese and vice versa. (#511)
+- Supported copying images to clipboard. (#515)
+- Improved image gallery mode styling and user experience. (#520)
+- Supported customizing typo style. (#488)
+
+### Changed
+
+- Change checkbox checked indicator from asterisk to checkmark. (#507)
+- Improved feed list in settings page for better usability. (#498)
+- Protocol is not required when adding/editing feeds. (#502)
+- Improved article content search performance. (#509)
+- Optimzied compact mode styling. (#488, #504)
+
+### Fixed
+
+- Fixed minor styling issues. (#492, #493, #494, #496, #503, #505, #506, #510, #516, #517, #519, #521, #522, #523)
+- Fixed the issue where pure text can not be translated correctly. (#511, #514)
+
 ## [1.3.16] - 2026-01-15
 
 ### Added

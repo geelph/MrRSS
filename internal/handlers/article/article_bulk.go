@@ -78,10 +78,26 @@ func HandleGetFilterCounts(h *core.Handler, w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Get favorite AND unread counts per feed
+	favoriteUnreadCounts, err := h.DB.GetFavoriteUnreadCountsForAllFeeds()
+	if err != nil {
+		log.Printf("[HandleGetFilterCounts] ERROR getting favorite unread counts: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Get read_later counts per feed
 	readLaterCounts, err := h.DB.GetReadLaterCountsForAllFeeds()
 	if err != nil {
 		log.Printf("[HandleGetFilterCounts] ERROR getting read_later counts: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get read_later AND unread counts per feed
+	readLaterUnreadCounts, err := h.DB.GetReadLaterUnreadCountsForAllFeeds()
+	if err != nil {
+		log.Printf("[HandleGetFilterCounts] ERROR getting read_later unread counts: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -95,10 +111,12 @@ func HandleGetFilterCounts(h *core.Handler, w http.ResponseWriter, r *http.Reque
 	}
 
 	response := map[string]interface{}{
-		"unread":     unreadCounts,
-		"favorites":  favoriteCounts,
-		"read_later": readLaterCounts,
-		"images":     imageCounts,
+		"unread":            unreadCounts,
+		"favorites":         favoriteCounts,
+		"favorites_unread":  favoriteUnreadCounts,
+		"read_later":        readLaterCounts,
+		"read_later_unread": readLaterUnreadCounts,
+		"images":            imageCounts,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

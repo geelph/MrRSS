@@ -626,6 +626,27 @@
       "category": "internal",
       "encrypted": false,
       "frontend_key": "feedDrawerExpanded"
+    },
+    "content_font_family": {
+      "type": "string",
+      "default": "system",
+      "category": "reading",
+      "encrypted": false,
+      "frontend_key": "contentFontFamily"
+    },
+    "content_font_size": {
+      "type": "int",
+      "default": 16,
+      "category": "reading",
+      "encrypted": false,
+      "frontend_key": "contentFontSize"
+    },
+    "content_line_height": {
+      "type": "string",
+      "default": "1.6",
+      "category": "reading",
+      "encrypted": false,
+      "frontend_key": "contentLineHeight"
     }
   }
 }

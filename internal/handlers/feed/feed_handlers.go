@@ -8,6 +8,7 @@ import (
 
 	"MrRSS/internal/handlers/core"
 	"MrRSS/internal/rsshub"
+	"MrRSS/internal/utils"
 )
 
 // HandleFeeds returns all feeds.
@@ -83,6 +84,9 @@ func HandleAddFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Normalize the URL to ensure it has a protocol
+	req.URL = utils.NormalizeFeedURL(req.URL)
 
 	// Determine the feed URL to check for duplicates
 	feedURL := req.URL
@@ -218,6 +222,9 @@ func HandleUpdateFeed(h *core.Handler, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// Normalize the URL to ensure it has a protocol
+	req.URL = utils.NormalizeFeedURL(req.URL)
 
 	// Validate RSSHub URL if provided
 	if req.URL != "" && rsshub.IsRSSHubURL(req.URL) {

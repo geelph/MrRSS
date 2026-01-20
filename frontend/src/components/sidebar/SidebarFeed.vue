@@ -18,9 +18,14 @@ interface Props {
   unreadCount: number;
   isEditMode?: boolean;
   level?: number;
+  compactMode?: boolean;
 }
 
-defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  isEditMode: false,
+  level: 0,
+  compactMode: false,
+});
 
 const emit = defineEmits<{
   click: [];
@@ -91,7 +96,7 @@ function handleDragEnd() {
 
 <template>
   <div
-    :class="['feed-item', isActive ? 'active' : '']"
+    :class="['feed-item', isActive ? 'active' : '', props.compactMode ? 'compact' : '']"
     :data-feed-id="feed.id"
     :data-level="level || 0"
     @click="emit('click')"
@@ -198,6 +203,11 @@ function handleDragEnd() {
   @apply px-2 sm:px-3 py-1.5 sm:py-2 cursor-pointer rounded-md text-xs sm:text-sm text-text-primary flex items-center gap-1.5 sm:gap-2.5 hover:bg-bg-tertiary transition-colors;
 }
 
+/* Compact mode: reduce padding and gap */
+.feed-item.compact {
+  @apply px-1 sm:px-1.5 py-0.5 sm:py-1 gap-0.5 sm:gap-1;
+}
+
 /* Indentation for nested feeds */
 .feed-item[data-level='1'] {
   padding-left: calc(0.5rem + 1rem);
@@ -230,6 +240,41 @@ function handleDragEnd() {
 
   .feed-item[data-level='4'] {
     padding-left: calc(0.75rem + 4rem);
+  }
+}
+
+/* Compact mode indentation */
+.feed-item.compact[data-level='1'] {
+  padding-left: calc(0.375rem + 1rem);
+}
+
+.feed-item.compact[data-level='2'] {
+  padding-left: calc(0.375rem + 2rem);
+}
+
+.feed-item.compact[data-level='3'] {
+  padding-left: calc(0.375rem + 3rem);
+}
+
+.feed-item.compact[data-level='4'] {
+  padding-left: calc(0.375rem + 4rem);
+}
+
+@media (min-width: 640px) {
+  .feed-item.compact[data-level='1'] {
+    padding-left: calc(0.5rem + 1rem);
+  }
+
+  .feed-item.compact[data-level='2'] {
+    padding-left: calc(0.5rem + 2rem);
+  }
+
+  .feed-item.compact[data-level='3'] {
+    padding-left: calc(0.5rem + 3rem);
+  }
+
+  .feed-item.compact[data-level='4'] {
+    padding-left: calc(0.5rem + 4rem);
   }
 }
 .feed-item.active {

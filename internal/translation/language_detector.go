@@ -3,8 +3,10 @@ package translation
 import (
 	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/abadojack/whatlanggo"
+	"github.com/longbridgeapp/opencc"
 )
 
 // LanguageDetector handles language detection using whatlanggo
@@ -64,14 +66,16 @@ func (ld *LanguageDetector) DetectLanguage(text string) string {
 
 	info := whatlanggo.DetectWithOptions(textForDetection, options)
 
-	// Check confidence level - only accept high confidence detections
-	if info.Confidence < 0.5 {
-		return ""
+	if info.Confidence >= 0.5 {
+		isoCode := whatlangToISOCode(info.Lang)
+		// Special handling for Chinese - distinguish Simplified vs Traditional
+		if isoCode == "zh" {
+			return detectChineseVariant(textForDetection)
+		}
+		return isoCode
 	}
 
-	// Convert whatlanggo Lang to ISO 639-1 code
-	detectedCode := whatlangToISOCode(info.Lang)
-	return detectedCode
+	return ""
 }
 
 // ShouldTranslate determines if translation is needed based on language detection
@@ -83,6 +87,7 @@ func (ld *LanguageDetector) ShouldTranslate(text, targetLang string) bool {
 	detectedLang := ld.DetectLanguage(text)
 
 	// If detection failed, assume translation is needed (fallback behavior)
+	// This is a conservative approach to avoid missing translations
 	if detectedLang == "" {
 		return true
 	}
@@ -242,9 +247,15 @@ func whatlangToISOCode(lang whatlanggo.Lang) string {
 	return ""
 }
 
-// normalizeLangCode normalizes language codes (e.g., "zh-CN" -> "zh", "en-US" -> "en")
+// normalizeLangCode normalizes language codes (e.g., "zh-CN" -> "zh", "zh-TW" -> "zh-TW", "en-US" -> "en")
+// Special handling for zh-TW to preserve the distinction
 func normalizeLangCode(code string) string {
 	code = strings.ToLower(strings.TrimSpace(code))
+	// Preserve zh-tw variant
+	if code == "zh-tw" {
+		return "zh-tw"
+	}
+	// For other codes, normalize to base language
 	if len(code) > 2 {
 		code = code[:2]
 	}
@@ -266,4 +277,44 @@ func removeHTMLTags(text string) string {
 		}
 	}
 	return strings.TrimSpace(result.String())
+}
+
+// detectChineseVariant distinguishes between Simplified and Traditional Chinese
+// Returns "zh" for Simplified Chinese and "zh-TW" for Traditional Chinese
+// Uses OpenCC conversion to accurately detect the script
+func detectChineseVariant(text string) string {
+	// Count Chinese characters
+	chineseCharCount := 0
+	for _, r := range text {
+		if unicode.In(r, unicode.Han) {
+			chineseCharCount++
+		}
+	}
+
+	// If we don't have enough Chinese characters, default to Simplified
+	if chineseCharCount < 10 {
+		return "zh"
+	}
+
+	// Use OpenCC to convert Traditional to Simplified
+	// If the text changes after conversion, it was Traditional
+	t2s, err := opencc.New("t2s")
+	if err != nil {
+		// If OpenCC fails, fallback to Simplified
+		return "zh"
+	}
+
+	converted, err := t2s.Convert(text)
+	if err != nil {
+		// If conversion fails, assume Simplified
+		return "zh"
+	}
+
+	// If converted text is different from original, it was Traditional
+	// Compare normalized versions (ignore whitespace differences)
+	if strings.TrimSpace(converted) != strings.TrimSpace(text) {
+		return "zh-TW"
+	}
+
+	return "zh"
 }

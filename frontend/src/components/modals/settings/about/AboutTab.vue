@@ -43,7 +43,8 @@ const emit = defineEmits<{
   'download-install-update': [];
 }>();
 
-const appVersion: Ref<string> = ref('1.3.16');
+const appVersion: Ref<string> = ref('');
+const isLoadingVersion: Ref<boolean> = ref(true);
 
 onMounted(async () => {
   // Fetch current version from API
@@ -52,9 +53,15 @@ onMounted(async () => {
     if (versionRes.ok) {
       const versionData = await versionRes.json();
       appVersion.value = versionData.version;
+    } else {
+      console.error('Failed to fetch version:', versionRes.status, versionRes.statusText);
+      appVersion.value = 'Unknown';
     }
   } catch (e) {
     console.error('Error fetching version:', e);
+    appVersion.value = 'Unknown';
+  } finally {
+    isLoadingVersion.value = false;
   }
 });
 
@@ -79,7 +86,11 @@ function openGitHubRelease() {
   <div class="text-center py-6 sm:py-10 px-2">
     <img src="/assets/logo.svg" alt="Logo" class="h-12 sm:h-16 w-auto mb-3 sm:mb-4 mx-auto" />
     <h3 class="text-lg sm:text-xl font-bold mb-2">{{ t('appName') }}</h3>
-    <p class="text-text-secondary text-xs sm:text-sm">{{ t('version') }} {{ appVersion }}</p>
+    <p class="text-text-secondary text-xs sm:text-sm">
+      {{ t('version') }}
+      <span v-if="isLoadingVersion" class="inline-block animate-pulse">Loading...</span>
+      <span v-else>{{ appVersion }}</span>
+    </p>
 
     <div class="mt-4 sm:mt-6 mb-4 sm:mb-6 flex justify-center">
       <button

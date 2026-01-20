@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useAppStore } from '@/stores/app';
 import { useI18n } from 'vue-i18n';
 import { useDragDrop } from '@/composables/ui/useDragDrop';
 import { useSidebar } from '@/composables/core/useSidebar';
+import { useSettings } from '@/composables/core/useSettings';
 import SidebarCategory from './SidebarCategory.vue';
 import { PhMagnifyingGlass, PhX, PhPencil, PhCheck, PhPushPin } from '@phosphor-icons/vue';
 import type { Feed } from '@/types/models';
@@ -22,6 +23,35 @@ const emit = defineEmits<{
 
 const store = useAppStore();
 const { t } = useI18n();
+const { settings, fetchSettings } = useSettings();
+
+// Compact mode setting
+const compactMode = computed(() => {
+  return settings.value.compact_mode === true;
+});
+
+// Initialize settings on mount
+onMounted(async () => {
+  try {
+    await fetchSettings();
+  } catch (e) {
+    console.error('Error loading settings in FeedList:', e);
+  }
+
+  // Listen for compact mode changes
+  window.addEventListener('compact-mode-changed', handleCompactModeChange);
+});
+
+// Handle compact mode changes
+function handleCompactModeChange() {
+  fetchSettings().catch((e) => {
+    console.error('Error re-fetching settings after compact mode change:', e);
+  });
+}
+
+onUnmounted(() => {
+  window.removeEventListener('compact-mode-changed', handleCompactModeChange);
+});
 
 // Edit mode for drag reordering
 const isEditMode = ref(false);
@@ -37,6 +67,7 @@ function toggleEditMode() {
 const {
   tree,
   categoryUnreadCounts,
+  feedUnreadCounts,
   toggleCategory,
   isCategoryOpen: checkIsCategoryOpen,
   searchQuery,
@@ -403,7 +434,10 @@ function handleTogglePin() {
           </div>
 
           <!-- Categories List -->
-          <div class="flex-1 overflow-y-auto overflow-x-hidden p-2">
+          <div
+            class="flex-1 overflow-y-auto overflow-x-hidden"
+            :class="compactMode ? 'p-1' : 'p-2'"
+          >
             <SidebarCategory
               v-for="(data, name) in filteredTree.tree"
               :key="name"
@@ -415,12 +449,13 @@ function handleTogglePin() {
               :is-active="store.currentCategory === name"
               :unread-count="categoryUnreadCounts[name] || 0"
               :current-feed-id="store.currentFeedId"
-              :feed-unread-counts="store.unreadCounts.feedCounts"
+              :feed-unread-counts="feedUnreadCounts"
               :is-drag-over="dragOverCategory === name"
               :is-edit-mode="isEditMode"
               :drop-preview="dropPreview"
               :dragging-feed-id="draggingFeedId"
               :is-category-open="checkIsCategoryOpen"
+              :compact-mode="compactMode"
               @toggle="() => toggleCategory(name)"
               @select-category="() => handleSelectCategory(name)"
               @select-feed="(feedId: number) => handleSelectFeed(feedId)"
@@ -448,17 +483,19 @@ function handleTogglePin() {
                 checkIsCategoryOpen('uncategorized') ||
                 (filteredTree.uncategorized.length === 0 && isDragging)
               "
-              :is-active="false"
+              :is-active="store.currentCategory === ''"
               :is-uncategorized="true"
               :unread-count="categoryUnreadCounts['uncategorized'] || 0"
               :current-feed-id="store.currentFeedId"
-              :feed-unread-counts="store.unreadCounts.feedCounts"
+              :feed-unread-counts="feedUnreadCounts"
               :is-drag-over="dragOverCategory === 'uncategorized'"
               :is-edit-mode="isEditMode"
               :drop-preview="dropPreview"
               :dragging-feed-id="draggingFeedId"
               :is-category-open="checkIsCategoryOpen"
+              :compact-mode="compactMode"
               @toggle="toggleCategory('uncategorized')"
+              @select-category="(path: string) => handleSelectCategory(path)"
               @select-feed="(feedId: number) => handleSelectFeed(feedId)"
               @category-context-menu="(e: MouseEvent) => onCategoryContextMenu(e, 'uncategorized')"
               @feed-context-menu="onFeedContextMenu"

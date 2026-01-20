@@ -33,6 +33,9 @@ type Defaults struct {
 	BaiduSecretKey                string `json:"baidu_secret_key"`
 	CloseToTray                   bool   `json:"close_to_tray"`
 	CompactMode                   bool   `json:"compact_mode"`
+	ContentFontFamily             string `json:"content_font_family"`
+	ContentFontSize               int    `json:"content_font_size"`
+	ContentLineHeight             string `json:"content_line_height"`
 	CustomCssFile                 string `json:"custom_css_file"`
 	CustomTranslationBodyTemplate string `json:"custom_translation_body_template"`
 	CustomTranslationEnabled      bool   `json:"custom_translation_enabled"`
@@ -155,6 +158,12 @@ func GetString(key string) string {
 		return strconv.FormatBool(defaults.CloseToTray)
 	case "compact_mode":
 		return strconv.FormatBool(defaults.CompactMode)
+	case "content_font_family":
+		return defaults.ContentFontFamily
+	case "content_font_size":
+		return strconv.Itoa(defaults.ContentFontSize)
+	case "content_line_height":
+		return defaults.ContentLineHeight
 	case "custom_css_file":
 		return defaults.CustomCssFile
 	case "custom_translation_body_template":

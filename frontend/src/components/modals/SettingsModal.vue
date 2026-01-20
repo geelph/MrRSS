@@ -3,6 +3,7 @@ import { useAppStore } from '@/stores/app';
 import { useI18n } from 'vue-i18n';
 import { ref, onMounted, type Ref } from 'vue';
 import GeneralTab from './settings/general/GeneralTab.vue';
+import ReadingDisplayTab from './settings/reading/ReadingDisplayTab.vue';
 import FeedsTab from './settings/feeds/FeedsTab.vue';
 import ContentTab from './settings/content/ContentTab.vue';
 import AITab from './settings/ai/AITab.vue';
@@ -16,6 +17,7 @@ import DiscoverAllFeedsModal from './discovery/DiscoverAllFeedsModal.vue';
 import {
   PhGear,
   PhSlidersHorizontal,
+  PhBookOpen,
   PhRss,
   PhTextT,
   PhBrain,
@@ -116,6 +118,13 @@ function handleDiscoverAll() {
               <span>{{ t('general') }}</span>
             </button>
             <button
+              :class="['sidebar-tab-btn', activeTab === 'reading' ? 'active' : '']"
+              @click="activeTab = 'reading'"
+            >
+              <PhBookOpen :size="22" />
+              <span>{{ t('readingAndDisplay') }}</span>
+            </button>
+            <button
               :class="['sidebar-tab-btn', activeTab === 'feeds' ? 'active' : '']"
               @click="activeTab = 'feeds'"
             >
@@ -185,6 +194,12 @@ function handleDiscoverAll() {
         <div class="flex-1 overflow-y-auto p-3 sm:p-6 min-h-0 scroll-smooth">
           <GeneralTab
             v-if="activeTab === 'general'"
+            :settings="settings"
+            @update:settings="settings = $event"
+          />
+
+          <ReadingDisplayTab
+            v-if="activeTab === 'reading'"
             :settings="settings"
             @update:settings="settings = $event"
           />

@@ -58,10 +58,10 @@ function handleKeydown(e: KeyboardEvent) {
       openFindInPage();
     }
   }
-  // Close find in page with Escape
-  if (e.key === 'Escape' && showFindInPage.value) {
-    closeFindInPage();
-  }
+
+  // Note: FindInPage component handles its own ESC key to close
+  // We don't handle ESC here to avoid conflicts - FindInPage will stopPropagation
+  // when it needs to handle the key (when search is focused or has content)
 
   // Note: Arrow key navigation is now handled by the global keyboard shortcuts system
   // See useKeyboardShortcuts.ts which properly checks for editable elements
@@ -163,6 +163,7 @@ onBeforeUnmount(() => {
     <FindInPage
       v-if="showFindInPage && showContent"
       container-selector=".prose-content"
+      :article-id="article?.id"
       @close="closeFindInPage"
     />
 

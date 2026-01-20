@@ -10,6 +10,10 @@ export function useResizablePanels() {
   // Track if user has manually resized the article list
   const userManuallyResized = ref<boolean>(false);
 
+  // Track initial mouse position when starting resize
+  const initialMouseX = ref<number>(0);
+  const initialArticleListWidth = ref<number>(400);
+
   // Set compact mode state (doesn't change width by itself)
   function setCompactMode(enabled: boolean): void {
     compactMode.value = enabled;
@@ -48,8 +52,11 @@ export function useResizablePanels() {
   }
 
   // Article list resize handlers
-  function startResizeArticleList(): void {
+  function startResizeArticleList(event: MouseEvent): void {
     isResizingArticleList.value = true;
+    // Store initial mouse position and article list width
+    initialMouseX.value = event.clientX;
+    initialArticleListWidth.value = articleListWidth.value;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
     window.addEventListener('mousemove', handleResizeArticleList);
@@ -58,7 +65,10 @@ export function useResizablePanels() {
 
   function handleResizeArticleList(): void {
     if (!isResizingArticleList.value) return;
-    const newWidth = (window.event as MouseEvent).clientX - sidebarWidth.value;
+    const currentMouseX = (window.event as MouseEvent).clientX;
+    // Calculate the delta from the initial position and apply to initial width
+    const deltaX = currentMouseX - initialMouseX.value;
+    const newWidth = initialArticleListWidth.value + deltaX;
     // In compact mode, allow wider range (300-800), in normal mode (250-600)
     const minWidth = compactMode.value ? 300 : 250;
     const maxWidth = compactMode.value ? 800 : 600;

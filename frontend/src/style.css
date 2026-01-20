@@ -186,7 +186,7 @@ input[type='checkbox']:not(.toggle):checked {
 }
 
 input[type='checkbox']:not(.toggle):checked::after {
-  content: '*';
+  content: '✓';
   position: absolute;
   top: 50%;
   left: 50%;
@@ -206,6 +206,23 @@ input[type='checkbox']:not(.toggle):focus {
 .dark-mode input[type='checkbox']:not(.toggle):checked {
   background-color: var(--accent-color);
   border-color: var(--accent-color);
+}
+
+/* Remove focus outline from all interactive elements */
+button,
+a,
+input,
+textarea,
+select {
+  outline: none !important;
+}
+
+button:focus,
+a:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
 }
 
 /* Fixed line height utility */

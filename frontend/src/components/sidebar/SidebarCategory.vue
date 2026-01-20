@@ -33,6 +33,7 @@ interface Props {
   categoryPath?: string;
   // eslint-disable-next-line no-unused-vars
   isCategoryOpen?: (path: string) => boolean;
+  compactMode?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -42,6 +43,7 @@ const props = withDefaults(defineProps<Props>(), {
   isCategoryOpen: undefined,
   dropPreview: undefined,
   draggingFeedId: null,
+  compactMode: false,
 });
 
 const emit = defineEmits<{
@@ -143,6 +145,10 @@ const hasChildren = computed(() => {
 
 // Get the full category path for this node
 const fullPath = computed(() => {
+  // For uncategorized category, use empty string to match database (feeds with no category)
+  if (props.isUncategorized) {
+    return '';
+  }
   return props.categoryPath ? `${props.categoryPath}/${props.name}` : props.name;
 });
 
@@ -167,14 +173,18 @@ const isFreshRSSCategory = computed(() => {
 
 <template>
   <div
-    :class="['mb-1 category-container', isDragOver ? 'drag-over' : '']"
+    :class="[
+      'category-container',
+      isDragOver ? 'drag-over' : '',
+      props.compactMode ? 'mb-0.5' : 'mb-1',
+    ]"
     :data-level="level"
     @dragover.self="handleCategoryDragOver"
     @dragleave.self="(e) => $emit('dragleave', props.name, e)"
     @drop.self.prevent="handleDrop"
   >
     <div
-      :class="['category-header', isActive ? 'active' : '']"
+      :class="['category-header', isActive ? 'active' : '', props.compactMode ? 'compact' : '']"
       @click="emit('selectCategory', fullPath)"
       @contextmenu="(e) => emit('categoryContextMenu', e, fullPath)"
       @dragover="handleCategoryDragOver"
@@ -203,7 +213,8 @@ const isFreshRSSCategory = computed(() => {
     </div>
     <div
       v-show="isOpen"
-      class="pl-2 feeds-list"
+      class="feeds-list"
+      :class="props.compactMode ? 'pl-1' : 'pl-2'"
       @dragover="handleFeedsListDragOver"
       @drop.prevent="handleDrop"
     >
@@ -226,6 +237,7 @@ const isFreshRSSCategory = computed(() => {
             :unread-count="feedUnreadCounts[feed.id] || 0"
             :is-edit-mode="isEditMode"
             :level="level"
+            :compact-mode="props.compactMode"
             @click="emit('selectFeed', feed.id)"
             @contextmenu="(e) => emit('feedContextMenu', e, feed)"
             @dragstart="(e) => emit('dragstart', feed.id, e)"
@@ -271,6 +283,7 @@ const isFreshRSSCategory = computed(() => {
           :is-edit-mode="isEditMode"
           :dragging-feed-id="draggingFeedId"
           :is-category-open="props.isCategoryOpen"
+          :compact-mode="props.compactMode"
           @toggle="emit('childToggle', fullPath + '/' + childName)"
           @select-category="(path) => emit('childSelectCategory', path)"
           @category-context-menu="(e, path) => emit('childContextMenu', e, path)"
@@ -298,6 +311,11 @@ const isFreshRSSCategory = computed(() => {
   padding-right: calc(0.75rem + 0.375rem);
 }
 
+/* Compact mode: reduce padding for category headers */
+.category-header.compact {
+  @apply px-1.5 sm:px-2 py-1 sm:py-1.5;
+}
+
 /* Indentation for nested categories */
 .category-container[data-level='1'] .category-header {
   padding-left: calc(0.5rem + 0.375rem + 1rem);
@@ -315,6 +333,23 @@ const isFreshRSSCategory = computed(() => {
   padding-left: calc(0.5rem + 0.375rem + 4rem);
 }
 
+/* Compact mode indentation for nested categories */
+.category-container[data-level='1'] .category-header.compact {
+  padding-left: calc(0.375rem + 0.375rem + 1rem);
+}
+
+.category-container[data-level='2'] .category-header.compact {
+  padding-left: calc(0.375rem + 0.375rem + 2rem);
+}
+
+.category-container[data-level='3'] .category-header.compact {
+  padding-left: calc(0.375rem + 0.375rem + 3rem);
+}
+
+.category-container[data-level='4'] .category-header.compact {
+  padding-left: calc(0.375rem + 0.375rem + 4rem);
+}
+
 /* Special styling for category header when its container is a drag target */
 .category-container.drag-over .category-header {
   @apply text-accent font-bold;
@@ -327,6 +362,32 @@ const isFreshRSSCategory = computed(() => {
     margin-right: -0.5rem;
     padding-left: calc(0.75rem + 0.5rem);
     padding-right: calc(0.75rem + 0.5rem);
+  }
+
+  /* Compact mode at sm breakpoint */
+  .category-header.compact {
+    top: -0.25rem; /* matches container's compact p-1 */
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+    padding-left: calc(0.5rem + 0.25rem);
+    padding-right: calc(0.5rem + 0.25rem);
+  }
+
+  /* Compact mode indentation for nested categories at sm breakpoint */
+  .category-container[data-level='1'] .category-header.compact {
+    padding-left: calc(0.5rem + 0.25rem + 1rem);
+  }
+
+  .category-container[data-level='2'] .category-header.compact {
+    padding-left: calc(0.5rem + 0.25rem + 2rem);
+  }
+
+  .category-container[data-level='3'] .category-header.compact {
+    padding-left: calc(0.5rem + 0.25rem + 3rem);
+  }
+
+  .category-container[data-level='4'] .category-header.compact {
+    padding-left: calc(0.5rem + 0.25rem + 4rem);
   }
 }
 .category-header.active {

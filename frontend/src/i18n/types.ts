@@ -193,6 +193,7 @@ export interface TranslationMessages {
   downloadAudio: string;
   downloadComplete: string;
   downloadFailed: string;
+  copyImage: string;
   downloadImage: string;
   downloading: string;
   downloadUpdate: string;
@@ -458,6 +459,9 @@ export interface TranslationMessages {
   ruleNamePlaceholder: string;
   rules: string;
   ruleSavedSuccess: string;
+  unsavedChangesTitle: string;
+  unsavedChangesMessage: string;
+  discard: string;
   rulesDesc: string;
   saveChanges: string;
   saveSettings: string;
@@ -471,6 +475,9 @@ export interface TranslationMessages {
   searchingFriendLinks: string;
   selectActions: string;
   selectAll: string;
+  totalAndSelected: string;
+  noSearchResults: string;
+  noFeeds: string;
   selectArticle: string;
   selectCategory: string;
   selectCondition: string;
@@ -580,6 +587,7 @@ export interface TranslationMessages {
   viewModeRendered: string;
   viewOnGitHub: string;
   viewOriginal: string;
+  viewArticle: string;
   xmlXpath: string;
   xpath: string;
   xpathDescription: string;
@@ -601,6 +609,8 @@ export interface TranslationMessages {
   youtubeVideo: string;
   zoomIn: string;
   zoomOut: string;
+  expandContent: string;
+  collapseContent: string;
   findInPagePlaceholder: string;
   nextMatch: string;
   previousMatch: string;

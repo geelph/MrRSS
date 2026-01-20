@@ -28,6 +28,9 @@ export function generateInitialSettings(): SettingsData {
     baidu_secret_key: settingsDefaults.baidu_secret_key,
     close_to_tray: settingsDefaults.close_to_tray,
     compact_mode: settingsDefaults.compact_mode,
+    content_font_family: settingsDefaults.content_font_family,
+    content_font_size: settingsDefaults.content_font_size,
+    content_line_height: settingsDefaults.content_line_height,
     custom_css_file: settingsDefaults.custom_css_file,
     custom_translation_body_template: settingsDefaults.custom_translation_body_template,
     custom_translation_enabled: settingsDefaults.custom_translation_enabled,
@@ -126,6 +129,9 @@ export function parseSettingsData(data: Record<string, string>): SettingsData {
     baidu_secret_key: data.baidu_secret_key || settingsDefaults.baidu_secret_key,
     close_to_tray: data.close_to_tray === 'true',
     compact_mode: data.compact_mode === 'true',
+    content_font_family: data.content_font_family || settingsDefaults.content_font_family,
+    content_font_size: parseInt(data.content_font_size) || settingsDefaults.content_font_size,
+    content_line_height: data.content_line_height || settingsDefaults.content_line_height,
     custom_css_file: data.custom_css_file || settingsDefaults.custom_css_file,
     custom_translation_body_template:
       data.custom_translation_body_template || settingsDefaults.custom_translation_body_template,
@@ -247,6 +253,13 @@ export function buildAutoSavePayload(settingsRef: Ref<SettingsData>): Record<str
     baidu_secret_key: settingsRef.value.baidu_secret_key ?? settingsDefaults.baidu_secret_key,
     close_to_tray: (settingsRef.value.close_to_tray ?? settingsDefaults.close_to_tray).toString(),
     compact_mode: (settingsRef.value.compact_mode ?? settingsDefaults.compact_mode).toString(),
+    content_font_family:
+      settingsRef.value.content_font_family ?? settingsDefaults.content_font_family,
+    content_font_size: (
+      settingsRef.value.content_font_size ?? settingsDefaults.content_font_size
+    ).toString(),
+    content_line_height:
+      settingsRef.value.content_line_height ?? settingsDefaults.content_line_height,
     custom_css_file: settingsRef.value.custom_css_file ?? settingsDefaults.custom_css_file,
     custom_translation_body_template:
       settingsRef.value.custom_translation_body_template ??

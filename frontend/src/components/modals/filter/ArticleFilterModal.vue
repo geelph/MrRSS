@@ -94,7 +94,7 @@ function close() {
     >
       <!-- Header -->
       <div class="p-4 sm:p-5 border-b border-border flex justify-between items-center shrink-0">
-        <h3 class="text-lg font-semibold m-0 flex items-center gap-2">
+        <h3 class="text-lg font-semibold m-0 flex items-center gap-2 text-text-primary">
           <PhFunnel :size="20" />
           {{ t('filterArticles') }}
         </h3>

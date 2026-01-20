@@ -124,11 +124,35 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function setCategory(category: string): void {
-    // Keep currentFilter and set tempSelection
-    currentFeedId.value = null;
-    currentCategory.value = category;
-    tempSelection.value = { feedId: null, category };
-    fetchArticles();
+    // Check if this category contains only image mode feeds
+    const categoryFeeds = feeds.value.filter((f) => {
+      // Handle uncategorized category (empty string)
+      if (category === '') {
+        return !f.category || f.category === '';
+      }
+
+      // Handle nested categories by checking if the feed's category starts with the selected path
+      // For example, if category is "Tech", it should match "Tech", "Tech/AI", "Tech/AI/ML", etc.
+      const feedCategory = f.category || '';
+      return feedCategory === category || feedCategory.startsWith(category + '/');
+    });
+
+    const allImageMode = categoryFeeds.length > 0 && categoryFeeds.every((f) => f.is_image_mode);
+
+    // If all feeds in this category are image mode, switch to image gallery filter
+    if (allImageMode) {
+      currentFilter.value = 'imageGallery';
+      currentFeedId.value = null;
+      currentCategory.value = category;
+      tempSelection.value = { feedId: null, category };
+      // Don't call fetchArticles here - ImageGalleryView will handle fetching
+    } else {
+      // For regular categories, keep currentFilter and set tempSelection
+      currentFeedId.value = null;
+      currentCategory.value = category;
+      tempSelection.value = { feedId: null, category };
+      fetchArticles();
+    }
   }
 
   async function fetchArticles(append: boolean = false): Promise<void> {
@@ -219,7 +243,9 @@ export const useAppStore = defineStore('app', () => {
   const filterCounts = ref<Record<string, Record<number | string, number>>>({
     unread: {},
     favorites: {},
+    favorites_unread: {},
     read_later: {},
+    read_later_unread: {},
     images: {},
   });
 
@@ -230,7 +256,9 @@ export const useAppStore = defineStore('app', () => {
       filterCounts.value = {
         unread: data.unread || {},
         favorites: data.favorites || {},
+        favorites_unread: data.favorites_unread || {},
         read_later: data.read_later || {},
+        read_later_unread: data.read_later_unread || {},
         images: data.images || {},
       };
     } catch (e) {
@@ -238,7 +266,9 @@ export const useAppStore = defineStore('app', () => {
       filterCounts.value = {
         unread: {},
         favorites: {},
+        favorites_unread: {},
         read_later: {},
+        read_later_unread: {},
         images: {},
       };
     }

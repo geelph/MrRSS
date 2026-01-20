@@ -301,8 +301,10 @@ onUnmounted(() => {
           v-if="
             !article.translated_title || article.translated_title === article.title || compactMode
           "
-          class="flex-1 m-0 mb-1 sm:mb-1.5 text-sm sm:text-base font-semibold leading-snug text-text-primary article-title"
+          class="flex-1 m-0 text-sm sm:text-base font-semibold leading-snug text-text-primary article-title"
           :class="{
+            'mb-1 sm:mb-1.5': !compactMode,
+            'mb-0': compactMode,
             'compact-title': compactMode,
             'read-title': article.is_read && compactMode,
           }"
@@ -373,42 +375,49 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- Feed source name and time - shown in both normal and compact mode -->
       <div
-        v-if="!compactMode"
-        class="flex justify-between items-center text-[10px] sm:text-xs text-text-secondary mt-1.5 sm:mt-2"
+        class="flex justify-between items-center text-[10px] sm:text-xs text-text-secondary"
+        :class="{
+          'mt-1.5 sm:mt-2': !compactMode,
+          'mt-0': compactMode,
+        }"
       >
         <span class="font-medium text-accent truncate flex-1 min-w-0 mr-2">
           {{ article.feed_title }}
         </span>
         <div class="flex items-center gap-1 sm:gap-2 shrink-0 min-h-[14px] sm:min-h-[18px]">
-          <PhClockCountdown
-            v-if="article.is_read_later"
-            :size="14"
-            class="text-blue-500 sm:w-[18px] sm:h-[18px]"
-            weight="fill"
-          />
-          <PhStar
-            v-if="article.is_favorite"
-            :size="14"
-            class="text-yellow-500 sm:w-[18px] sm:h-[18px]"
-            weight="fill"
-          />
-          <!-- FreshRSS indicator -->
-          <img
-            v-if="article.freshrss_item_id"
-            src="/assets/plugin_icons/freshrss.svg"
-            class="w-3.5 h-3.5 shrink-0 sm:w-4 sm:h-4"
-            :title="t('freshRSSSyncedFeed')"
-            alt="FreshRSS"
-          />
-          <!-- RSSHub indicator -->
-          <img
-            v-if="isRSSHubArticle"
-            src="/assets/plugin_icons/rsshub.svg"
-            class="w-3.5 h-3.5 shrink-0 sm:w-4 sm:h-4"
-            :title="t('rsshubFeed')"
-            alt="RSSHub"
-          />
+          <!-- Icons only shown in normal mode -->
+          <template v-if="!compactMode">
+            <PhClockCountdown
+              v-if="article.is_read_later"
+              :size="14"
+              class="text-blue-500 sm:w-[18px] sm:h-[18px]"
+              weight="fill"
+            />
+            <PhStar
+              v-if="article.is_favorite"
+              :size="14"
+              class="text-yellow-500 sm:w-[18px] sm:h-[18px]"
+              weight="fill"
+            />
+            <!-- FreshRSS indicator -->
+            <img
+              v-if="article.freshrss_item_id"
+              src="/assets/plugin_icons/freshrss.svg"
+              class="w-3.5 h-3.5 shrink-0 sm:w-4 sm:h-4"
+              :title="t('freshRSSSyncedFeed')"
+              alt="FreshRSS"
+            />
+            <!-- RSSHub indicator -->
+            <img
+              v-if="isRSSHubArticle"
+              src="/assets/plugin_icons/rsshub.svg"
+              class="w-3.5 h-3.5 shrink-0 sm:w-4 sm:h-4"
+              :title="t('rsshubFeed')"
+              alt="RSSHub"
+            />
+          </template>
           <span class="whitespace-nowrap">{{ formatDateWithI18n(article.published_at) }}</span>
         </div>
       </div>

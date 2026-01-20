@@ -44,20 +44,37 @@ func HandleTranslateArticle(h *core.Handler, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Step 0: Check if article already has a translation in database
+	// This prevents re-translating already translated content
+	article, err := h.DB.GetArticleByID(req.ArticleID)
+	if err == nil && article != nil {
+		if article.TranslatedTitle != "" && article.TranslatedTitle != article.Title {
+			// Translation already exists and is different from original
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"translated_title": article.TranslatedTitle,
+				"limit_reached":    false,
+				"skipped":          true, // Indicate translation was skipped (from cache)
+				"cached":           true,
+			})
+			return
+		}
+	}
+
 	// Step 1: Pre-translation language detection to avoid unnecessary API calls
 	detector := translation.GetLanguageDetector()
-	if !detector.ShouldTranslate(req.Title, req.TargetLang) {
+	shouldTranslate := detector.ShouldTranslate(req.Title, req.TargetLang)
+
+	if !shouldTranslate {
 		// Text is already in target language, return original title
-		log.Printf("Article %d title is already in target language %s, skipping translation", req.ArticleID, req.TargetLang)
-		if err := h.DB.UpdateArticleTranslation(req.ArticleID, req.Title); err != nil {
-			log.Printf("Error updating article translation: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if updateErr := h.DB.UpdateArticleTranslation(req.ArticleID, req.Title); updateErr != nil {
+			http.Error(w, updateErr.Error(), http.StatusInternalServerError)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"translated_title": req.Title,
 			"limit_reached":    false,
 			"skipped":          true, // Indicate translation was skipped
+			"reason":           "already_target_language",
 		})
 		return
 	}
@@ -68,69 +85,64 @@ func HandleTranslateArticle(h *core.Handler, w http.ResponseWriter, r *http.Requ
 	isAIProvider := provider == "ai"
 
 	var translatedTitle string
-	var err error
+	var translateErr error
 	var limitReached = false
 
 	if isAIProvider {
 		// Check if AI usage limit is reached
 		if h.AITracker.IsLimitReached() {
-			log.Printf("AI usage limit reached, falling back to Google Translate")
 			limitReached = true
 			// Fallback to Google Translate
 			googleTranslator := translation.NewGoogleFreeTranslatorWithDB(h.DB)
-			translatedTitle, err = translation.TranslateMarkdownPreservingStructure(req.Title, googleTranslator, req.TargetLang)
+			translatedTitle, translateErr = translation.TranslateMarkdownPreservingStructure(req.Title, googleTranslator, req.TargetLang)
 		} else {
 			// Apply rate limiting for AI requests
 			h.AITracker.WaitForRateLimit()
 
 			// Use markdown-preserving translation for better list structure
-			translatedTitle, err = translation.TranslateMarkdownAIPrompt(req.Title, h.Translator, req.TargetLang)
+			translatedTitle, translateErr = translation.TranslateMarkdownAIPrompt(req.Title, h.Translator, req.TargetLang)
 
 			// If AI fails, fallback to Google Translate
-			if err != nil {
-				log.Printf("AI translation failed, falling back to Google Translate: %v", err)
+			if translateErr != nil {
 				googleTranslator := translation.NewGoogleFreeTranslatorWithDB(h.DB)
-				translatedTitle, err = translation.TranslateMarkdownPreservingStructure(req.Title, googleTranslator, req.TargetLang)
+				translatedTitle, translateErr = translation.TranslateMarkdownPreservingStructure(req.Title, googleTranslator, req.TargetLang)
 			}
 
 			// Track AI usage only on success (whether AI or fallback)
-			if err == nil {
+			if translateErr == nil {
 				h.AITracker.TrackTranslation(req.Title, translatedTitle)
 			}
 		}
 	} else {
 		// Non-AI provider, use markdown-preserving translation
-		translatedTitle, err = translation.TranslateMarkdownPreservingStructure(req.Title, h.Translator, req.TargetLang)
+		translatedTitle, translateErr = translation.TranslateMarkdownPreservingStructure(req.Title, h.Translator, req.TargetLang)
 	}
 
-	if err != nil {
-		log.Printf("Error translating article %d: %v", req.ArticleID, err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if translateErr != nil {
+		http.Error(w, translateErr.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Step 3: Post-translation check - if translation equals original, it was already in target language
 	// This provides a safety net in case pre-translation detection was inaccurate
 	if translatedTitle == req.Title {
-		log.Printf("Translation output equals original for article %d, confirming no translation needed", req.ArticleID)
 		// Still update DB with the "translated" text (which is the original)
-		if err := h.DB.UpdateArticleTranslation(req.ArticleID, translatedTitle); err != nil {
-			log.Printf("Error updating article translation: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if updateErr := h.DB.UpdateArticleTranslation(req.ArticleID, translatedTitle); updateErr != nil {
+			http.Error(w, updateErr.Error(), http.StatusInternalServerError)
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"translated_title": translatedTitle,
 			"limit_reached":    limitReached,
 			"skipped":          true, // Indicate no actual translation was performed
+			"reason":           "translation_equals_original",
 		})
 		return
 	}
 
 	// Update the article with the translated title
-	if err := h.DB.UpdateArticleTranslation(req.ArticleID, translatedTitle); err != nil {
-		log.Printf("Error updating article translation: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if updateErr := h.DB.UpdateArticleTranslation(req.ArticleID, translatedTitle); updateErr != nil {
+		http.Error(w, updateErr.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -191,11 +203,13 @@ func HandleTranslateText(h *core.Handler, w http.ResponseWriter, r *http.Request
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Error decoding translation request: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if req.Text == "" || req.TargetLang == "" {
+		log.Printf("Missing required fields in translation request")
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
@@ -204,9 +218,10 @@ func HandleTranslateText(h *core.Handler, w http.ResponseWriter, r *http.Request
 	detector := translation.GetLanguageDetector()
 	// Use full-text analysis for better accuracy on longer content
 	// Skip language detection if force flag is set
-	if !req.Force && !detector.ShouldTranslateFullText(req.Text, req.TargetLang) {
+	shouldTranslate := req.Force || detector.ShouldTranslateFullText(req.Text, req.TargetLang)
+
+	if !shouldTranslate {
 		// Text is already in target language, return original text
-		log.Printf("Text is already in target language %s (skipped by ratio check), skipping translation", req.TargetLang)
 		htmlText := utils.ConvertMarkdownToHTML(req.Text)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"translated_text": req.Text,
@@ -265,7 +280,6 @@ func HandleTranslateText(h *core.Handler, w http.ResponseWriter, r *http.Request
 	// Step 3: Post-translation check - if translation equals original, it was already in target language
 	// This provides a safety net in case pre-translation detection was inaccurate
 	if translatedText == req.Text {
-		log.Printf("Translation output equals original, confirming no translation needed")
 		htmlText := utils.ConvertMarkdownToHTML(translatedText)
 		json.NewEncoder(w).Encode(map[string]string{
 			"translated_text": translatedText,
