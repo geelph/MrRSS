@@ -125,7 +125,7 @@ watch(
       class="font-semibold mb-2 sm:mb-3 text-text-secondary uppercase text-xs tracking-wider flex items-center gap-2"
     >
       <PhRobot :size="14" class="sm:w-4 sm:h-4" />
-      {{ t('aiSettings') }}
+      {{ t('setting.ai.aiSettings') }}
     </label>
     <div class="text-xs text-text-secondary mb-3 sm:mb-4">
       {{ t('aiSettingsDesc') }}
@@ -165,17 +165,17 @@ watch(
         <PhLink :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
         <div class="flex-1 min-w-0">
           <div class="font-medium mb-0 sm:mb-1 text-sm">
-            {{ t('aiEndpoint') }} <span class="text-red-500">*</span>
+            {{ t('setting.ai.aiEndpoint') }} <span class="text-red-500">*</span>
           </div>
           <div class="text-xs text-text-secondary hidden sm:block">
-            {{ t('aiEndpointDesc') }}
+            {{ t('setting.ai.aiEndpointDesc') }}
           </div>
         </div>
       </div>
       <input
         :value="props.settings.ai_endpoint"
         type="text"
-        :placeholder="t('aiEndpointPlaceholder')"
+        :placeholder="t('setting.ai.aiEndpointPlaceholder')"
         class="input-field w-32 sm:w-48 text-xs sm:text-sm"
         @input="
           (e) =>
@@ -193,17 +193,17 @@ watch(
         <PhBrain :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
         <div class="flex-1 min-w-0">
           <div class="font-medium mb-0 sm:mb-1 text-sm">
-            {{ t('aiModel') }} <span class="text-red-500">*</span>
+            {{ t('setting.ai.aiModel') }} <span class="text-red-500">*</span>
           </div>
           <div class="text-xs text-text-secondary hidden sm:block">
-            {{ t('aiModelDesc') }}
+            {{ t('setting.ai.aiModelDesc') }}
           </div>
         </div>
       </div>
       <input
         :value="props.settings.ai_model"
         type="text"
-        :placeholder="t('aiModelPlaceholder')"
+        :placeholder="t('setting.ai.aiModelPlaceholder')"
         class="input-field w-32 sm:w-48 text-xs sm:text-sm"
         @input="
           (e) =>
@@ -220,8 +220,8 @@ watch(
       <div class="flex items-center gap-2 sm:gap-3">
         <PhSliders :size="20" class="text-text-secondary shrink-0 sm:w-6 sm:h-6" />
         <div class="flex-1 min-w-0">
-          <div class="font-medium text-sm">{{ t('aiCustomHeaders') }}</div>
-          <div class="text-xs text-text-secondary">{{ t('aiCustomHeadersDesc') }}</div>
+          <div class="font-medium text-sm">{{ t('setting.ai.aiCustomHeaders') }}</div>
+          <div class="text-xs text-text-secondary">{{ t('setting.ai.aiCustomHeadersDesc') }}</div>
         </div>
       </div>
 
@@ -235,21 +235,21 @@ watch(
           <input
             v-model="header.name"
             type="text"
-            :placeholder="t('aiCustomHeadersName')"
+            :placeholder="t('setting.ai.aiCustomHeadersName')"
             class="input-field text-xs sm:text-sm flex-1"
             @input="saveCustomHeaders()"
           />
           <input
             v-model="header.value"
             type="text"
-            :placeholder="t('aiCustomHeadersValue')"
+            :placeholder="t('setting.ai.aiCustomHeadersValue')"
             class="input-field text-xs sm:text-sm flex-1"
             @input="saveCustomHeaders()"
           />
           <button
             type="button"
             class="p-1.5 sm:p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-text-secondary hover:text-red-500 transition-all shrink-0"
-            :title="t('aiCustomHeadersRemove')"
+            :title="t('setting.ai.aiCustomHeadersRemove')"
             @click="removeCustomHeader(header.id)"
           >
             <PhTrash :size="14" class="sm:w-4 sm:h-4" />
@@ -263,7 +263,7 @@ watch(
           @click="addCustomHeader"
         >
           <PhPlus :size="14" class="sm:w-4 sm:h-4" />
-          <span>{{ t('aiCustomHeadersAdd') }}</span>
+          <span>{{ t('setting.ai.aiCustomHeadersAdd') }}</span>
         </button>
       </div>
     </div>

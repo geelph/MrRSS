@@ -9,7 +9,7 @@ with line numbers and clickable links to source files.
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Set
 from urllib.parse import quote
 
 # File paths (relative to project root)
@@ -19,13 +19,19 @@ TYPES_FILE = Path("frontend/src/i18n/types.ts")
 FRONTEND_DIR = Path("frontend/src")
 
 
-def extract_keys_from_locale(file_path: Path) -> Dict[str, int]:
-    """Extract i18n keys and their line numbers from locale files."""
+def extract_keys_from_locale(file_path: Path) -> Tuple[Dict[str, int], Set[str]]:
+    """
+    Extract i18n keys and their line numbers from locale files.
+    Returns tuple of (keys_dict, category_keys).
+    - keys_dict: maps key name to line number
+    - category_keys: set of keys that are categories (objects with children, no direct value)
+    """
     keys = {}
+    categories = set()
 
     if not file_path.exists():
         print(f"Warning: {file_path} not found")
-        return keys
+        return keys, categories
 
     with open(file_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
@@ -54,7 +60,7 @@ def extract_keys_from_locale(file_path: Path) -> Dict[str, int]:
         value_match = re.match(r'^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*[\'"]', line)
 
         if obj_match:
-            # This is a nested object
+            # This is a nested object (category)
             key = obj_match.group(1)
             path_stack.append((key, indent_level))
 
@@ -62,16 +68,18 @@ def extract_keys_from_locale(file_path: Path) -> Dict[str, int]:
             full_key = ".".join([p[0] for p in path_stack])
             if full_key not in keys:  # Only keep first occurrence
                 keys[full_key] = line_num
+            # Mark as category (will be excluded from report)
+            categories.add(full_key)
 
         elif value_match:
-            # This is a leaf value
+            # This is a leaf value (actual translation)
             key = value_match.group(1)
             full_key = ".".join([p[0] for p in path_stack] + [key]) if path_stack else key
 
             if full_key not in keys:  # Only keep first occurrence
                 keys[full_key] = line_num
 
-    return keys
+    return keys, categories
 
 
 def extract_keys_from_types(file_path: Path) -> Dict[str, int]:
@@ -202,6 +210,12 @@ def get_nesting_depth(key: str) -> int:
     return key.count(".") + 1
 
 
+def is_top_level_key(key: str) -> bool:
+    """Check if a key is a top-level key (not in any category)."""
+    # Top-level keys have no dots
+    return "." not in key
+
+
 def main():
     # Determine if we're on Windows
     is_windows = os.name == "nt"
@@ -214,17 +228,21 @@ def main():
     print(f"Analyzing i18n usage in {project_root}")
     print("=" * 80)
 
-    # Extract keys from all three files
-    en_keys = extract_keys_from_locale(EN_FILE)
-    zh_keys = extract_keys_from_locale(ZH_FILE)
+    # Extract keys from locale files with category information
+    en_keys, en_categories = extract_keys_from_locale(EN_FILE)
+    zh_keys, zh_categories = extract_keys_from_locale(ZH_FILE)
     types_keys = extract_keys_from_types(TYPES_FILE)
 
-    # Get all unique keys
+    # Combine all categories from both locale files
+    all_categories = en_categories | zh_categories
+
+    # Get all unique keys, excluding all categories
     all_keys = sorted(set(en_keys.keys()) | set(zh_keys.keys()) | set(types_keys.keys()))
+    filtered_keys = [key for key in all_keys if key not in all_categories]
 
     # Group keys by nesting depth
     keys_by_depth: Dict[int, List[str]] = {}
-    for key in all_keys:
+    for key in filtered_keys:
         depth = get_nesting_depth(key)
         if depth not in keys_by_depth:
             keys_by_depth[depth] = []
@@ -234,6 +252,8 @@ def main():
     print(f"  - en.ts: {len(en_keys)} keys")
     print(f"  - zh.ts: {len(zh_keys)} keys")
     print(f"  - types.ts: {len(types_keys)} keys")
+    print(f"  - Category keys (excluded from report): {len(all_categories)}")
+    print(f"  - Leaf keys with values (included in report): {len(filtered_keys)}")
     print(f"\nNesting depth distribution:")
     for depth in sorted(keys_by_depth.keys()):
         print(f"  - Level {depth}: {len(keys_by_depth[depth])} keys")
@@ -247,11 +267,14 @@ def main():
     output_lines.append("| Key | Depth | en.ts | zh.ts | types.ts | Usage Count | Locations |")
     output_lines.append("|-----|-------|-------|-------|----------|-------------|-----------|")
 
-    for key in all_keys:
+    for key in filtered_keys:
         en_line = en_keys.get(key, "")
         zh_line = zh_keys.get(key, "")
         types_line = types_keys.get(key, "")
         depth = get_nesting_depth(key)
+
+        # Bold format for top-level keys (no dots)
+        display_key = f"**{key}**" if is_top_level_key(key) else key
 
         # Find usages in the codebase
         usages = find_i18n_usage(key, FRONTEND_DIR)
@@ -261,7 +284,7 @@ def main():
         usage_links = create_usage_links(usages, is_windows)
 
         output_lines.append(
-            f"| {key} | {depth} | {en_line} | {zh_line} | {types_line} | {usage_count} | {usage_links} |"
+            f"| {display_key} | {depth} | {en_line} | {zh_line} | {types_line} | {usage_count} | {usage_links} |"
         )
 
     # Write to output file
@@ -270,7 +293,7 @@ def main():
         f.write("\n".join(output_lines))
 
     print(f"Report generated: {output_file}")
-    print(f"Total keys analyzed: {len(all_keys)}")
+    print(f"Total keys analyzed: {len(filtered_keys)}")
 
 
 if __name__ == "__main__":

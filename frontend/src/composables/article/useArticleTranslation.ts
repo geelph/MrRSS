@@ -111,7 +111,7 @@ export function useArticleTranslation() {
 
         // Show notification if AI limit was reached
         if (data.limit_reached) {
-          window.showToast(t('aiLimitReached'), 'warning');
+          window.showToast(t('article.translation.aiLimitReached'), 'warning');
         }
       } else {
         window.showToast(t('errorTranslatingTitle'), 'error');

@@ -55,7 +55,7 @@ async function clearAllChatSessions() {
       class="font-semibold mb-2 sm:mb-3 text-text-secondary uppercase text-xs tracking-wider flex items-center gap-2"
     >
       <PhRobot :size="14" class="sm:w-4 sm:h-4" />
-      {{ t('aiFeatures') }}
+      {{ t('setting.ai.aiFeatures') }}
     </label>
 
     <!-- AI Chat -->

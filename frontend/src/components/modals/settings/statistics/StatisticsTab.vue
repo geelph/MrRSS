@@ -71,8 +71,8 @@ const statLabels: Record<string, string> = {
   feed_refresh: t('feedRefreshes'),
   article_read: t('articlesRead'),
   article_view: t('articlesViewed'),
-  ai_chat: t('aiChats'),
-  ai_summary: t('aiSummaries'),
+  ai_chat: t('setting.statistic.aiChats'),
+  ai_summary: t('setting.statistic.aiSummaries'),
   article_favorite: t('articlesFavorited'),
 };
 

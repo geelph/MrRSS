@@ -38,16 +38,16 @@ async function testAIConfig() {
       testInfo.value = data;
 
       if (!data.config_valid || !data.connection_success) {
-        errorMessage.value = data.error_message || t('aiTestFailed');
+        errorMessage.value = data.error_message || t('setting.ai.aiTestFailed');
       } else {
-        window.showToast(t('aiTestSuccess'), 'success');
+        window.showToast(t('setting.ai.aiTestSuccess'), 'success');
       }
     } else {
-      errorMessage.value = t('aiTestFailed');
+      errorMessage.value = t('setting.ai.aiTestFailed');
     }
   } catch (error) {
     console.error('AI test error:', error);
-    errorMessage.value = t('aiTestFailed');
+    errorMessage.value = t('setting.ai.aiTestFailed');
   } finally {
     isTesting.value = false;
   }
@@ -87,7 +87,7 @@ function openDocumentation() {
       class="font-semibold mb-2 sm:mb-3 text-text-secondary uppercase text-xs tracking-wider flex items-center gap-2"
     >
       <PhTestTube :size="14" class="sm:w-4 sm:h-4" />
-      {{ t('aiConfigTest') }}
+      {{ t('setting.ai.aiConfigTest') }}
     </label>
 
     <!-- AI Test Status Display -->
@@ -200,7 +200,7 @@ function openDocumentation() {
       "
       class="bg-green-500/10 border border-green-500/30 rounded-lg p-2 sm:p-3 text-xs sm:text-sm text-green-500 mt-3"
     >
-      {{ t('aiConfigAllGood') }}
+      {{ t('setting.ai.aiConfigAllGood') }}
     </div>
 
     <!-- Documentation Link -->
@@ -211,7 +211,7 @@ function openDocumentation() {
         @click="openDocumentation"
       >
         <PhBookOpen :size="14" />
-        {{ t('aiConfigurationGuide') }}
+        {{ t('setting.ai.aiConfigurationGuide') }}
       </button>
     </div>
   </div>

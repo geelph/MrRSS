@@ -106,12 +106,12 @@ export function useArticleSummary() {
 
         // Show notification if AI limit was reached
         if (data.limit_reached) {
-          window.showToast(t('aiLimitReached'), 'warning');
+          window.showToast(t('article.summary.aiLimitReached'), 'warning');
         }
 
         // Show notification if AI failed and fell back to built-in algorithm
         if (data.used_fallback) {
-          window.showToast(t('aiSummaryFallback'), 'info');
+          window.showToast(t('article.summary.aiSummaryFallback'), 'info');
         }
 
         return data;
