@@ -241,7 +241,8 @@ async function forceTranslateContent() {
 }
 
 // Fetch full article content from the original URL
-async function fetchFullArticle() {
+// @param showErrors - whether to show error toasts (default: true for manual clicks, false for auto-fetch)
+async function fetchFullArticle(showErrors: boolean = true) {
   if (!props.article?.id) return;
 
   isFetchingFullArticle.value = true;
@@ -263,7 +264,9 @@ async function fetchFullArticle() {
       }
 
       fullArticleContent.value = content;
-      window.showToast(t('fullArticleFetched'), 'success');
+      if (showErrors) {
+        window.showToast(t('fullArticleFetched'), 'success');
+      }
 
       // After fetching full content, regenerate summary and trigger translation
       if (props.article) {
@@ -280,11 +283,15 @@ async function fetchFullArticle() {
       }
     } else {
       console.error('Error fetching full article:', res.status);
-      window.showToast(t('errorFetchingFullArticle'), 'error');
+      if (showErrors) {
+        window.showToast(t('errorFetchingFullArticle'), 'error');
+      }
     }
   } catch (e) {
     console.error('Error fetching full article:', e);
-    window.showToast(t('errorFetchingFullArticle'), 'error');
+    if (showErrors) {
+      window.showToast(t('errorFetchingFullArticle'), 'error');
+    }
   } finally {
     isFetchingFullArticle.value = false;
   }
@@ -694,7 +701,7 @@ watch(
 
       // Auto-fetch full article if setting is enabled
       if (shouldAutoExpandContent.value && !fullArticleContent.value) {
-        setTimeout(() => fetchFullArticle(), 200);
+        setTimeout(() => fetchFullArticle(false), 200);
       }
 
       // Generate summary if needed
@@ -748,7 +755,7 @@ onMounted(async () => {
         !fullArticleContent.value &&
         !isFetchingFullArticle.value
       ) {
-        setTimeout(() => fetchFullArticle(), 200);
+        setTimeout(() => fetchFullArticle(false), 200);
       }
     }
   }
@@ -854,7 +861,7 @@ onBeforeUnmount(() => {
         <button
           :disabled="isFetchingFullArticle"
           class="btn-secondary-compact flex items-center gap-2"
-          @click="fetchFullArticle"
+          @click="() => fetchFullArticle()"
         >
           <PhSpinnerGap v-if="isFetchingFullArticle" :size="14" class="animate-spin" />
           <PhArticleNyTimes v-else :size="14" />

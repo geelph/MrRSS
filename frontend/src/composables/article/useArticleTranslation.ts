@@ -41,6 +41,11 @@ export function useArticleTranslation() {
 
     observer = new IntersectionObserver(
       (entries) => {
+        // Check if translation is still enabled before processing
+        if (!translationSettings.value.enabled) {
+          return;
+        }
+
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const articleId = parseInt((entry.target as HTMLElement).dataset.articleId || '0');
@@ -78,6 +83,8 @@ export function useArticleTranslation() {
 
   // Translate an article
   async function translateArticle(article: Article): Promise<void> {
+    // Don't translate if translation is disabled
+    if (!translationSettings.value.enabled) return;
     if (translatingArticles.value.has(article.id)) return;
 
     translatingArticles.value.add(article.id);
