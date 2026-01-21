@@ -283,7 +283,7 @@ async function submit() {
     >
       <div class="p-3 sm:p-5 border-b border-border flex justify-between items-center shrink-0">
         <h3 class="text-base sm:text-lg font-semibold m-0">
-          {{ mode === 'add' ? t('addNewFeed') : t('editFeed') }}
+          {{ mode === 'add' ? t('modal.feed.addNewFeed') : t('editFeed') }}
         </h3>
         <span
           class="text-2xl cursor-pointer text-text-secondary hover:text-text-primary"
@@ -643,10 +643,10 @@ async function submit() {
           {{
             isSubmitting
               ? mode === 'add'
-                ? t('adding')
+                ? t('modal.feed.adding')
                 : t('saving')
               : mode === 'add'
-                ? t('addSubscription')
+                ? t('modal.feed.addSubscription')
                 : t('saveChanges')
           }}
         </button>

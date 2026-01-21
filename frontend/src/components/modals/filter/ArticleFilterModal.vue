@@ -159,7 +159,7 @@ function close() {
           @click="addCondition"
         >
           <PhPlus :size="18" />
-          {{ t('addCondition') }}
+          {{ t('modal.filter.addCondition') }}
         </button>
       </div>
 

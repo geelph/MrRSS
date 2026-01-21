@@ -983,7 +983,11 @@ onUnmounted(() => {
           </button>
           <button
             class="px-2 py-1.5 rounded bg-black/50 hover:bg-black/70 text-white transition-colors"
-            :title="selectedArticle.is_favorite ? t('actionUnfavorite') : t('actionFavorite')"
+            :title="
+              selectedArticle.is_favorite
+                ? t('article.imageGallery.actionUnfavorite')
+                : t('article.imageGallery.actionFavorite')
+            "
             @click="toggleFavorite(selectedArticle)"
           >
             <PhHeart
@@ -1171,7 +1175,9 @@ onUnmounted(() => {
           :class="contextMenu.article.is_favorite ? 'text-yellow-500' : ''"
         />
         <span>{{
-          contextMenu.article.is_favorite ? t('removeFromFavorites') : t('addToFavorites')
+          contextMenu.article.is_favorite
+            ? t('removeFromFavorites')
+            : t('article.imageGallery.addToFavorite')
         }}</span>
       </button>
       <div class="h-px bg-border my-1"></div>

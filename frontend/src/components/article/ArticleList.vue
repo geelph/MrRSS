@@ -609,7 +609,9 @@ function handleHoverMarkAsRead(articleId: number): void {
                       class="text-[10px] text-text-secondary mb-1.5 font-medium flex items-center gap-1"
                     >
                       <PhCircle :size="10" class="text-accent" />
-                      {{ t('activeTasks') }} ({{ store.refreshProgress.pool_task_count || 0 }})
+                      {{ t('article.progressactiveTasks') }} ({{
+                        store.refreshProgress.pool_task_count || 0
+                      }})
                     </div>
                     <div class="space-y-0.5">
                       <div

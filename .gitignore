@@ -80,3 +80,6 @@ frontend/cypress/downloads/
 .claude/
 .plan/
 tmpclaude-*-cwd
+
+# Tools
+tools/i18n_usage_report.md

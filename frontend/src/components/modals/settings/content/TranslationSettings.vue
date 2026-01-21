@@ -717,7 +717,7 @@ async function clearTranslationCache() {
               @click="addCustomHeader"
             >
               <PhPlus :size="14" class="sm:w-4 sm:h-4" />
-              <span>{{ t('addHeader') || 'Add Header' }}</span>
+              <span>{{ t('setting.content.addHeader') }}</span>
             </button>
           </div>
         </div>
@@ -850,7 +850,7 @@ async function clearTranslationCache() {
               @click="addCustomLangMapping"
             >
               <PhPlus :size="14" class="sm:w-4 sm:h-4" />
-              <span>{{ t('addLangMapping') || 'Add Mapping' }}</span>
+              <span>{{ t('setting.content.addLangMapping') }}</span>
             </button>
           </div>
         </div>

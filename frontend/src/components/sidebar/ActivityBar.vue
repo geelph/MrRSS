@@ -232,7 +232,7 @@ defineExpose({
       <button
         class="relative flex items-center justify-center text-text-secondary flex-shrink-0 transition-all hover:text-accent"
         style="width: 44px; height: 44px"
-        :title="t('addFeed')"
+        :title="t('sidebar.activity.addFeed')"
         @click="emit('add-feed')"
       >
         <PhPlus :size="24" weight="regular" class="transition-all" />
@@ -242,7 +242,11 @@ defineExpose({
       <button
         class="relative flex items-center justify-center text-text-secondary flex-shrink-0 transition-all hover:text-accent"
         style="width: 44px; height: 44px"
-        :title="isFeedListExpanded ? t('collapseFeedList') : t('expandFeedList')"
+        :title="
+          isFeedListExpanded
+            ? t('sidebar.activity.collapseFeedList')
+            : t('sidebar.activity.expandFeedList')
+        "
         @click="toggleFeedList"
       >
         <PhTextOutdent v-if="isFeedListExpanded" :size="24" />

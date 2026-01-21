@@ -137,17 +137,17 @@ watch(
         <PhKey :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
         <div class="flex-1 min-w-0">
           <div class="font-medium mb-0 sm:mb-1 text-sm">
-            {{ t('aiApiKey') }}
+            {{ t('setting.ai.aiApiKey') }}
           </div>
           <div class="text-xs text-text-secondary hidden sm:block">
-            {{ t('aiApiKeyDesc') }}
+            {{ t('setting.ai.aiApiKeyDesc') }}
           </div>
         </div>
       </div>
       <input
         :value="props.settings.ai_api_key"
         type="password"
-        :placeholder="t('aiApiKeyPlaceholder')"
+        :placeholder="t('setting.ai.aiApiKeyPlaceholder')"
         class="input-field w-32 sm:w-48 text-xs sm:text-sm"
         @input="
           (e) =>

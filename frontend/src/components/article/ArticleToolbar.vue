@@ -94,7 +94,7 @@ defineEmits<{
           'action-btn',
           article.is_favorite ? 'text-yellow-500 hover:text-yellow-600' : 'hover:text-yellow-500',
         ]"
-        :title="article.is_favorite ? t('removeFromFavorite') : t('addToFavorite')"
+        :title="article.is_favorite ? t('removeFromFavorite') : t('article.toolbar.addToFavorite')"
         @click="$emit('toggleFavorite')"
       >
         <PhStar
@@ -108,7 +108,9 @@ defineEmits<{
           'action-btn',
           article.is_read_later ? 'text-blue-500 hover:text-blue-600' : 'hover:text-blue-500',
         ]"
-        :title="article.is_read_later ? t('removeFromReadLater') : t('addToReadLater')"
+        :title="
+          article.is_read_later ? t('removeFromReadLater') : t('article.toolbar.addToReadLater')
+        "
         @click="$emit('toggleReadLater')"
       >
         <PhClockCountdown

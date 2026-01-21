@@ -42,14 +42,18 @@ export function useArticleActions(
               icon: 'ph-arrow-bend-left-down',
             },
             {
-              label: article.is_favorite ? t('removeFromFavorites') : t('addToFavorites'),
+              label: article.is_favorite
+                ? t('removeFromFavorites')
+                : t('article.action.addToFavorite'),
               action: 'toggleFavorite',
               icon: 'ph-star',
               iconWeight: article.is_favorite ? 'fill' : 'regular',
               iconColor: article.is_favorite ? 'text-yellow-500' : '',
             },
             {
-              label: article.is_read_later ? t('removeFromReadLater') : t('addToReadLater'),
+              label: article.is_read_later
+                ? t('removeFromReadLater')
+                : t('article.action.addToReadLater'),
               action: 'toggleReadLater',
               icon: 'ph-clock-countdown',
               iconWeight: article.is_read_later ? 'fill' : 'regular',

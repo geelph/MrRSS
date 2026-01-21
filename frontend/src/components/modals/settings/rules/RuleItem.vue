@@ -90,12 +90,12 @@ function formatActions(rule: Rule): string {
   }
 
   const actionLabels: Record<string, string> = {
-    favorite: t('actionFavorite'),
-    unfavorite: t('actionUnfavorite'),
-    hide: t('actionHide'),
-    unhide: t('actionUnhide'),
-    mark_read: t('actionMarkRead'),
-    mark_unread: t('actionMarkUnread'),
+    favorite: t('setting.rule.actionFavorite'),
+    unfavorite: t('setting.rule.actionUnfavorite'),
+    hide: t('setting.rule.actionHide'),
+    unhide: t('setting.rule.actionUnhide'),
+    mark_read: t('setting.rule.actionMarkRead'),
+    mark_unread: t('setting.rule.actionMarkUnread'),
   };
 
   return rule.actions.map((a: string) => actionLabels[a] || a).join(', ');

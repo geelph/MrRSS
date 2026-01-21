@@ -5,8 +5,8 @@ import { useSettingsAutoSave } from '@/composables/core/useSettingsAutoSave';
 import { useSettingsValidation } from '@/composables/core/useSettingsValidation';
 import { useI18n } from 'vue-i18n';
 import { PhWarning } from '@phosphor-icons/vue';
-import TranslationSettings from '../general/TranslationSettings.vue';
-import SummarySettings from '../general/SummarySettings.vue';
+import TranslationSettings from './TranslationSettings.vue';
+import SummarySettings from './SummarySettings.vue';
 
 interface Props {
   settings: SettingsData;

@@ -287,12 +287,12 @@ async function sendMessage() {
       const errorText = await response.text();
       console.error('AI chat error response:', response.status, errorText);
 
-      let errorMessage = t('aiChatError');
+      let errorMessage = t('article.chat.aiChatError');
       try {
         const errorData = JSON.parse(errorText);
-        errorMessage = errorData.error || errorData || t('aiChatError');
+        errorMessage = errorData.error || errorData || t('article.chat.aiChatError');
       } catch {
-        errorMessage = errorText || t('aiChatError');
+        errorMessage = errorText || t('article.chat.aiChatError');
       }
 
       messages.value.push({
@@ -307,7 +307,7 @@ async function sendMessage() {
     messages.value.push({
       id: 0,
       role: 'assistant',
-      content: t('aiChatError'),
+      content: t('article.chat.aiChatError'),
       created_at: new Date().toISOString(),
     });
   } finally {
@@ -333,9 +333,9 @@ function handleKeydown(e: KeyboardEvent) {
 const currentSessionTitle = computed(() => {
   if (currentSessionId.value) {
     const session = sessions.value.find((s) => s.id === currentSessionId.value);
-    return session?.title || t('aiChat');
+    return session?.title || t('article.chat.aiChat');
   }
-  return t('aiChat');
+  return t('article.chat.aiChat');
 });
 </script>
 
@@ -452,7 +452,7 @@ const currentSessionTitle = computed(() => {
             v-if="messages.length === 0"
             class="flex items-center justify-center h-full text-text-secondary text-sm"
           >
-            {{ t('aiChatWelcome') }}
+            {{ t('article.chat.aiChatWelcome') }}
           </div>
           <div
             v-for="(msg, index) in messages"
@@ -499,7 +499,7 @@ const currentSessionTitle = computed(() => {
             <input
               v-model="inputMessage"
               type="text"
-              :placeholder="t('aiChatInputPlaceholder')"
+              :placeholder="t('article.chat.aiChatInputPlaceholder')"
               class="flex-1 px-3 py-2 bg-bg-tertiary border border-border rounded-lg text-sm focus:outline-none focus:border-accent"
               :disabled="isLoading"
               @keydown="handleKeydown"

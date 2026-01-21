@@ -214,7 +214,7 @@ async function handleClose(checkUnsaved = false): Promise<void> {
       <div class="p-4 sm:p-5 border-b border-border flex justify-between items-center shrink-0">
         <h3 class="text-lg font-semibold m-0 flex items-center gap-2 text-text-primary">
           <PhLightning :size="20" />
-          {{ rule ? t('editRule') : t('addRule') }}
+          {{ rule ? t('editRule') : t('modal.rule.addRule') }}
         </h3>
         <span
           class="text-2xl cursor-pointer text-text-secondary hover:text-text-primary"
@@ -290,7 +290,7 @@ async function handleClose(checkUnsaved = false): Promise<void> {
             @click="addCondition"
           >
             <PhPlus :size="16" />
-            {{ t('addCondition') }}
+            {{ t('modal.rule.addCondition') }}
           </button>
         </div>
 
@@ -332,7 +332,7 @@ async function handleClose(checkUnsaved = false): Promise<void> {
             @click="addAction"
           >
             <PhPlus :size="16" />
-            {{ t('addAction') }}
+            {{ t('modal.rule.addAction') }}
           </button>
         </div>
       </div>

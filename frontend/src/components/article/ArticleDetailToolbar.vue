@@ -73,7 +73,7 @@ const emit = defineEmits<{
       </button>
       <button
         class="btn-icon"
-        :title="article.is_favorite ? t('removeFromFavorite') : t('addToFavorite')"
+        :title="article.is_favorite ? t('removeFromFavorite') : t('article.toolbar.addToFavorite')"
         @click="emit('toggle-favorite')"
       >
         <PhStar
@@ -85,7 +85,9 @@ const emit = defineEmits<{
       </button>
       <button
         class="btn-icon"
-        :title="article.is_read_later ? t('removeFromReadLater') : t('addToReadLater')"
+        :title="
+          article.is_read_later ? t('removeFromReadLater') : t('article.toolbar.addToReadLater')
+        "
         @click="emit('toggle-read-later')"
       >
         <PhClockCountdown

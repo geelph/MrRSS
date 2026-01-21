@@ -319,7 +319,7 @@ async function onDrop(targetRuleId: number, event: DragEvent) {
         </div>
         <button class="btn-secondary" @click="addRule">
           <PhPlus :size="16" class="sm:w-5 sm:h-5" />
-          <span class="hidden sm:inline">{{ t('addRule') }}</span>
+          <span class="hidden sm:inline">{{ t('setting.rule.addRule') }}</span>
         </button>
       </div>
 

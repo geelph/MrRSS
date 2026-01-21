@@ -143,7 +143,7 @@ function handleDiscoverAll() {
               @click="activeTab = 'ai'"
             >
               <PhBrain :size="22" />
-              <span>{{ t('ai') }}</span>
+              <span>{{ t('setting.tab.ai') }}</span>
             </button>
             <button
               :class="['sidebar-tab-btn', activeTab === 'rules' ? 'active' : '']"
@@ -185,7 +185,7 @@ function handleDiscoverAll() {
               @click="activeTab = 'about'"
             >
               <PhInfo :size="22" />
-              <span>{{ t('about') }}</span>
+              <span>{{ t('setting.tab.about') }}</span>
             </button>
           </nav>
         </div>

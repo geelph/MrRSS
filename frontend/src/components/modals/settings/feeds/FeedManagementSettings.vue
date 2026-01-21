@@ -201,8 +201,8 @@ function isRSSHubFeed(feed: Feed): boolean {
     <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-2 text-xs sm:text-sm">
       <button class="btn-secondary py-1.5 px-2.5 sm:px-3" @click="handleAddFeed">
         <PhPlus :size="14" class="sm:w-4 sm:h-4" />
-        <span class="hidden sm:inline">{{ t('addFeed') }}</span
-        ><span class="sm:hidden">{{ t('addFeed').split(' ')[0] }}</span>
+        <span class="hidden sm:inline">{{ t('setting.feed.addFeed') }}</span
+        ><span class="sm:hidden">{{ t('setting.feed.addFeed').split(' ')[0] }}</span>
       </button>
       <button
         class="btn-danger py-1.5 px-2.5 sm:px-3"

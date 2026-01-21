@@ -152,7 +152,7 @@ const shortcutGroups = computed<Array<{ label: string; items: ShortcutItemData[]
       { key: 'refreshFeeds', label: t('refreshFeedsShortcut'), icon: PhArrowClockwise },
       { key: 'markAllRead', label: t('markAllReadShortcut'), icon: PhCheckCircle },
       { key: 'openSettings', label: t('openSettingsShortcut'), icon: PhGear },
-      { key: 'addFeed', label: t('addFeedShortcut'), icon: PhPlus },
+      { key: 'addFeed', label: t('setting.shortcut.addFeedShortcut'), icon: PhPlus },
       { key: 'focusSearch', label: t('focusFeedSearch'), icon: PhMagnifyingGlass },
       { key: 'toggleFilter', label: t('toggleFilter'), icon: PhFunnel },
     ],
