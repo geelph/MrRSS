@@ -2,6 +2,8 @@
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { PhTextT, PhTextIndent, PhTextAa } from '@phosphor-icons/vue';
+import { SettingGroup, SettingItem, NumberControl } from '@/components/settings';
+import '@/components/settings/styles.css';
 import type { SettingsData } from '@/types/settings';
 import { getRecommendedFonts } from '@/utils/fontDetector';
 
@@ -44,38 +46,28 @@ onMounted(() => {
     console.error('Failed to detect system fonts:', error);
   }
 });
+
+function updateSetting(key: keyof SettingsData, value: any) {
+  emit('update:settings', {
+    ...props.settings,
+    [key]: value,
+  });
+}
 </script>
 
 <template>
-  <div class="setting-section">
-    <label class="section-label">
-      <PhTextT :size="16" class="w-4 h-4" />
-      {{ t('setting.tab.typography') }}
-    </label>
-
+  <SettingGroup :icon="PhTextT" :title="t('setting.tab.typography')">
     <!-- Content Font Family -->
-    <div class="setting-item">
-      <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
-        <PhTextT :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
-        <div class="flex-1 min-w-0">
-          <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
-            {{ t('setting.typography.contentFontFamily') }}
-          </div>
-          <div class="text-xs text-text-secondary hidden sm:block">
-            {{ t('setting.typography.contentFontFamilyDesc') }}
-          </div>
+    <SettingItem :icon="PhTextT" :title="t('setting.typography.contentFontFamily')">
+      <template #description>
+        <div class="text-xs text-text-secondary hidden sm:block">
+          {{ t('setting.typography.contentFontFamilyDesc') }}
         </div>
-      </div>
+      </template>
       <select
         :value="settings.content_font_family"
         class="input-field w-36 sm:w-48 text-xs sm:text-sm max-h-60"
-        @change="
-          (e) =>
-            emit('update:settings', {
-              ...settings,
-              content_font_family: (e.target as HTMLSelectElement).value,
-            })
-        "
+        @change="updateSetting('content_font_family', ($event.target as HTMLSelectElement).value)"
       >
         <optgroup :label="t('setting.typography.fontSystem')">
           <option value="system">{{ t('setting.typography.fontSystemDefault') }}</option>
@@ -123,99 +115,48 @@ onMounted(() => {
           </option>
         </optgroup>
       </select>
-    </div>
+    </SettingItem>
 
     <!-- Content Font Size -->
-    <div class="setting-item mt-2 sm:mt-3">
-      <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
-        <PhTextAa :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
-        <div class="flex-1 min-w-0">
-          <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
-            {{ t('setting.typography.contentFontSize') }}
-          </div>
-          <div class="text-xs text-text-secondary hidden sm:block">
-            {{ t('setting.typography.contentFontSizeDesc') }}
-          </div>
+    <SettingItem :icon="PhTextAa" :title="t('setting.typography.contentFontSize')">
+      <template #description>
+        <div class="text-xs text-text-secondary hidden sm:block">
+          {{ t('setting.typography.contentFontSizeDesc') }}
         </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <input
-          type="number"
-          :value="displayContentSize"
-          class="input-field w-20 sm:w-24 text-xs sm:text-sm"
-          @input="
-            (e) => {
-              const value = parseInt((e.target as HTMLInputElement).value);
-              emit('update:settings', {
-                ...settings,
-                content_font_size: isNaN(value) ? 16 : value,
-              });
-            }
-          "
-        />
-        <span class="text-sm text-text-secondary">px</span>
-      </div>
-    </div>
+      </template>
+      <NumberControl
+        :model-value="displayContentSize"
+        :min="10"
+        :max="24"
+        suffix="px"
+        @update:model-value="(v) => updateSetting('content_font_size', isNaN(v) ? 16 : v)"
+      />
+    </SettingItem>
 
     <!-- Content Line Height -->
-    <div class="setting-item mt-2 sm:mt-3">
-      <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
-        <PhTextIndent :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
-        <div class="flex-1 min-w-0">
-          <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
-            {{ t('setting.typography.contentLineHeight') }}
-          </div>
-          <div class="text-xs text-text-secondary hidden sm:block">
-            {{ t('setting.typography.contentLineHeightDesc') }}
-          </div>
+    <SettingItem :icon="PhTextIndent" :title="t('setting.typography.contentLineHeight')">
+      <template #description>
+        <div class="text-xs text-text-secondary hidden sm:block">
+          {{ t('setting.typography.contentLineHeightDesc') }}
         </div>
-      </div>
-      <div class="flex items-center gap-2">
-        <input
-          type="number"
-          :value="displayLineHeight"
-          step="0.1"
-          class="input-field w-20 sm:w-24 text-xs sm:text-sm"
-          @input="
-            (e) => {
-              const value = parseFloat((e.target as HTMLInputElement).value);
-              emit('update:settings', {
-                ...settings,
-                content_line_height: isNaN(value) ? '1.6' : value.toString(),
-              });
-            }
-          "
-        />
-      </div>
-    </div>
-  </div>
+      </template>
+      <NumberControl
+        :model-value="displayLineHeight"
+        :min="1"
+        :max="3"
+        :step="0.1"
+        @update:model-value="
+          (v) => updateSetting('content_line_height', isNaN(v) ? '1.6' : v.toString())
+        "
+      />
+    </SettingItem>
+  </SettingGroup>
 </template>
 
 <style scoped>
 @reference "../../../../style.css";
 
-.section-label {
-  @apply font-semibold mb-3 sm:mb-4 text-text-secondary uppercase text-xs tracking-wider flex items-center gap-2;
-}
-
 .input-field {
   @apply p-1.5 sm:p-2.5 border border-border rounded-md bg-bg-secondary text-text-primary focus:border-accent focus:outline-none transition-colors;
-}
-
-.toggle {
-  @apply w-10 h-5 appearance-none bg-bg-tertiary rounded-full relative cursor-pointer border border-border transition-colors checked:bg-accent checked:border-accent shrink-0;
-}
-
-.toggle::after {
-  content: '';
-  @apply absolute top-0.5 left-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-sm transition-transform;
-}
-
-.toggle:checked::after {
-  transform: translateX(20px);
-}
-
-.setting-item {
-  @apply flex items-center sm:items-start justify-between gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg bg-bg-secondary border border-border;
 }
 </style>

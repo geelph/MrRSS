@@ -28,13 +28,17 @@ withDefaults(defineProps<Props>(), {
         <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
           {{ title }} <span v-if="required" class="text-red-500">*</span>
         </div>
-        <div v-if="description" class="text-xs text-text-secondary hidden sm:block">
-          {{ description }}
-        </div>
+        <slot name="description">
+          <div v-if="description" class="text-xs text-text-secondary hidden sm:block">
+            {{ description }}
+          </div>
+        </slot>
       </div>
     </div>
     <div class="shrink-0">
-      <slot />
+      <slot name="action">
+        <slot />
+      </slot>
     </div>
   </div>
 </template>
