@@ -63,7 +63,7 @@ function handleUpdate() {
       <!-- Content -->
       <div class="p-4 sm:p-6">
         <p class="text-text-secondary text-sm mb-4">
-          {{ t('newVersionAvailable', { version: updateInfo.latest_version }) }}
+          {{ t('modal.update.newVersionAvailable', { version: updateInfo.latest_version }) }}
         </p>
 
         <div class="bg-bg-secondary rounded-lg p-3 sm:p-4 space-y-2 text-sm">

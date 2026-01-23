@@ -106,9 +106,9 @@ function getMultiSelectDisplayText(): string {
   const remaining = totalCount - 1;
 
   if (locale.value === 'zh-CN') {
-    return `${firstItem} ${t('andNMore', { count: totalCount })}`;
+    return `${firstItem} ${t('common.text.andNMore', { count: totalCount })}`;
   }
-  return `${firstItem} ${t('andNMore', { count: remaining })}`;
+  return `${firstItem} ${t('common.text.andNMore', { count: remaining })}`;
 }
 
 function updateValue(value: string): void {

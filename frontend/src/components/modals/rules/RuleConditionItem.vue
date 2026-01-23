@@ -75,12 +75,12 @@ function getMultiSelectDisplayText(): string {
   // For feed_type, translate the type codes to display text
   if (props.condition.field === 'feed_type') {
     if (values.length === 1) return getFeedTypeLabel(values[0]);
-    return t('itemsSelected', { count: values.length });
+    return t('common.search.itemsSelected', { count: values.length });
   }
 
   // For other fields, use the values directly
   if (values.length === 1) return values[0];
-  return t('itemsSelected', { count: values.length });
+  return t('common.search.itemsSelected', { count: values.length });
 }
 </script>
 

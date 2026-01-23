@@ -268,6 +268,55 @@ def find_i18n_usage(key: str, search_dir: Path) -> List[Tuple[str, int]]:
     return usages
 
 
+def extract_label_keys_from_file(file_path: Path, search_dir: Path) -> Dict[str, List[Tuple[str, int]]]:
+    """
+    Extract i18n keys from labelKey properties in configuration files.
+    This handles special cases like useRuleOptions.ts where keys are stored
+    in labelKey properties instead of direct t() calls.
+    Returns dict mapping key to list of (file_path, line_number) tuples.
+    """
+    label_keys = {}
+
+    if not file_path.exists():
+        return label_keys
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Remove comments to avoid false matches
+        content = re.sub(r'//.*?$', '', content, flags=re.MULTILINE)
+        content = re.sub(r'/\*.*?\*/', '', content, flags=re.DOTALL)
+
+        # Pattern to match labelKey: 'key' or labelKey: "key"
+        # Matches keys with valid i18n characters: a-zA-Z0-9._-
+        pattern = re.compile(
+            r"""labelKey\s*:\s*           # labelKey: with optional whitespace
+            ['"`]([a-zA-Z0-9._\-]+)['"`]  # the key in quotes (valid i18n chars only)
+            """,
+            re.VERBOSE,
+        )
+
+        for match in pattern.finditer(content):
+            key = match.group(1)
+            line_num = content[:match.start()].count('\n') + 1
+
+            if key not in label_keys:
+                label_keys[key] = []
+
+            # Convert to relative path from search_dir
+            try:
+                rel_path = file_path.relative_to(search_dir)
+                label_keys[key].append((str(rel_path), line_num))
+            except ValueError:
+                label_keys[key].append((str(file_path), line_num))
+
+    except Exception as e:
+        print(f"Warning: Could not read {file_path}: {e}")
+
+    return label_keys
+
+
 def find_all_i18n_calls(search_dir: Path) -> Dict[str, List[Tuple[str, int]]]:
     """
     Find ALL t() calls in the codebase and extract the keys.
@@ -325,6 +374,23 @@ def find_all_i18n_calls(search_dir: Path) -> Dict[str, List[Tuple[str, int]]]:
                         all_calls[key].append((str(file_path), line_num))
             except Exception as e:
                 print(f"Warning: Could not read {file_path}: {e}")
+
+    # Special handling: Extract labelKey properties from known files
+    # These files define i18n keys in labelKey properties that are used dynamically
+    special_files = [
+        "composables/rules/useRuleOptions.ts",
+        "composables/filter/useFilterFields.ts",
+    ]
+
+    for special_file in special_files:
+        file_path = search_dir / special_file
+        if file_path.exists():
+            label_keys = extract_label_keys_from_file(file_path, search_dir)
+            # Merge label_keys into all_calls
+            for key, locations in label_keys.items():
+                if key not in all_calls:
+                    all_calls[key] = []
+                all_calls[key].extend(locations)
 
     return all_calls
 
@@ -408,10 +474,24 @@ def main():
     missing_keys = set(all_calls.keys()) - set(all_keys)
 
     # Find unused keys (defined but never used)
+    # Build a set of keys used in special files (labelKey properties)
+    special_files = [
+        "composables/rules/useRuleOptions.ts",
+        "composables/filter/useFilterFields.ts",
+    ]
+    label_key_usage = set()
+    for special_file in special_files:
+        file_path = FRONTEND_DIR / special_file
+        if file_path.exists():
+            label_keys = extract_label_keys_from_file(file_path, FRONTEND_DIR)
+            label_key_usage.update(label_keys.keys())
+
     unused_keys = []
     for key in filtered_keys:
         usages = find_i18n_usage(key, FRONTEND_DIR)
-        if len(usages) == 0:
+        # Also check if key is used in labelKey properties
+        used_in_label_key = key in label_key_usage
+        if len(usages) == 0 and not used_in_label_key:
             unused_keys.append(key)
 
     # Check for inconsistencies between en.ts and zh.ts

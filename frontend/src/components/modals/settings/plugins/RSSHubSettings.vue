@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { PhLink, PhKey, PhTestTube } from '@phosphor-icons/vue';
+import { PhLink, PhKey, PhTestTube, PhInfo } from '@phosphor-icons/vue';
 import type { SettingsData } from '@/types/settings';
 import { useAppStore } from '@/stores/app';
+import {
+  NestedSettingsContainer,
+  SubSettingItem,
+  InputControl,
+  InfoBox,
+} from '@/components/settings';
 
 const { t } = useI18n();
 const store = useAppStore();
@@ -17,6 +23,13 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   'update:settings': [settings: SettingsData];
 }>();
+
+function updateSetting(key: keyof SettingsData, value: any) {
+  emit('update:settings', {
+    ...props.settings,
+    [key]: value,
+  });
+}
 
 const isTesting = ref(false);
 
@@ -38,10 +51,7 @@ function handleToggleRSSHub(e: Event) {
     return;
   }
 
-  emit('update:settings', {
-    ...props.settings,
-    rsshub_enabled: newValue,
-  });
+  updateSetting('rsshub_enabled', newValue);
 }
 
 // Test RSSHub connection
@@ -104,105 +114,54 @@ async function testConnection() {
     />
   </div>
 
-  <div
-    v-if="props.settings.rsshub_enabled"
-    class="ml-2 sm:ml-4 space-y-2 sm:space-y-3 border-l-2 border-border pl-2 sm:pl-4"
-  >
-    <div class="tip-box">
-      <PhInfo :size="16" class="text-accent shrink-0 sm:w-5 sm:h-5" />
-      <span class="text-xs sm:text-sm">{{ t('setting.rsshub.notSuggestOfficial') }}</span>
-    </div>
+  <NestedSettingsContainer v-if="props.settings.rsshub_enabled">
+    <InfoBox :icon="PhInfo" :content="t('setting.rsshub.notSuggestOfficial')" />
 
     <!-- Endpoint -->
-    <div class="sub-setting-item">
-      <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
-        <PhLink :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
-        <div class="flex-1 min-w-0">
-          <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
-            {{ t('setting.rsshub.endpoint') }} <span class="text-red-500">*</span>
-          </div>
-          <div class="text-xs text-text-secondary hidden sm:block">
-            {{ t('setting.rsshub.endpointDesc') }}
-          </div>
-        </div>
-      </div>
-      <input
-        type="text"
-        :value="props.settings.rsshub_endpoint"
+    <SubSettingItem
+      :icon="PhLink"
+      :title="t('setting.rsshub.endpoint')"
+      :description="t('setting.rsshub.endpointDesc')"
+      required
+    >
+      <InputControl
+        :model-value="props.settings.rsshub_endpoint"
         placeholder="https://rsshub.app"
-        class="input-field w-32 sm:w-48 text-xs sm:text-sm"
-        @input="
-          (e) =>
-            emit('update:settings', {
-              ...props.settings,
-              rsshub_endpoint: (e.target as HTMLInputElement).value,
-            })
-        "
+        width="md"
+        @update:model-value="updateSetting('rsshub_endpoint', $event)"
       />
-    </div>
+    </SubSettingItem>
 
     <!-- API Key -->
-    <div class="sub-setting-item">
-      <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
-        <PhKey :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
-        <div class="flex-1 min-w-0">
-          <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
-            {{ t('setting.rsshub.apiKey') }}
-          </div>
-          <div class="text-xs text-text-secondary hidden sm:block">
-            {{ t('setting.rsshub.apiKeyDesc') }}
-          </div>
-        </div>
-      </div>
-      <input
+    <SubSettingItem
+      :icon="PhKey"
+      :title="t('setting.rsshub.apiKey')"
+      :description="t('setting.rsshub.apiKeyDesc')"
+    >
+      <InputControl
         type="password"
-        :value="props.settings.rsshub_api_key"
+        :model-value="props.settings.rsshub_api_key"
         :placeholder="t('setting.rsshub.optional')"
-        class="input-field w-32 sm:w-48 text-xs sm:text-sm"
-        @input="
-          (e) =>
-            emit('update:settings', {
-              ...props.settings,
-              rsshub_api_key: (e.target as HTMLInputElement).value,
-            })
-        "
+        width="md"
+        @update:model-value="updateSetting('rsshub_api_key', $event)"
       />
-    </div>
+    </SubSettingItem>
 
     <!-- Test Connection -->
-    <div class="sub-setting-item">
-      <div class="flex-1 flex items-center sm:items-start gap-2 sm:gap-3 min-w-0">
-        <PhTestTube :size="20" class="text-text-secondary mt-0.5 shrink-0 sm:w-6 sm:h-6" />
-        <div class="flex-1 min-w-0">
-          <div class="font-medium mb-0 sm:mb-1 text-sm sm:text-base">
-            {{ t('setting.rsshub.testConnection') }}
-          </div>
-          <div class="text-xs text-text-secondary hidden sm:block">
-            {{ t('setting.rsshub.testConnectionDesc') }}
-          </div>
-        </div>
-      </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <button :disabled="isTesting" class="btn-secondary" @click="testConnection">
-          {{ isTesting ? t('setting.rsshub.testing') : t('setting.rsshub.testConnection') }}
-        </button>
-      </div>
-    </div>
-  </div>
+    <SubSettingItem
+      :icon="PhTestTube"
+      :title="t('setting.rsshub.testConnection')"
+      :description="t('setting.rsshub.testConnectionDesc')"
+    >
+      <button class="btn-secondary" :disabled="isTesting" @click="testConnection">
+        {{ isTesting ? t('setting.rsshub.testing') : t('setting.rsshub.testConnection') }}
+      </button>
+    </SubSettingItem>
+  </NestedSettingsContainer>
 </template>
 
 <style scoped>
 @reference "../../../../style.css";
-
-.tip-box {
-  @apply flex items-center gap-2 sm:gap-3 py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-lg;
-  background-color: rgba(59, 130, 246, 0.05);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-}
-
-.input-field {
-  @apply p-1.5 sm:p-2.5 border border-border rounded-md bg-bg-secondary text-text-primary focus:border-accent focus:outline-none transition-colors;
-}
 
 .toggle {
   @apply w-10 h-5 appearance-none bg-bg-tertiary rounded-full relative cursor-pointer border border-border transition-colors checked:bg-accent checked:border-accent shrink-0;
@@ -219,14 +178,9 @@ async function testConnection() {
   @apply flex items-center sm:items-start justify-between gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg bg-bg-secondary border border-border;
 }
 
-.sub-setting-item {
-  @apply flex items-center sm:items-start justify-between gap-2 sm:gap-4 p-2 sm:p-2.5 rounded-md bg-bg-tertiary;
-}
-
 .btn-secondary {
   @apply bg-bg-tertiary border border-border text-text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-medium hover:bg-bg-secondary transition-colors;
 }
-
 .btn-secondary:disabled {
   @apply cursor-not-allowed opacity-50;
 }

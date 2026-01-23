@@ -14,39 +14,54 @@ export function useFilterFields() {
    * Available field options for filtering
    */
   const fieldOptions: FieldOption[] = [
-    { value: 'feed_name', labelKey: 'feedName', multiSelect: true },
+    { value: 'feed_name', labelKey: 'modal.feed.feedName', multiSelect: true },
     { value: 'feed_category', labelKey: 'modal.feed.feedCategory', multiSelect: true },
-    { value: 'article_title', labelKey: 'articleTitle', multiSelect: false },
-    { value: 'feed_type', labelKey: 'feedType', multiSelect: true },
-    { value: 'published_after', labelKey: 'publishedAfter', multiSelect: false },
-    { value: 'published_before', labelKey: 'publishedBefore', multiSelect: false },
-    { value: 'is_read', labelKey: 'readStatus', multiSelect: false, booleanField: true },
-    { value: 'is_favorite', labelKey: 'favoriteStatus', multiSelect: false, booleanField: true },
-    { value: 'is_read_later', labelKey: 'readLaterStatus', multiSelect: false, booleanField: true },
+    { value: 'article_title', labelKey: 'article.parts.articleTitle', multiSelect: false },
+    { value: 'feed_type', labelKey: 'modal.filter.feedType', multiSelect: true },
+    { value: 'published_after', labelKey: 'modal.filter.publishedAfter', multiSelect: false },
+    { value: 'published_before', labelKey: 'modal.filter.publishedBefore', multiSelect: false },
+    {
+      value: 'is_read',
+      labelKey: 'modal.filter.readStatus',
+      multiSelect: false,
+      booleanField: true,
+    },
+    {
+      value: 'is_favorite',
+      labelKey: 'modal.filter.favoriteStatus',
+      multiSelect: false,
+      booleanField: true,
+    },
+    {
+      value: 'is_read_later',
+      labelKey: 'modal.filter.readLaterStatus',
+      multiSelect: false,
+      booleanField: true,
+    },
   ];
 
   /**
    * Operator options for text fields
    */
   const textOperatorOptions: OperatorOption[] = [
-    { value: 'contains', labelKey: 'contains' },
-    { value: 'exact', labelKey: 'exactMatch' },
+    { value: 'contains', labelKey: 'modal.filter.contains' },
+    { value: 'exact', labelKey: 'modal.filter.exactMatch' },
   ];
 
   /**
    * Boolean value options
    */
   const booleanOptions: OperatorOption[] = [
-    { value: 'true', labelKey: 'yes' },
-    { value: 'false', labelKey: 'no' },
+    { value: 'true', labelKey: 'common.action.yes' },
+    { value: 'false', labelKey: 'common.action.no' },
   ];
 
   /**
    * Logic connector options
    */
   const logicOptions: LogicOption[] = [
-    { value: 'and', labelKey: 'and' },
-    { value: 'or', labelKey: 'or' },
+    { value: 'and', labelKey: 'modal.filter.and' },
+    { value: 'or', labelKey: 'modal.filter.or' },
   ];
 
   /**
@@ -171,9 +186,9 @@ export function useFilterFields() {
 
     // Use different count based on locale
     if (locale.value === 'zh') {
-      return `${firstItem} ${t('andNMore', { count: totalCount })}`;
+      return `${firstItem} ${t('common.text.andNMore', { count: totalCount })}`;
     }
-    return `${firstItem} ${t('andNMore', { count: remaining })}`;
+    return `${firstItem} ${t('common.text.andNMore', { count: remaining })}`;
   }
 
   return {

@@ -9,6 +9,7 @@ import {
   PhStar,
   PhReadCvLogo,
   PhCaretRight,
+  PhCaretLeft,
   PhFlagPennant,
   PhChats,
   PhCalendarDots,
@@ -16,6 +17,7 @@ import {
   PhCalendarX,
   PhCalendarStar,
 } from '@phosphor-icons/vue';
+import { ButtonControl } from '@/components/settings';
 
 const { t } = useI18n();
 
@@ -229,10 +231,13 @@ onMounted(async () => {
           </p>
         </div>
       </div>
-      <button class="btn-secondary" :disabled="isResetting" @click="resetStatistics">
-        <PhArrowCounterClockwise :size="16" class="sm:w-5 sm:h-5" />
-        {{ t('setting.statistic.resetToDefault') }}
-      </button>
+      <ButtonControl
+        :label="t('setting.statistic.resetToDefault')"
+        :icon="PhArrowCounterClockwise"
+        :disabled="isResetting"
+        type="secondary"
+        @click="resetStatistics"
+      />
     </div>
 
     <!-- Period Selector -->
@@ -374,10 +379,6 @@ onMounted(async () => {
 
 <style scoped>
 @reference "../../../../style.css";
-
-.btn-secondary {
-  @apply bg-bg-tertiary border border-border text-text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-medium hover:bg-bg-secondary transition-colors;
-}
 
 .period-btn {
   @apply flex items-center gap-1.5 px-3 py-2 border rounded-lg cursor-pointer text-xs font-medium transition-all;

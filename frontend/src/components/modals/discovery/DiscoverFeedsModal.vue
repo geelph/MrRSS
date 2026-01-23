@@ -131,7 +131,7 @@ onUnmounted(() => {
             class="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-bg-secondary rounded-lg p-2 sm:p-3"
           >
             <p class="text-xs sm:text-sm font-medium text-text-primary">
-              {{ t('foundFeeds', { count: discoveredFeeds.length }) }}
+              {{ t('modal.discovery.foundFeeds', { count: discoveredFeeds.length }) }}
             </p>
             <button
               class="text-xs sm:text-sm text-accent hover:text-accent-hover font-medium px-2 sm:px-3 py-1 rounded hover:bg-accent/10 transition-colors"

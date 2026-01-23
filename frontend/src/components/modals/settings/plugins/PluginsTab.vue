@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import type { SettingsData } from '@/types/settings';
 import { useSettingsAutoSave } from '@/composables/core/useSettingsAutoSave';
 import { useI18n } from 'vue-i18n';
+import { PhInfo } from '@phosphor-icons/vue';
+import { InfoBox } from '@/components/settings';
 import ObsidianSettings from './ObsidianSettings.vue';
 import FreshRSSSettings from './FreshRSSSettings.vue';
 import RSSHubSettings from './RSSHubSettings.vue';
@@ -34,10 +36,7 @@ function handleUpdateSettings(updatedSettings: SettingsData) {
 
 <template>
   <div class="space-y-4 sm:space-y-6">
-    <div class="tip-box">
-      <PhInfo :size="16" class="text-accent shrink-0 sm:w-5 sm:h-5" />
-      <span class="text-xs sm:text-sm">{{ t('common.warning.isInDevelopment') }}</span>
-    </div>
+    <InfoBox :icon="PhInfo" :content="t('common.warning.isInDevelopment')" />
 
     <ObsidianSettings :settings="settings" @update:settings="handleUpdateSettings" />
 
@@ -49,10 +48,4 @@ function handleUpdateSettings(updatedSettings: SettingsData) {
 
 <style scoped>
 @reference "../../../../style.css";
-
-.tip-box {
-  @apply flex items-center gap-2 sm:gap-3 py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-lg;
-  background-color: rgba(59, 130, 246, 0.05);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-}
 </style>

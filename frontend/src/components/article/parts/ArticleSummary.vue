@@ -209,7 +209,7 @@ async function handleSummaryLinkClick(event: MouseEvent) {
             }}
           </div>
           <div class="text-xs text-text-secondary">
-            {{ t('generatingSummaryTime', { seconds: loadingTime }) }}
+            {{ t('article.summary.generatingSummaryTime', { seconds: loadingTime }) }}
           </div>
         </div>
 

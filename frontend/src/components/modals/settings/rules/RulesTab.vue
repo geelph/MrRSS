@@ -175,7 +175,7 @@ async function applyRule(rule: Rule): Promise<void> {
 
     if (res.ok) {
       const data = await res.json();
-      window.showToast(t('ruleAppliedSuccess', { count: data.affected }), 'success');
+      window.showToast(t('modal.rule.ruleAppliedSuccess', { count: data.affected }), 'success');
       store.fetchArticles();
       store.fetchUnreadCounts();
     } else {

@@ -49,10 +49,10 @@ export function formatDate(
       }
 
       // Use translations
-      if (diffSeconds < 60) return t('secondsAgo', { count: diffSeconds });
-      if (diffMins < 60) return t('minutesAgo', { count: diffMins });
-      if (diffHours < 24) return t('hoursAgo', { count: diffHours });
-      return t('daysAgo', { count: diffDays });
+      if (diffSeconds < 60) return t('common.time.secondsAgo', { count: diffSeconds });
+      if (diffMins < 60) return t('common.time.minutesAgo', { count: diffMins });
+      if (diffHours < 24) return t('common.time.hoursAgo', { count: diffHours });
+      return t('common.time.daysAgo', { count: diffDays });
     }
 
     // Use absolute date for articles 14+ days old

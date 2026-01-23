@@ -28,47 +28,67 @@ export function useRuleOptions() {
 
   // Field options for conditions
   const fieldOptions: FieldOption[] = [
-    { value: 'feed_name', labelKey: 'feedName', multiSelect: true },
+    { value: 'feed_name', labelKey: 'modal.feed.feedName', multiSelect: true },
     { value: 'feed_category', labelKey: 'modal.feed.feedCategory', multiSelect: true },
-    { value: 'article_title', labelKey: 'articleTitle', multiSelect: false },
-    { value: 'feed_type', labelKey: 'feedType', multiSelect: true },
+    { value: 'article_title', labelKey: 'article.parts.articleTitle', multiSelect: false },
+    { value: 'feed_type', labelKey: 'modal.filter.feedType', multiSelect: true },
     {
       value: 'is_image_mode_feed',
-      labelKey: 'isImageModeFeed',
+      labelKey: 'modal.filter.isImageModeFeed',
       multiSelect: false,
       booleanField: true,
     },
-    { value: 'published_after', labelKey: 'publishedAfter', multiSelect: false },
-    { value: 'published_before', labelKey: 'publishedBefore', multiSelect: false },
-    { value: 'is_read', labelKey: 'readStatus', multiSelect: false, booleanField: true },
-    { value: 'is_favorite', labelKey: 'favoriteStatus', multiSelect: false, booleanField: true },
-    { value: 'is_hidden', labelKey: 'hiddenStatus', multiSelect: false, booleanField: true },
-    { value: 'is_read_later', labelKey: 'readLaterStatus', multiSelect: false, booleanField: true },
+    { value: 'published_after', labelKey: 'modal.filter.publishedAfter', multiSelect: false },
+    { value: 'published_before', labelKey: 'modal.filter.publishedBefore', multiSelect: false },
+    {
+      value: 'is_read',
+      labelKey: 'modal.filter.readStatus',
+      multiSelect: false,
+      booleanField: true,
+    },
+    {
+      value: 'is_favorite',
+      labelKey: 'modal.filter.favoriteStatus',
+      multiSelect: false,
+      booleanField: true,
+    },
+    {
+      value: 'is_hidden',
+      labelKey: 'modal.filter.hiddenStatus',
+      multiSelect: false,
+      booleanField: true,
+    },
+    {
+      value: 'is_read_later',
+      labelKey: 'modal.filter.readLaterStatus',
+      multiSelect: false,
+      booleanField: true,
+    },
   ];
 
   // Operator options for article title
   const textOperatorOptions: Array<{ value: string; labelKey: string }> = [
-    { value: 'contains', labelKey: 'contains' },
-    { value: 'exact', labelKey: 'exactMatch' },
-    { value: 'regex', labelKey: 'regex' },
+    { value: 'contains', labelKey: 'modal.filter.contains' },
+    { value: 'exact', labelKey: 'modal.filter.exactMatch' },
+    { value: 'regex', labelKey: 'modal.filter.regex' },
   ];
 
   // Boolean value options
   const booleanOptions: Array<{ value: string; labelKey: string }> = [
-    { value: 'true', labelKey: 'yes' },
-    { value: 'false', labelKey: 'no' },
+    { value: 'true', labelKey: 'common.action.yes' },
+    { value: 'false', labelKey: 'common.action.no' },
   ];
 
   // Action options
   const actionOptions: ActionOption[] = [
-    { value: 'favorite', labelKey: 'actionFavorite' },
-    { value: 'unfavorite', labelKey: 'actionUnfavorite' },
-    { value: 'hide', labelKey: 'actionHide' },
-    { value: 'unhide', labelKey: 'actionUnhide' },
-    { value: 'mark_read', labelKey: 'actionMarkRead' },
-    { value: 'mark_unread', labelKey: 'actionMarkUnread' },
-    { value: 'read_later', labelKey: 'actionReadLater' },
-    { value: 'remove_read_later', labelKey: 'actionRemoveReadLater' },
+    { value: 'favorite', labelKey: 'setting.rule.actionFavorite' },
+    { value: 'unfavorite', labelKey: 'setting.rule.actionUnfavorite' },
+    { value: 'hide', labelKey: 'setting.rule.actionHide' },
+    { value: 'unhide', labelKey: 'setting.rule.actionUnhide' },
+    { value: 'mark_read', labelKey: 'setting.rule.actionMarkRead' },
+    { value: 'mark_unread', labelKey: 'setting.rule.actionMarkUnread' },
+    { value: 'read_later', labelKey: 'setting.rule.actionReadLater' },
+    { value: 'remove_read_later', labelKey: 'setting.rule.actionRemoveReadLater' },
   ];
 
   // Feed names for multi-select

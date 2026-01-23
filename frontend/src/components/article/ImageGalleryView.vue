@@ -449,11 +449,13 @@ function formatDate(dateString: string): string {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     if (hours === 0) {
       const minutes = Math.floor(diff / (1000 * 60));
-      return minutes <= 0 ? t('common.time.justNow') : t('minutesAgo', { count: minutes });
+      return minutes <= 0
+        ? t('common.time.justNow')
+        : t('common.time.minutesAgo', { count: minutes });
     }
-    return t('hoursAgo', { count: hours });
+    return t('common.time.hoursAgo', { count: hours });
   } else if (days < 7) {
-    return t('daysAgo', { count: days });
+    return t('common.time.daysAgo', { count: days });
   }
   return date.toLocaleDateString();
 }

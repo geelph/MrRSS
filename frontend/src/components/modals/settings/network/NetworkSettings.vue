@@ -86,11 +86,11 @@ function formatTime(timeStr: string): string {
   const days = Math.floor(hours / 24);
 
   if (days > 0) {
-    return t('daysAgo', { count: days });
+    return t('common.time.daysAgo', { count: days });
   } else if (hours > 0) {
-    return t('hoursAgo', { count: hours });
+    return t('common.time.hoursAgo', { count: hours });
   } else if (minutes > 0) {
-    return t('minutesAgo', { count: minutes });
+    return t('common.time.minutesAgo', { count: minutes });
   } else {
     return t('common.time.justNow');
   }

@@ -38,7 +38,7 @@ defineProps<Props>();
       <div class="flex justify-between text-xs text-text-tertiary">
         <span>{{ progressCounts.current }}/{{ progressCounts.total }}</span>
         <span v-if="progressCounts.found > 0">
-          {{ t('foundSoFar', { count: progressCounts.found }) }}
+          {{ t('modal.discovery.foundSoFar', { count: progressCounts.found }) }}
         </span>
       </div>
     </div>

@@ -121,7 +121,7 @@ export function useDiscoverAllFeeds() {
                 progressDetail.value = '';
                 break;
               case 'processing_feed':
-                progressMessage.value = t('processingFeed', {
+                progressMessage.value = t('modal.discovery.processingFeed', {
                   current: progress.current || 0,
                   total: progress.total || 0,
                 });
@@ -249,9 +249,9 @@ export function useDiscoverAllFeeds() {
       await store.fetchFeeds();
 
       if (failed === 0) {
-        window.showToast(t('feedsSubscribedSuccess', { count: successful }), 'success');
+        window.showToast(t('modal.feed.feedsSubscribedSuccess', { count: successful }), 'success');
       } else {
-        window.showToast(t('feedsSubscribedPartial', { successful, failed }), 'warning');
+        window.showToast(t('modal.feed.feedsSubscribedPartial', { successful, failed }), 'warning');
       }
     } catch (error) {
       console.error('Subscription error:', error);

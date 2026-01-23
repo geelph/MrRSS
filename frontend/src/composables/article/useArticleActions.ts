@@ -161,7 +161,10 @@ export function useArticleActions(
         // Refresh articles from server
         await store.fetchArticles();
 
-        window.showToast(t('markedNArticlesAsRead', { count: data.count || 0 }), 'success');
+        window.showToast(
+          t('article.action.markedNArticlesAsRead', { count: data.count || 0 }),
+          'success'
+        );
       } catch (e) {
         console.error('Error marking articles as read:', e);
         window.showToast(t('common.errors.savingSettings'), 'error');

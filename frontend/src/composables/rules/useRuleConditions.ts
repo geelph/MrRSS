@@ -81,9 +81,9 @@ export function useRuleConditions() {
     const remaining = totalCount - 1;
 
     if (locale.value === 'zh') {
-      return `${firstItem} ${t('andNMore', { count: totalCount })}`;
+      return `${firstItem} ${t('common.text.andNMore', { count: totalCount })}`;
     }
-    return `${firstItem} ${t('andNMore', { count: remaining })}`;
+    return `${firstItem} ${t('common.text.andNMore', { count: remaining })}`;
   }
 
   return {

@@ -54,7 +54,7 @@ function formatCondition(rule: Rule): string {
   let text = formatSingleCondition(first);
 
   if (rule.conditions.length > 1) {
-    text += ` ${t('andNMore', { count: rule.conditions.length - 1 })}`;
+    text += ` ${t('common.text.andNMore', { count: rule.conditions.length - 1 })}`;
   }
 
   return text;

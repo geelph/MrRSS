@@ -84,7 +84,9 @@ export function useFeedDiscovery(feed: Feed) {
                 progressDetail.value = progress.detail ? getHostname(progress.detail) : '';
                 break;
               case 'found_links':
-                progressMessage.value = t('foundPotentialLinks', { count: progress.total });
+                progressMessage.value = t('modal.discovery.foundPotentialLinks', {
+                  count: progress.total,
+                });
                 progressDetail.value = '';
                 progressCounts.value.total = progress.total || 0;
                 break;

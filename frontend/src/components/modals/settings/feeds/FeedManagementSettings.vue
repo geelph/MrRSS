@@ -19,6 +19,7 @@ import {
 } from '@phosphor-icons/vue';
 import type { Feed } from '@/types/models';
 import { formatRelativeTime } from '@/utils/date';
+import { SettingGroup, ButtonControl } from '@/components/settings';
 
 const store = useAppStore();
 const { t, locale } = useI18n();
@@ -190,38 +191,31 @@ function isRSSHubFeed(feed: Feed): boolean {
 </script>
 
 <template>
-  <div class="setting-group">
-    <label
-      class="font-semibold mb-2 sm:mb-3 text-text-secondary uppercase text-xs tracking-wider flex items-center gap-2"
-    >
-      <PhRss :size="14" class="sm:w-4 sm:h-4" />
-      {{ t('modal.feed.manageFeeds') }}
-    </label>
-
-    <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-2 text-xs sm:text-sm">
-      <button class="btn-secondary py-1.5 px-2.5 sm:px-3" @click="handleAddFeed">
-        <PhPlus :size="14" class="sm:w-4 sm:h-4" />
-        <span class="hidden sm:inline">{{ t('setting.feed.addFeed') }}</span
-        ><span class="sm:hidden">{{ t('setting.feed.addFeed').split(' ')[0] }}</span>
-      </button>
-      <button
-        class="btn-danger py-1.5 px-2.5 sm:px-3"
+  <SettingGroup :icon="PhRss" :title="t('modal.feed.manageFeeds')">
+    <div class="flex flex-wrap gap-1.5 sm:gap-2 mb-2">
+      <ButtonControl
+        :label="t('setting.feed.addFeed')"
+        :icon="PhPlus"
+        type="secondary"
+        class="py-1.5 px-2.5 sm:px-3"
+        @click="handleAddFeed"
+      />
+      <ButtonControl
+        :label="t('common.action.deleteSelected')"
+        :icon="PhTrash"
         :disabled="selectedFeeds.length === 0"
+        type="danger"
+        class="py-1.5 px-2.5 sm:px-3"
         @click="handleBatchDelete"
-      >
-        <PhTrash :size="14" class="sm:w-4 sm:h-4" />
-        <span class="hidden sm:inline">{{ t('common.action.deleteSelected') }}</span
-        ><span class="sm:hidden">{{ t('common.delete') }}</span>
-      </button>
-      <button
-        class="btn-secondary py-1.5 px-2.5 sm:px-3"
+      />
+      <ButtonControl
+        :label="t('common.action.moveSelected')"
+        :icon="PhFolder"
         :disabled="selectedFeeds.length === 0"
+        type="secondary"
+        class="py-1.5 px-2.5 sm:px-3"
         @click="handleBatchMove"
-      >
-        <PhFolder :size="14" class="sm:w-4 sm:h-4" />
-        <span class="hidden sm:inline">{{ t('common.action.moveSelected') }}</span
-        ><span class="sm:hidden">{{ t('common.action.move') }}</span>
-      </button>
+      />
     </div>
 
     <div class="border border-border rounded-lg bg-bg-secondary">
@@ -241,7 +235,9 @@ function isRSSHubFeed(feed: Feed): boolean {
               t('common.search.selectAll')
             }}</span>
             <span class="text-xs text-text-tertiary"
-              >({{ t('totalAndSelected', { total: totalFeeds, selected: selectedCount }) }})</span
+              >({{
+                t('common.search.totalAndSelected', { total: totalFeeds, selected: selectedCount })
+              }})</span
             >
           </label>
         </div>
@@ -561,28 +557,9 @@ function isRSSHubFeed(feed: Feed): boolean {
         </div>
       </div>
     </div>
-  </div>
+  </SettingGroup>
 </template>
 
 <style scoped>
 @reference "../../../../style.css";
-
-.btn-primary {
-  @apply bg-accent text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-semibold hover:bg-accent-hover transition-colors shadow-sm;
-}
-.btn-primary:disabled {
-  @apply opacity-50 cursor-not-allowed;
-}
-.btn-secondary {
-  @apply bg-transparent border border-border text-text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-medium hover:bg-bg-tertiary transition-colors;
-}
-.btn-secondary:disabled {
-  @apply opacity-50 cursor-not-allowed;
-}
-.btn-danger {
-  @apply bg-transparent border border-red-300 text-red-600 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 dark:border-red-400 dark:text-red-400 transition-colors;
-}
-.btn-danger:disabled {
-  @apply opacity-50 cursor-not-allowed;
-}
 </style>

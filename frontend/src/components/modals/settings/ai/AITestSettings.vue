@@ -59,11 +59,11 @@ function formatTime(timeStr: string): string {
   const days = Math.floor(hours / 24);
 
   if (days > 0) {
-    return t('daysAgo', { count: days });
+    return t('common.time.daysAgo', { count: days });
   } else if (hours > 0) {
-    return t('hoursAgo', { count: hours });
+    return t('common.time.hoursAgo', { count: hours });
   } else if (minutes > 0) {
-    return t('minutesAgo', { count: minutes });
+    return t('common.time.minutesAgo', { count: minutes });
   } else {
     return t('common.time.justNow');
   }
@@ -84,11 +84,11 @@ const statuses = computed(() => [
         ? t('common.action.yes')
         : t('common.action.no')
       : '-',
-    type: testInfo.value.test_time
+    type: (testInfo.value.test_time
       ? testInfo.value.config_valid
         ? 'success'
         : 'error'
-      : 'neutral',
+      : 'neutral') as 'success' | 'error' | 'neutral',
   },
   {
     label: t('setting.ai.connectionSuccess'),
@@ -97,11 +97,11 @@ const statuses = computed(() => [
         ? t('common.action.yes')
         : t('common.action.no')
       : '-',
-    type: testInfo.value.test_time
+    type: (testInfo.value.test_time
       ? testInfo.value.connection_success
         ? 'success'
         : 'error'
-      : 'neutral',
+      : 'neutral') as 'success' | 'error' | 'neutral',
   },
   {
     label: t('setting.ai.responseTime'),

@@ -53,7 +53,7 @@ async function handleClick() {
 }
 
 .btn-danger {
-  @apply bg-red-500 text-white border-none hover:bg-red-600;
+  @apply bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30;
 }
 
 @keyframes spin {

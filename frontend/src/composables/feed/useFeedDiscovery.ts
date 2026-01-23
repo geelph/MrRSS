@@ -80,7 +80,10 @@ export function useFeedDiscovery() {
             // Auto-select all discovered feeds
             selectedFeeds.value = new Set(state.feeds.map((_, idx) => idx));
             if (state.feeds.length > 0) {
-              window.showToast(t('discoveredFeeds', { count: state.feeds.length }), 'success');
+              window.showToast(
+                t('modal.discovery.discoveredFeeds', { count: state.feeds.length }),
+                'success'
+              );
             } else {
               window.showToast(t('modal.discovery.noFeedsDiscovered'), 'info');
             }
@@ -261,11 +264,11 @@ export function useFeedDiscovery() {
 
     if (successCount > 0) {
       await store.fetchFeeds();
-      window.showToast(t('feedsSubscribedSuccess', { count: successCount }), 'success');
+      window.showToast(t('modal.feed.feedsSubscribedSuccess', { count: successCount }), 'success');
     }
 
     if (failCount > 0) {
-      window.showToast(t('someFeedsFailedToSubscribe', { count: failCount }), 'error');
+      window.showToast(t('modal.feed.someFeedsFailedToSubscribe', { count: failCount }), 'error');
     }
 
     return { successCount, failCount };

@@ -19,6 +19,8 @@ const emit = defineEmits<{
   collapse: [];
   pin: [];
   unpin: [];
+  'sidebar.feedList.unpin': [];
+  'sidebar.feedList.pin': [];
 }>();
 
 const store = useAppStore();
@@ -331,7 +333,7 @@ const drawerTitle = computed(() => {
 
   // If there's a filter, return "{filter} - Feeds"
   if (filterName) {
-    return t('feedsWithFilter', { filter: filterName });
+    return t('sidebar.feedList.feedsWithFilter', { filter: filterName });
   }
 
   // For 'all' or any other case, just show "Feeds"

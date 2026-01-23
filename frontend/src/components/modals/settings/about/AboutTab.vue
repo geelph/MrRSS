@@ -95,7 +95,7 @@ function openGitHubRelease() {
     <div class="mt-4 sm:mt-6 mb-4 sm:mb-6 flex justify-center">
       <button
         :disabled="checkingUpdates"
-        class="btn-secondary justify-center text-sm sm:text-base"
+        class="btn btn-secondary justify-center text-sm sm:text-base"
         @click="handleCheckUpdates"
       >
         <PhArrowsClockwise
@@ -139,7 +139,7 @@ function openGitHubRelease() {
           <div v-if="updateInfo.has_update && updateInfo.download_url" class="mt-2 sm:mt-3">
             <button
               :disabled="downloadingUpdate || installingUpdate"
-              class="btn-primary w-full justify-center text-sm sm:text-base"
+              class="btn btn-primary w-full justify-center text-sm sm:text-base"
               @click="handleDownloadInstall"
             >
               <PhCircleNotch
@@ -208,18 +208,19 @@ function openGitHubRelease() {
 <style scoped>
 @reference "../../../../style.css";
 
-.btn-secondary {
-  @apply bg-bg-tertiary border border-border text-text-primary px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-medium hover:bg-bg-secondary transition-colors;
+.btn {
+  @apply px-3 sm:px-4 py-1.5 sm:py-2 rounded-md cursor-pointer flex items-center gap-1.5 sm:gap-2 font-medium transition-colors;
 }
-.btn-secondary:disabled {
+.btn:disabled {
   @apply opacity-50 cursor-not-allowed;
 }
 .btn-primary {
-  @apply bg-accent text-white border-none px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg cursor-pointer font-semibold hover:bg-accent-hover transition-colors flex items-center gap-1.5 sm:gap-2;
+  @apply bg-accent text-white border-none hover:bg-accent-hover;
 }
-.btn-primary:disabled {
-  @apply opacity-50 cursor-not-allowed;
+.btn-secondary {
+  @apply bg-bg-tertiary border border-border text-text-primary hover:bg-bg-secondary;
 }
+
 .animate-spin {
   animation: spin 1s linear infinite;
 }
